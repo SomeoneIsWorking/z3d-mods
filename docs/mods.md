@@ -75,7 +75,7 @@ plus the 44 render, HUD and input sites in its `source/generated/linker.ld`.
 | Source | github.com/leoetlino/project-restoration v1.5.9, `mm3d_project_restoration_v1.5.9-0-ge099fcc.7z`, sha256 `c575c1beeae8f7c68fc1126061b0f70d29cd9d0f5dd5697f53b83835638eca32` |
 | Licence | GPL-2.0 |
 | Gives | Zora fast swim, Deku hops, D-pad transformations, instant Bomber's Notebook, Song of Time saving option, boss rebalances, Inverted Song of Time at 1/3 speed, fewer song replays, Bombers no longer interrupting, softlock fixes |
-| Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. |
+| Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. The patched code it outputs is laid out like 1.0 (PR rebuilds 1.1 into its 1.0-based code), so our MM3D hooks use 1.0/mm3d-decomp addresses; the installer checks each hook's original word against this bake (0x174374 `bl 0x1846B4` there, not in vanilla 1.1). |
 
 | | |
 |---|---|
