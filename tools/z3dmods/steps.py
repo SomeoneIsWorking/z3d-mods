@@ -113,13 +113,12 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout | None) ->
             if play == 0:
                 log("no play state (title, file select or a scene load)")
                 continue
-            context = session.read(play + layout.cutscene_state - 8, 0x30)
-            script = struct.unpack_from("<I", context, 4)[0]
-            head = session.read(script, 0x10) if script else b""
+            script = session.u32(play + layout.cutscene_script)
+            head = session.read(script, 0x38) if script else b""
             scene = struct.unpack("<h", session.read(play + layout.scene, 2))[0]
             trigger = struct.unpack("<b", session.read(play + layout.transition_trigger, 1))[0]
             log(f"play 0x{play:08X} scene {scene} state/frames {_cutscene(session, layout)} "
-                f"trigger {trigger} csCtx {context.hex()} script 0x{script:08X} head {head.hex()}")
+                f"trigger {trigger} script 0x{script:08X} head {head.hex()}")
         elif kind == "save":
             if layout is None:
                 raise RuntimeError("this game has no RAM layout in tools/z3dmods/games.py yet")
