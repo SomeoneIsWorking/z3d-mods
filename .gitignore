@@ -4,3 +4,5 @@ env-assets/
 *.3ds
 *.cia
 *.cxi
+.venv/
+__pycache__/

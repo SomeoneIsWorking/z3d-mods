@@ -1,0 +1,11 @@
+{
+  "title_id": "0004000000033500",
+  "code_sha256": "ef210566e1d9d16879a746dfb063fcbad232f0171d860de906531ecc526cc020",
+  "base": {
+    "name": "The One Screen alpha 1.1.12 (toadalle, MIT code)",
+    "root": "downloads/the-one-screen-891b60e364cc660b2d1edfd7916ec01e3bb0cadf/x/load/mods/0004000000033500",
+    "code_patch": "exefs/code.ips",
+    "exheader": "exheader.bin",
+    "romfs": "romfs"
+  }
+}
