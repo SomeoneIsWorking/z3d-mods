@@ -38,13 +38,15 @@ def run_steps(args: argparse.Namespace) -> None:
     game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
     out = cfg.repo / "scratch" / "runs" / args.name
     if args.harness:
-        with harness.HarnessSession(cfg, cfg.rom(game.title_id), args.game, out / "harness.log") as session:
-            steps.run(session, args.steps, out, games.LAYOUTS[args.game])
+        with harness.HarnessSession(cfg, cfg.rom(game.title_id), args.game, game.screen_layout,
+                                    game.textures is not None, out / "harness.log",
+                                    dict(option.split("=", 1) for option in args.core_option)) as session:
+            steps.run(session, args.steps, out, games.LAYOUTS.get(args.game))
             print(f"{session.frames()} frames")
         return
     settings = json.loads(args.settings) if args.settings else None
     with azahar.Session(cfg, cfg.rom(game.title_id), out / "gamescope.log", settings) as session:
-        steps.run(session, args.steps, out, games.LAYOUTS[args.game])
+        steps.run(session, args.steps, out, games.LAYOUTS.get(args.game))
     for name, lines in session.config_changes.items():
         print(f"restored {name}: Azahar changed {len(lines)} lines")
 
@@ -65,6 +67,8 @@ def main() -> None:
     play.add_argument("--settings", help="global Azahar settings for this run only, as JSON")
     play.add_argument("--harness", action="store_true",
                       help="run on the libretro harness (frame-exact, savestates) instead of the player's Azahar")
+    play.add_argument("--core-option", action="append", default=[], metavar="KEY=VALUE",
+                      help="harness only: a libretro core option for this run, e.g. citra_custom_textures=disabled")
     play.set_defaults(run=run_steps)
     args = parser.parse_args()
     args.run(args)

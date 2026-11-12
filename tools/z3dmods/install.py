@@ -25,13 +25,15 @@ class GameSet:
     textures: dict | None
     azahar_global: dict
     patch: str | None
+    # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
+    screen_layout: str
 
 
     @classmethod
     def load(cls, path: Path) -> GameSet:
         raw = json.loads(path.read_text())
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
-                   raw.get("azahar_global", {}), raw.get("patch"))
+                   raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"))
 
 
 def _sha(path: Path) -> str:

@@ -57,22 +57,31 @@ Screen layout: The One Screen draws everything on the top screen but the game st
 bottom screen, so the player chooses Azahar's Single Screen layout (View › Screen Layout, or the
 layout hotkey). The set does not set it, because of the per-game leak above.
 
+| | |
+|---|---|
+| Textures | Henriko Magnifico OoT3D 4K 5.0a, 1080p (4x) variant: henrikomagnifico.com/zelda-ocarina-of-time-3d-4k, Google Drive file `1w1Ez_V2ky56Kc-Gz18cH3VnpraxiOD0Q`, zip sha256 `d68ad55f3067a0a89e21bab2fe5ae37e0847ff74b086965da6b0ed34b7693983` (1.9 GB) |
+| Licence | None stated; free, "as is" |
+| Layout | `user/load/textures/0004000000033500/` (2162 files, legacy hash: `pack.json` `use_new_hash: false`, `flip_png_files: true`) into `load/textures/0004000000033500/`. The zip also carries its own `load/mods` (code and romfs for RTG's single-screen mod); not installed, The One Screen is the base |
+| Needs | `[Utility] custom_textures=true` (the set's `azahar_global`); the pack's guide says to keep Preload Custom Textures off, which the player's config already has |
+| Shown | Harness, same state with textures on and off at 3x: the house sign and wood are the pack's, The One Screen's Xbox HUD labels are unchanged (no overlap) |
+
 Hooks it owns (our patch must not touch them): 0x452390 and 0x452434 (before/after the play update),
 plus the 44 render, HUD and input sites in its `source/generated/linker.ld`.
 
-### MM3D: Project Restoration v100 and Omni Xbox UI
+### MM3D: Project Restoration v110 and Omni Xbox UI
 
 | | |
 |---|---|
 | Source | github.com/leoetlino/project-restoration v1.5.9, `mm3d_project_restoration_v1.5.9-0-ge099fcc.7z`, sha256 `c575c1beeae8f7c68fc1126061b0f70d29cd9d0f5dd5697f53b83835638eca32` |
 | Licence | GPL-2.0 |
 | Gives | Zora fast swim, Deku hops, D-pad transformations, instant Bomber's Notebook, Song of Time saving option, boss rebalances, Inverted Song of Time at 1/3 speed, fewer song replays, Bombers no longer interrupting, softlock fixes |
-| Layout | `v100/citra/code.bps` (sha256 `c873d7fa…dd5ee76`) and `v100/citra/exheader.bin` (`1da15cfe…c8e8940`) |
+| Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. (`v100/citra/` was used on the 1.0 dump.) |
 
 | | |
 |---|---|
 | Textures | Omni Xbox UI for PR 1.3 (HardDanX), GameBanana 569317, `omni_ui_for_project_restoration_13.rar` md5 `74d99a122706fbd46cec2252d88cac71` (matches GameBanana), sha256 `c512206ed5edbc00585b5477f588e63733b1deee167578f931bc2a50dcb20a21`; its `Omni Xbox UI for PR/` folder into `load/textures/0004000000125500/` |
 | Licence | CC BY-NC-ND 4.0: installable, not modifiable or redistributable |
+| Shown | Harness, new game to the Lost Woods, same state with textures on and off: the bottom screen's button labels become RB, a yellow Y, a blue X and LB+RB hints (stock: I, X, Y, II) |
 | Needs | Azahar's custom textures, which the set turns on globally (`[Utility] custom_textures=true`; the only change to the player's `qt-config.ini`). Its readme also suggests swapping A/B and the bumpers with the triggers in Azahar's input mapping. That is the player's controller setup, so it is documented here and not changed |
 
 MM3D single screen is not installed yet: every existing one (DekUI, Majora ReMasked) is a GPL-2 fork
@@ -87,6 +96,7 @@ dump, so DekUI takes it unchanged; the MM3D set moves to it (Project Restoration
 |---|---|---|---|---|---|
 | Ocarina ReFramed | OoT3D | github.com/OTPR26/OOT3DHud v2.5.1 (2026-10-29), Single and Dual | GPL-3.0-or-later; free-cam base from Roberto-Nessy with no licence | `code.ips` + `exheader.bin` + `romfs/`, or an xdelta ROM patch | Fallback for OoT3D single screen; controller-neutral prompts |
 | OoT3D: Single Screen Experience | OoT3D | GameBanana 695893 v3.2.2 | CC BY-NC-ND 4.0, no source | `exheader.bin` + `romfs/` (+ code) | Not used |
+| Henriko MM3D 4K | MM3D | 3.0b-1, 1080p and 4K, henrikomagnifico.com/zelda-majoras-mask-3d-4k (Drive `1I_QuBQX-_TTKCkS0MHho73ApKFfyckh6`) | None stated | textures, `pack.json` | To install: Drive's download quota was exceeded on 2026-11-12 and the MediaFire mirror reset the connection. It remakes buttons and prompts, so where it and Omni replace the same texture Omni's file wins; if its `pack.json` sets `use_new_hash`, Omni's legacy-hash files would stop matching, so check before installing both |
 | SSE Controller UI Packs | OoT3D | GameBanana 701929 v3.2 | CC BY-NC-ND | textures | To install for private use where The One Screen leaves 3DS glyphs |
 | Touchless Layout UI | OoT3D | GameBanana 567711 v3.1 | CC BY-NC-ND | textures | Fallback glyph pack (Vanilla build) |
 | OoT3D Autosave | OoT3D | GameBanana 686090 | CC BY-NC-ND | `code.ips` only | To bake into the base `code.bin` with The One Screen if their writes do not overlap; our MIT one later |

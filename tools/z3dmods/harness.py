@@ -1,7 +1,8 @@
 """Drive the libretro harness (harness/, build/harness/z3d_harness) on a copy of the player's data.
 
 The core's user dir is scratch/harness/<game>/Azahar: each run copies in the player's nand, sdmc and
-sysdata and the installed load/ folder, so the player's own data is only read.
+sysdata, and links the installed load/ folder (mods and textures, which the core only reads), so the
+player's own data is only read.
 """
 
 from __future__ import annotations
@@ -20,16 +21,17 @@ BUTTONS = {
     "a": 8, "x": 9, "l": 10, "r": 11, "zl": 12, "zr": 13,
 }
 PRESS_FRAMES = 6
-USER_DATA = ("nand", "sdmc", "sysdata", "load")
+USER_DATA = ("nand", "sdmc", "sysdata")
+READ_ONLY_DATA = ("load",)
 OPTIONS = {
     "citra_graphics_api": "OpenGL",
-    "citra_layout_option": "single_screen",
     "citra_use_libretro_save_path": "LibRetro Default",
 }
 
 
 class HarnessSession:
-    def __init__(self, cfg: Config, rom: Path, game: str, log: Path) -> None:
+    def __init__(self, cfg: Config, rom: Path, game: str, screen_layout: str, custom_textures: bool,
+                 log: Path, core_options: dict[str, str] | None = None) -> None:
         if cfg.libretro_core is None:
             raise RuntimeError('set "libretro_core" in env-assets/local.json to the built azahar_libretro.so')
         self._cfg = cfg
@@ -37,6 +39,9 @@ class HarnessSession:
         self._user = cfg.repo / "scratch" / "harness" / game
         self._states = cfg.repo / "scratch" / "harness" / "states" / game
         self._log_path = log
+        self._options = dict(OPTIONS, citra_layout_option=screen_layout,
+                             citra_custom_textures="enabled" if custom_textures else "disabled")
+        self._options.update(core_options or {})
         self._process: subprocess.Popen | None = None
 
     def __enter__(self) -> HarnessSession:
@@ -45,7 +50,7 @@ class HarnessSession:
         if not binary.exists():
             raise RuntimeError(f"{binary} missing: cmake -S harness -B build/harness -G Ninja && ninja -C build/harness")
         args = [str(binary), "--core", str(self._cfg.libretro_core), "--rom", str(self._rom), "--user", str(self._user)]
-        for key, value in OPTIONS.items():
+        for key, value in self._options.items():
             args += ["--option", f"{key}={value}"]
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log = self._log_path.open("wb")
@@ -78,6 +83,10 @@ class HarnessSession:
             source = self._cfg.azahar_data / name
             if source.exists():
                 shutil.copytree(source, target / name, symlinks=True)
+        for name in READ_ONLY_DATA:
+            source = self._cfg.azahar_data / name
+            if source.exists():
+                (target / name).symlink_to(source, target_is_directory=True)
 
     def _send(self, line: str) -> str:
         assert self._process and self._process.stdin and self._process.stdout

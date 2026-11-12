@@ -29,7 +29,9 @@ class Session(Protocol):
     def press(self, button: str) -> None: ...
 
 
-def _play(session: Session, layout: Layout) -> int:
+def _play(session: Session, layout: Layout | None) -> int:
+    if layout is None:
+        raise RuntimeError("this game has no RAM layout in tools/z3dmods/games.py yet")
     return session.u32(layout.play_pointer)
 
 
@@ -59,7 +61,7 @@ def _wait_cutscene(session: Session, layout: Layout, timeout: float, log) -> Non
     raise RuntimeError(f"cutscene did not {'end' if seen else 'start'} within {timeout}s (last {last})")
 
 
-def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
+def run(session: Session, steps: list[str], out: Path, layout: Layout | None) -> None:
     start = time.monotonic()
 
     def log(text: str) -> None:
@@ -95,6 +97,8 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             log(f"play 0x{play:08X} scene {scene} state/frames {_cutscene(session, layout)} "
                 f"csCtx {context.hex()} script 0x{script:08X} head {head.hex()}")
         elif kind == "save":
+            if layout is None:
+                raise RuntimeError("this game has no RAM layout in tools/z3dmods/games.py yet")
             data = session.read(layout.save_context, layout.save_size)
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
