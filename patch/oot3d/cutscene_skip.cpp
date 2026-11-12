@@ -8,6 +8,8 @@ namespace z3dmods::oot3d {
 namespace {
 
 using InterpreterFn = void (*)(void *play, void *cutscene, const void *script);
+using CloseTextboxFn = void (*)(void *play);
+using MessageStateFn = int32_t (*)();
 
 // The script holds at most one frame per u16 value.
 inline constexpr uint32_t kMaxSteps = 0x10000;
@@ -18,6 +20,7 @@ public:
     interpret(play, cutscene, script);
     if (guest::read<uint8_t>(cutscene, kCsState) != kCsStateRunning) {
       latched_ = false;
+      closedFrame_ = 0;
       return;
     }
     if (!latched_ && startPressed(play, cutscene)) {
@@ -55,14 +58,16 @@ private:
     if (guest::read<uint16_t>(cutscene, kCsFrames) <= minimumFrames()) {
       return false;
     }
-    return guest::read<int8_t>(play, kPlayTransitionTrigger) == 0;
+    return guest::read<int8_t>(play, kPlayTransitionTrigger) != kTransitionStart;
   }
 
-  // The caller's own catch-up loop (0x322028) steps frames the same way.
-  static void runToEnd(void *play, void *cutscene, const void *script) {
+  // The caller's own catch-up loop (0x322028) steps frames the same way. A text command holds its
+  // end frame until the message has closed (0x2C7AD4); the skip closes it once and resumes when
+  // the game's message update has finished closing. A choice is left open for the player.
+  void runToEnd(void *play, void *cutscene, const void *script) {
     for (uint32_t steps = 0; steps < kMaxSteps; ++steps) {
       if (guest::read<uint8_t>(cutscene, kCsState) != kCsStateRunning ||
-          guest::read<int8_t>(play, kPlayTransitionTrigger) != 0) {
+          guest::read<int8_t>(play, kPlayTransitionTrigger) == kTransitionStart) {
         return;
       }
       const auto frame = static_cast<uint16_t>(guest::read<uint16_t>(cutscene, kCsFrames) + 1);
@@ -71,13 +76,20 @@ private:
       }
       guest::write<uint16_t>(cutscene, kCsFrames, frame);
       interpret(play, cutscene, script);
-      if (guest::read<uint16_t>(cutscene, kCsFrames) != frame) {
-        return; // a command holds the frame (a message waiting for the player)
+      if (guest::read<uint16_t>(cutscene, kCsFrames) == frame) {
+        continue;
       }
+      if (closedFrame_ != frame &&
+          guest::function<MessageStateFn>(kMessageGetState)() != kMessageStateChoice) {
+        guest::function<CloseTextboxFn>(kMessageCloseTextbox)(play);
+        closedFrame_ = frame;
+      }
+      return;
     }
   }
 
   bool latched_ = false;
+  uint16_t closedFrame_ = 0;
 };
 
 constinit CutsceneSkip skip;

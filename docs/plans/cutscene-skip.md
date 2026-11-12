@@ -17,8 +17,16 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   rest. Inside that frame the patch runs the game's own cutscene interpreter for every remaining
   frame up to the script's end frame, so every command the script would have issued (destination,
   flags, time of day, music, the stop command) runs in order, and the game ends the cutscene itself.
-  It sets no flags of its own. Stepping stops early if a command holds the frame (a message waiting
-  for the player) or a scene transition starts.
+  It sets no flags of its own. User: "don't fast forward please, skip entirely".
+- Text: a text command (0x13) holds its end frame while `Message_GetState()` (0x3769D8) is not
+  0, 2, 7 or 8 (0x2C7AD4). On a hold the skip calls `Message_CloseTextbox(play)` (0x3725E0) once,
+  stops stepping for that game frame, and resumes on the next frame once the game's message update
+  has finished closing (manager byte +0xF38 = 0x0E, counter +0xFA4 below 2). Closing again every
+  frame resets that counter and stalls the cutscene. A choice (state 4) is never closed: the skip
+  waits there for the player.
+- Transitions: `play + 0x5C2D` is 20 when a scene transition is requested, -20 during the incoming
+  fade (it stays -20 through the black opening narration until frame ~160), 0 otherwise. The skip
+  refuses to start, and stops stepping, only at 20.
 - OoT3D: `patch/oot3d/` replaces the interpreter `FUN_002c5ba0` at its two call sites in the
   cutscene update `FUN_00321f50` (0x322040, 0x322070) with `stepCutscene`. `csCtx = play + 0x2298`:
   state +0x08 (2 running), end frame +0x18, current frame +0x20. Start is `play + 0x18` bit 3 in
@@ -31,7 +39,12 @@ to the end (flags, items, time of day, entrance, music), with no other change.
 - OoT3D Kakariko intro (warp 0xDB from Link's house, misc stop at frame 255): Start at frame 57 ends
   it the same frame; the landing frame matches watching it to the end, and the save context differs
   only in `naviTimer` (+0x4C) and the counter at +0x15B4.
-- Still to prove: a cutscene with a destination, one with textboxes, and MM3D.
+- OoT3D opening narration (File 1 copy, `poke:0x588EF8,f1ff warp:0xBB`: nextCutsceneIndex 0xFFF1
+  into Link's house, as a new file does; script 0x0877CE84, end 4500): Start at frame 74, with the
+  first box on screen, closes each box, runs the destination and lands in the nightmare cutscene
+  in scene 81 with no text shown. Watched to the same point (scene 81, frame 459/460), the save
+  context differs only in the counter at +0x15B4. Same on standalone Azahar in real time.
+- Still to prove: a cutscene with a choice, and MM3D.
 
 ## Proof
 On real cutscenes in each game, reached through a warp from a copy of the save: one run watches to
