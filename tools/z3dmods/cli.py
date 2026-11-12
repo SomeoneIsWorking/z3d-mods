@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, install, steps
+from z3dmods import azahar, config, ctr, games, install, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -39,7 +39,7 @@ def run_steps(args: argparse.Namespace) -> None:
     out = cfg.repo / "scratch" / "runs" / args.name
     settings = json.loads(args.settings) if args.settings else None
     with azahar.Session(cfg, cfg.rom(game.title_id), out / "gamescope.log", settings) as session:
-        steps.run(session, args.steps, out)
+        steps.run(session, args.steps, out, games.LAYOUTS[args.game])
     for name, lines in session.config_changes.items():
         print(f"restored {name}: Azahar changed {len(lines)} lines")
 

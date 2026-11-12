@@ -7,5 +7,6 @@
     "code_patch": "exefs/code.ips",
     "exheader": "exheader.bin",
     "romfs": "romfs"
-  }
+  },
+  "patch": "oot3d"
 }

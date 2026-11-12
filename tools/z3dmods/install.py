@@ -5,13 +5,16 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, ips
+from z3dmods import azahar_config, bps, ctr, ips, patch_build
 from z3dmods.config import Config
 
 RECORD = "z3dmods-install.json"
+PAGE = 0x1000
+EXHEADER_BSS_SIZE = 0x3C
 
 
 @dataclass(frozen=True)
@@ -21,13 +24,14 @@ class GameSet:
     base: dict
     textures: dict | None
     azahar_global: dict
+    patch: str | None
 
 
     @classmethod
     def load(cls, path: Path) -> GameSet:
         raw = json.loads(path.read_text())
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
-                   raw.get("azahar_global", {}))
+                   raw.get("azahar_global", {}), raw.get("patch"))
 
 
 def _sha(path: Path) -> str:
@@ -64,21 +68,54 @@ def _copy_tree(source: Path, dest: Path) -> None:
             shutil.copyfile(path, target)
 
 
+def _page(value: int) -> int:
+    return (value + PAGE - 1) & ~(PAGE - 1)
+
+
+def _apply(patch_name: str, patch: bytes, code: bytes) -> bytes:
+    return bps.apply(patch, code) if patch_name.endswith(".bps") else ips.apply(patch, code)
+
+
+def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_exheader: bytes,
+           mods: Path) -> None:
+    """Bake the base patch into code.bin and put our patch on top as code.ips."""
+    code = _apply(game.base["code_patch"], base_patch, vanilla)
+    exheader = ctr.Exheader.parse(base_exheader)
+    data_end = exheader.data.address + exheader.data.pages * PAGE
+    payload = data_end + _page(exheader.bss_size)
+    ours = patch_build.build(cfg.repo, game.patch, payload, cfg.repo / "build" / "patch" / game.patch)
+    for record in ours.records:
+        if record.offset + patch_build.CODE_BASE >= payload:
+            continue
+        span = slice(record.offset, record.offset + len(record.data))
+        if code[span] != vanilla[span]:
+            raise RuntimeError(f"our write at 0x{record.offset + patch_build.CODE_BASE:08X} overlaps the base mod")
+    grown = bytearray(base_exheader)
+    struct.pack_into("<I", grown, EXHEADER_BSS_SIZE, _page(ours.payload_end - data_end))
+    (mods / "code.bin").write_bytes(code)
+    (mods / "code.ips").write_bytes(ips.build(ours.records))
+    (mods / "exheader.bin").write_bytes(bytes(grown))
+
+
 def install(cfg: Config, game: GameSet) -> Path:
     root = cfg.env_assets / game.base["root"]
     code_patch = root / game.base["code_patch"]
-    ctr_code = ctr.open_cci(cfg.rom(game.title_id)).code()
-    if ctr.sha256(ctr_code) != game.code_sha256:
+    vanilla = ctr.open_cci(cfg.rom(game.title_id)).code()
+    if ctr.sha256(vanilla) != game.code_sha256:
         raise RuntimeError(f"{game.title_id}: ROM code.bin is not the revision this set targets")
 
     mods = cfg.mods_dir(game.title_id)
     _remove_recorded(mods)
     mods.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(code_patch, mods / Path(game.base["code_patch"]).name)
-    shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
+    if game.patch:
+        _layer(cfg, game, vanilla, code_patch.read_bytes(), (root / game.base["exheader"]).read_bytes(),
+               mods)
+    else:
+        shutil.copyfile(code_patch, mods / Path(game.base["code_patch"]).name)
+        shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
     if "romfs" in game.base:
         _copy_tree(root / game.base["romfs"], mods / "romfs")
-    _write_record(mods, {"base": game.base["name"]})
+    _write_record(mods, {"base": game.base["name"], "patch": game.patch or ""})
 
     if game.textures:
         textures = cfg.textures_dir(game.title_id)

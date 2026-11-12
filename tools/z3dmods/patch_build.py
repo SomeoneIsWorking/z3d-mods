@@ -1,0 +1,77 @@
+"""Build our MIT code patch for a game: clang/lld into an ELF, then IPS records relative to .text."""
+
+from __future__ import annotations
+
+import shutil
+import struct
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+from z3dmods import ips
+
+CODE_BASE = 0x00100000
+SHT_PROGBITS, SHT_NOBITS, SHF_ALLOC = 1, 8, 2
+
+CXXFLAGS = [
+    "--target=armv6k-none-eabi", "-mcpu=mpcore", "-marm", "-mfloat-abi=softfp", "-mfpu=vfpv2",
+    "-std=c++20", "-Os", "-ffreestanding", "-nostdinc++", "-fno-exceptions", "-fno-rtti",
+    "-fno-unwind-tables", "-fno-asynchronous-unwind-tables", "-fno-threadsafe-statics",
+    "-ffunction-sections", "-fdata-sections", "-Wall", "-Wextra", "-Werror",
+]
+
+
+@dataclass(frozen=True)
+class Patch:
+    records: list[ips.Record]
+    payload_start: int
+    payload_end: int
+
+
+def _tool(name: str) -> str:
+    path = shutil.which(name)
+    if not path:
+        raise RuntimeError(f"{name} not found: install clang and lld (Fedora: dnf install clang lld)")
+    return path
+
+
+def _sections(elf: bytes) -> list[tuple[str, int, int, int, bytes]]:
+    if elf[:4] != b"\x7fELF" or elf[4] != 1:
+        raise ValueError("not a 32-bit ELF")
+    shoff = struct.unpack_from("<I", elf, 0x20)[0]
+    shentsize, shnum, shstrndx = struct.unpack_from("<HHH", elf, 0x2E)
+    headers = [struct.unpack_from("<IIIIIIIIII", elf, shoff + i * shentsize) for i in range(shnum)]
+    names = headers[shstrndx]
+    out = []
+    for name, kind, flags, addr, offset, size, *_ in headers:
+        if not flags & SHF_ALLOC or not size:
+            continue
+        start = names[4] + name
+        label = elf[start:elf.index(b"\0", start)].decode()
+        data = elf[offset:offset + size] if kind == SHT_PROGBITS else b""
+        out.append((label, kind, addr, size, data))
+    return out
+
+
+def build(repo: Path, game: str, payload: int, build_dir: Path) -> Patch:
+    source = repo / "patch" / game
+    build_dir.mkdir(parents=True, exist_ok=True)
+    objects = []
+    for path in sorted(source.glob("*.cpp")) + sorted(source.glob("*.s")):
+        obj = build_dir / (path.name + ".o")
+        flags = CXXFLAGS if path.suffix == ".cpp" else CXXFLAGS[:5]
+        subprocess.run([_tool("clang++"), *flags, "-c", str(path), "-o", str(obj)], check=True)
+        objects.append(str(obj))
+    elf_path = build_dir / f"{game}.elf"
+    subprocess.run([_tool("ld.lld"), "-T", str(source / "link.ld"), f"--defsym=PAYLOAD=0x{payload:X}",
+                    "--gc-sections", "-o", str(elf_path), *objects], check=True)
+
+    records, end = [], payload
+    for label, kind, addr, size, data in _sections(elf_path.read_bytes()):
+        if addr >= payload:
+            end = max(end, addr + size)
+        elif not label.startswith(".patch."):
+            raise RuntimeError(f"{label} at 0x{addr:08X} is below the payload and not a .patch. section")
+        if kind == SHT_PROGBITS:
+            records.append(ips.Record(addr - CODE_BASE, data))
+    return Patch(records, payload, end)
