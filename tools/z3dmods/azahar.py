@@ -180,6 +180,18 @@ class Session:
         if self._gamescope.poll() is not None:
             raise RuntimeError(f"gamescope exited with {self._gamescope.returncode}; see {self._log_path}")
 
+    def read(self, address: int, size: int) -> bytes:
+        return self.rpc.read(address, size)
+
+    def u32(self, address: int) -> int:
+        return self.rpc.u32(address)
+
+    def write(self, address: int, data: bytes) -> None:
+        self.rpc.write(address, data)
+
+    def screenshot(self, path: Path) -> tuple[int, int]:
+        return self.rpc.screenshot(path)
+
     def press(self, button: str, hold: float = 0.2) -> None:
         self.hold(button, hold)
 

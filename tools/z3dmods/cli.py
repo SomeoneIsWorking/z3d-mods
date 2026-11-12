@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, install, steps
+from z3dmods import azahar, config, ctr, games, harness, install, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -37,6 +37,11 @@ def run_steps(args: argparse.Namespace) -> None:
     cfg = config.load()
     game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
     out = cfg.repo / "scratch" / "runs" / args.name
+    if args.harness:
+        with harness.HarnessSession(cfg, cfg.rom(game.title_id), args.game, out / "harness.log") as session:
+            steps.run(session, args.steps, out, games.LAYOUTS[args.game])
+            print(f"{session.frames()} frames")
+        return
     settings = json.loads(args.settings) if args.settings else None
     with azahar.Session(cfg, cfg.rom(game.title_id), out / "gamescope.log", settings) as session:
         steps.run(session, args.steps, out, games.LAYOUTS[args.game])
@@ -58,6 +63,8 @@ def main() -> None:
     play.add_argument("name", help="run folder under scratch/runs/")
     play.add_argument("steps", nargs="+")
     play.add_argument("--settings", help="global Azahar settings for this run only, as JSON")
+    play.add_argument("--harness", action="store_true",
+                      help="run on the libretro harness (frame-exact, savestates) instead of the player's Azahar")
     play.set_defaults(run=run_steps)
     args = parser.parse_args()
     args.run(args)

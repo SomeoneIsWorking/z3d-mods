@@ -10,6 +10,7 @@ player's own dumps.
 |---|---|---|---|---|
 | OoT3D | `CTR-P-AQEE` | v0 | `ef210566e1d9d16879a746dfb063fcbad232f0171d860de906531ecc526cc020` | USA Rev 1 executable: `.text` ends at 0x4C99A8, where ReFramed's and The One Screen's USA links place their loaders |
 | MM3D | `CTR-P-AJRE` | v0 | `050a58834365187ca67211eef0a29816715e9ab9f7289e8372b06fb906620580` | USA 1.0: matches Project Restoration's v100 BPS source (size 0x5B1000, CRC32 0xC75021D9) |
+| MM3D (Rev 1) | `CTR-P-AJRE` | v2 | `6eec27b1827eab2c87744ac38066d569ffe6fe75790b1eb3300bd91f5099038d` | USA 1.1: main partition (NCSD partition 0, 654643200 bytes) sha256 `9c756279…23da`, exactly DekUI's `supported-rom.json` |
 
 No update title is installed for either game, and none of the chosen mods needs one. The MM3D
 dump's NCCH has crypto flags set although its ExeFS and exheader are plaintext; `tools/z3dmods/ctr.py`
@@ -74,10 +75,10 @@ plus the 44 render, HUD and input sites in its `source/generated/linker.ld`.
 | Licence | CC BY-NC-ND 4.0: installable, not modifiable or redistributable |
 | Needs | Azahar's custom textures, which the set turns on globally (`[Utility] custom_textures=true`; the only change to the player's `qt-config.ini`). Its readme also suggests swapping A/B and the bumpers with the triggers in Azahar's input mapping. That is the player's controller setup, so it is documented here and not changed |
 
-MM3D single screen is not installed: every existing one (DekUI, Majora ReMasked) is a GPL-2 fork of
-Azahar, not a mod for the player's Azahar 2126.2, and accepts only the USA 1.1 dump
-(`supported-rom.json`: remaster v2, a fixed main-partition hash). The player's dump is 1.0; DekUI
-is used once the player supplies a USA 1.1 dump. An MIT variant is planned in
+MM3D single screen is not installed yet: every existing one (DekUI, Majora ReMasked) is a GPL-2 fork
+of Azahar, not a mod for the player's Azahar 2126.2, and accepts only the USA 1.1 dump
+(`supported-rom.json`: remaster v2, a fixed main-partition hash). The player's Rev 1 dump is that
+dump, so DekUI takes it unchanged; the MM3D set moves to it (Project Restoration's v110 build). An MIT variant is planned in
 [plans/mm3d-single-screen.md](plans/mm3d-single-screen.md).
 
 ## Everything else considered
@@ -92,7 +93,7 @@ is used once the player supplies a USA 1.1 dump. An MIT variant is planned in
 | Door of Time Skip, Zora's River Waterfall Skip, Unfreeze Zora's Domain | OoT3D | GameBanana 713704, 711124, 710508 | CC BY-NC-ND | romfs only | Not used; Door of Time Skip can softlock adult Link |
 | OoT3D Randomizer | OoT3D | github.com/gamestabled/OoT3D_Randomizer v5.0 | MIT | `code.ips` + `exheader.bin` | Reference: loader, Quick Text, story-flag skips at save creation |
 | zeldaret/oot3d | OoT3D | WIP decompilation of the USA `code.bin` | CC0 | | Reference |
-| DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Waiting for the player's USA 1.1 dump |
+| DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Accepts the player's Rev 1 dump; next for MM3D single screen |
 | Omni Xbox UI | MM3D | as above | CC BY-NC-ND | textures | Installed until our own glyphs exist |
 | MM3D Randomizer base patch | MM3D | Z3DR/mm3dr | MIT (with permission for its PR code) | | Reference |
 | Zeldocto/MM3D-PC | MM3D | v0.1.9 | GPL-3.0 | native PC port | Not an Azahar mod |

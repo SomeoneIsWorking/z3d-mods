@@ -18,6 +18,8 @@ class Config:
     azahar_config: Path
     azahar_appimage: Path
     roms: dict[str, Path]
+    # The SomeoneIsWorking/azahar libretro core the harness loads (local.json "libretro_core").
+    libretro_core: Path | None
 
     def rom(self, title_id: str) -> Path:
         if title_id not in self.roms:
@@ -45,4 +47,5 @@ def load() -> Config:
         azahar_config=config_home / "azahar-emu",
         azahar_appimage=data_home / "opensu/emulators/azahar" / installed["file"],
         roms={tid: Path(path) for tid, path in local["roms"].items()},
+        libretro_core=Path(local["libretro_core"]) if "libretro_core" in local else None,
     )

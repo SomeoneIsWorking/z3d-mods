@@ -26,6 +26,10 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   Azahar config is restored afterwards. Steps: `wait:<s>`, `shot:<name>`, `<button>`,
   `hold:<button>,<s>`, `peek:<addr>,<size>`. `--settings '{"Layout":{"layout_option":1}}'` sets
   global settings for that run only. Output: `scratch/runs/<name>/`.
+- `... z3dmods run <game> <name> --harness <steps...>`: the same steps on the libretro harness
+  (frame-exact, savestates, watchpoints) on a copy of the player's data; see
+  [docs/harness.md](docs/harness.md) for the core pin and build. Harness build:
+  `cmake -S harness -B build/harness -G Ninja -DCMAKE_CXX_COMPILER=clang++ && ninja -C build/harness`.
 
 The OoT3D save in slot 1 is the player's: load it, never save over it. Check
 `sdmc/.../title/00040000/00033500/data/00000001/` against the backup after a run.
