@@ -43,6 +43,7 @@ class HarnessSession:
                              citra_custom_textures="enabled" if custom_textures else "disabled")
         self._options.update(core_options or {})
         self._process: subprocess.Popen | None = None
+        self._held = 0
 
     def __enter__(self) -> HarnessSession:
         self._copy_player_data()
@@ -125,9 +126,17 @@ class HarnessSession:
         self.run_frames(round(seconds * FPS))
 
     def hold(self, button: str, seconds: float) -> None:
-        self._send(f"input {1 << BUTTONS[button]:x}")
+        self.keydown(button)
         self.run_frames(max(1, round(seconds * FPS)))
-        self._send("input 0")
+        self.keyup(button)
+
+    def keydown(self, button: str) -> str:
+        self._held |= 1 << BUTTONS[button]
+        return self._send(f"input {self._held:x}")
+
+    def keyup(self, button: str) -> str:
+        self._held &= ~(1 << BUTTONS[button])
+        return self._send(f"input {self._held:x}")
 
     def press(self, button: str) -> None:
         self.hold(button, PRESS_FRAMES / FPS)

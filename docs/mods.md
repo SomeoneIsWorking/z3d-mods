@@ -9,12 +9,12 @@ player's own dumps.
 | Game | Product | Exheader remaster | `code.bin` sha256 (decompressed) | Revision |
 |---|---|---|---|---|
 | OoT3D | `CTR-P-AQEE` | v0 | `ef210566e1d9d16879a746dfb063fcbad232f0171d860de906531ecc526cc020` | USA Rev 1 executable: `.text` ends at 0x4C99A8, where ReFramed's and The One Screen's USA links place their loaders |
-| MM3D | `CTR-P-AJRE` | v0 | `050a58834365187ca67211eef0a29816715e9ab9f7289e8372b06fb906620580` | USA 1.0: matches Project Restoration's v100 BPS source (size 0x5B1000, CRC32 0xC75021D9) |
-| MM3D (Rev 1) | `CTR-P-AJRE` | v2 | `6eec27b1827eab2c87744ac38066d569ffe6fe75790b1eb3300bd91f5099038d` | USA 1.1: main partition (NCSD partition 0, 654643200 bytes) sha256 `9c756279…23da`, exactly DekUI's `supported-rom.json` |
+| MM3D | `CTR-P-AJRE` | v2 | `6eec27b1827eab2c87744ac38066d569ffe6fe75790b1eb3300bd91f5099038d` | USA 1.1: main partition (NCSD partition 0, 654643200 bytes) sha256 `9c756279…23da`, exactly DekUI's `supported-rom.json` |
 
-No update title is installed for either game, and none of the chosen mods needs one. The MM3D
-dump's NCCH has crypto flags set although its ExeFS and exheader are plaintext; `tools/z3dmods/ctr.py`
-checks the plaintext ExeFS header instead of the flag.
+No update title is installed for either game, and none of the chosen mods needs one. The player's
+earlier MM3D 1.0 dump (remaster v0, code `050a5883…`) was deleted at their request on 2026-11-12;
+its NCCH had crypto flags set over plaintext, which is why `tools/z3dmods/ctr.py` checks the
+plaintext ExeFS header instead of the flag.
 
 `uv run --frozen z3dmods rominfo <rom.3ds>` prints these.
 
@@ -75,7 +75,7 @@ plus the 44 render, HUD and input sites in its `source/generated/linker.ld`.
 | Source | github.com/leoetlino/project-restoration v1.5.9, `mm3d_project_restoration_v1.5.9-0-ge099fcc.7z`, sha256 `c575c1beeae8f7c68fc1126061b0f70d29cd9d0f5dd5697f53b83835638eca32` |
 | Licence | GPL-2.0 |
 | Gives | Zora fast swim, Deku hops, D-pad transformations, instant Bomber's Notebook, Song of Time saving option, boss rebalances, Inverted Song of Time at 1/3 speed, fewer song replays, Bombers no longer interrupting, softlock fixes |
-| Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. (`v100/citra/` was used on the 1.0 dump.) |
+| Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. |
 
 | | |
 |---|---|

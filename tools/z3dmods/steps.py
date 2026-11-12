@@ -1,9 +1,11 @@
 """Run a scripted session.
 
-Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>, warp:<entrance>,
-waitcs:<s> (wait for a cutscene to start, then end), save:<name> (dump the save context),
+Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
+poke:<addr>,<hex bytes>, warp:<entrance>, waitcs:<s> (wait for a cutscene to start, then end), csframe:<n> (wait until a running cutscene
+reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
-Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits.
+Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
+keyup:<button> (hold across other steps).
 """
 
 from __future__ import annotations
@@ -36,7 +38,10 @@ def _play(session: Session, layout: Layout | None) -> int:
 
 
 def _cutscene(session: Session, layout: Layout) -> tuple[int, int]:
+    """(state, frame) of the cutscene context; (0, 0) while no play state exists."""
     play = _play(session, layout)
+    if play == 0:
+        return 0, 0
     state = session.read(play + layout.cutscene_state, 1)[0]
     frames = struct.unpack("<H", session.read(play + layout.cutscene_frames, 2))[0]
     return state, frames
@@ -61,6 +66,15 @@ def _wait_cutscene(session: Session, layout: Layout, timeout: float, log) -> Non
     raise RuntimeError(f"cutscene did not {'end' if seen else 'start'} within {timeout}s (last {last})")
 
 
+def _wait_frame(session: Session, layout: Layout | None, frame: int, timeout: float = 60) -> tuple[int, int]:
+    for _ in range(round(timeout / POLL)):
+        state, frames = _cutscene(session, layout)
+        if state and frames >= frame:
+            return state, frames
+        session.wait(POLL)
+    raise RuntimeError(f"cutscene did not reach frame {frame} within {timeout}s")
+
+
 def run(session: Session, steps: list[str], out: Path, layout: Layout | None) -> None:
     start = time.monotonic()
 
@@ -81,21 +95,31 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout | None) ->
         elif kind == "peek":
             address, size = (int(part, 0) for part in arg.split(","))
             log(f"peek 0x{address:08X} {session.read(address, size).hex()}")
+        elif kind == "poke":
+            address, data = arg.split(",")
+            session.write(int(address, 0), bytes.fromhex(data))
+            log(f"poke 0x{int(address, 0):08X} {data}")
         elif kind == "warp":
             play = _play(session, layout)
             session.write(play + layout.next_entrance, struct.pack("<h", int(arg, 0)))
             session.write(play + layout.transition_trigger, bytes([TRANSITION_START]))
             log(f"warp to entrance {arg}")
+        elif kind == "csframe":
+            log(f"cutscene at {_wait_frame(session, layout, int(arg, 0))}")
         elif kind == "waitcs":
             _wait_cutscene(session, layout, float(arg), log)
         elif kind == "cs":
             play = _play(session, layout)
+            if play == 0:
+                log("no play state (title, file select or a scene load)")
+                continue
             context = session.read(play + layout.cutscene_state - 8, 0x30)
             script = struct.unpack_from("<I", context, 4)[0]
             head = session.read(script, 0x10) if script else b""
             scene = struct.unpack("<h", session.read(play + layout.scene, 2))[0]
+            trigger = struct.unpack("<b", session.read(play + layout.transition_trigger, 1))[0]
             log(f"play 0x{play:08X} scene {scene} state/frames {_cutscene(session, layout)} "
-                f"csCtx {context.hex()} script 0x{script:08X} head {head.hex()}")
+                f"trigger {trigger} csCtx {context.hex()} script 0x{script:08X} head {head.hex()}")
         elif kind == "save":
             if layout is None:
                 raise RuntimeError("this game has no RAM layout in tools/z3dmods/games.py yet")
@@ -103,7 +127,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout | None) ->
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
-        elif kind in ("savestate", "loadstate", "watch", "hits"):
+        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup"):
             extra = getattr(session, kind, None)
             if extra is None:
                 raise RuntimeError(f"{kind} needs the harness backend (--harness)")
