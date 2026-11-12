@@ -1,0 +1,6 @@
+build/
+scratch/
+env-assets/
+*.3ds
+*.cia
+*.cxi
