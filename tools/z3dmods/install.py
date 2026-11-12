@@ -86,12 +86,10 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
     data_end = exheader.data.address + exheader.data.pages * PAGE
     payload = data_end + _page(exheader.bss_size)
     ours = patch_build.build(cfg.repo, game.patch, payload, cfg.repo / "build" / "patch" / game.patch)
-    for record in ours.records:
-        if record.offset + patch_build.CODE_BASE >= payload:
-            continue
-        span = slice(record.offset, record.offset + len(record.data))
-        if code[span] != vanilla[span]:
-            raise RuntimeError(f"our write at 0x{record.offset + patch_build.CODE_BASE:08X} overlaps the base mod")
+    for offset, original in ours.expected.items():
+        if code[offset:offset + len(original)] != original:
+            raise RuntimeError(f"0x{offset + patch_build.CODE_BASE:08X} in the base mod's code is not the "
+                               f"instruction our hook replaces")
     grown = bytearray(base_exheader)
     struct.pack_into("<I", grown, EXHEADER_BSS_SIZE, _page(ours.payload_end - data_end))
     (mods / "code.bin").write_bytes(code)

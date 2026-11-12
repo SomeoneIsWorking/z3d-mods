@@ -1,5 +1,6 @@
-// Start ends a cutscene at once: the remaining script frames run inside the press frame.
+// OoT3D's layout for the Start cutscene skip.
 #include "game.hpp"
+#include "../common/cutscene_skip.hpp"
 #include "../common/guest.hpp"
 
 #include <stdint.h>
@@ -11,41 +12,34 @@ using InterpreterFn = void (*)(void *play, void *cutscene, const void *script);
 using CloseTextboxFn = void (*)(void *play);
 using MessageStateFn = int32_t (*)();
 
-// The script holds at most one frame per u16 value.
-inline constexpr uint32_t kMaxSteps = 0x10000;
-
-class CutsceneSkip {
-public:
-  void step(void *play, void *cutscene, const void *script) {
-    interpret(play, cutscene, script);
-    if (guest::read<uint8_t>(cutscene, kCsState) != kCsStateRunning) {
-      latched_ = false;
-      closedFrame_ = 0;
-      return;
-    }
-    if (!latched_ && startPressed(play, cutscene)) {
-      latched_ = true;
-    }
-    if (latched_) {
-      runToEnd(play, cutscene, script);
-    }
-  }
-
-private:
+struct Game {
   static void interpret(void *play, void *cutscene, const void *script) {
     guest::function<InterpreterFn>(kCutsceneInterpreter)(play, cutscene, script);
   }
 
-  // Same minimum as the game's title-demo skip: one second of cutscene frames. That skip also
-  // requires the in-cutscene flag (0x5043D4+0x18) clear, which blocks every gameplay cutscene.
-  static uint32_t minimumFrames() {
-    const auto timing = guest::read<uintptr_t>(kFrameRatePointer);
-    const auto divisor = guest::read<int16_t>(reinterpret_cast<void *>(timing), kFrameRateDivisor);
-    return static_cast<uint32_t>(60.0F / static_cast<float>(divisor) + 0.5F);
+  static bool running(const void *cutscene) {
+    return guest::read<uint8_t>(cutscene, kCsState) == kCsStateRunning;
   }
 
-  static bool startPressed(void *play, void *cutscene) {
-    const auto *save = reinterpret_cast<void *>(kSaveContext);
+  static uint16_t frame(const void *cutscene) {
+    return guest::read<uint16_t>(cutscene, kCsFrames);
+  }
+
+  static void setFrame(void *cutscene, uint16_t frame) {
+    guest::write<uint16_t>(cutscene, kCsFrames, frame);
+  }
+
+  // The interpreter copies the script's end frame here on every call.
+  static int32_t endFrame(const void *cutscene, const void * /*script*/) {
+    return guest::read<int32_t>(cutscene, kCsEndFrame);
+  }
+
+  static bool transitionStarted(const void *play) {
+    return guest::read<int8_t>(play, kPlayTransitionTrigger) == kTransitionStart;
+  }
+
+  static bool startPressed(const void *play, const void *cutscene) {
+    const auto *save = reinterpret_cast<const void *>(kSaveContext);
     if (guest::read<int32_t>(save, kSaveGameMode) != kGameModeNormal) {
       return false;
     }
@@ -55,44 +49,30 @@ private:
     if ((guest::read<uint32_t>(play, kPlayInputPressed) & kButtonStart) == 0) {
       return false;
     }
-    if (guest::read<uint16_t>(cutscene, kCsFrames) <= minimumFrames()) {
+    if (frame(cutscene) <= minimumFrames()) {
       return false;
     }
-    return guest::read<int8_t>(play, kPlayTransitionTrigger) != kTransitionStart;
+    return !transitionStarted(play);
   }
 
-  // The caller's own catch-up loop (0x322028) steps frames the same way. A text command holds its
-  // end frame until the message has closed (0x2C7AD4); the skip closes it once and resumes when
-  // the game's message update has finished closing. A choice is left open for the player.
-  void runToEnd(void *play, void *cutscene, const void *script) {
-    for (uint32_t steps = 0; steps < kMaxSteps; ++steps) {
-      if (guest::read<uint8_t>(cutscene, kCsState) != kCsStateRunning ||
-          guest::read<int8_t>(play, kPlayTransitionTrigger) == kTransitionStart) {
-        return;
-      }
-      const auto frame = static_cast<uint16_t>(guest::read<uint16_t>(cutscene, kCsFrames) + 1);
-      if (static_cast<int32_t>(frame) > guest::read<int32_t>(cutscene, kCsEndFrame) + 1) {
-        return;
-      }
-      guest::write<uint16_t>(cutscene, kCsFrames, frame);
-      interpret(play, cutscene, script);
-      if (guest::read<uint16_t>(cutscene, kCsFrames) == frame) {
-        continue;
-      }
-      if (closedFrame_ != frame &&
-          guest::function<MessageStateFn>(kMessageGetState)() != kMessageStateChoice) {
-        guest::function<CloseTextboxFn>(kMessageCloseTextbox)(play);
-        closedFrame_ = frame;
-      }
-      return;
-    }
+  static bool messageIsChoice(const void * /*play*/) {
+    return guest::function<MessageStateFn>(kMessageGetState)() == kMessageStateChoice;
   }
 
-  bool latched_ = false;
-  uint16_t closedFrame_ = 0;
+  static void closeMessage(void *play) {
+    guest::function<CloseTextboxFn>(kMessageCloseTextbox)(play);
+  }
+
+  // Same minimum as the game's title-demo skip: one second of cutscene frames. That skip also
+  // requires the in-cutscene flag (0x5043D4+0x18) clear, which blocks every gameplay cutscene.
+  static uint32_t minimumFrames() {
+    const auto timing = guest::read<uintptr_t>(kFrameRatePointer);
+    const auto divisor = guest::read<int16_t>(reinterpret_cast<void *>(timing), kFrameRateDivisor);
+    return static_cast<uint32_t>(60.0F / static_cast<float>(divisor) + 0.5F);
+  }
 };
 
-constinit CutsceneSkip skip;
+constinit CutsceneSkip<Game> skip;
 
 } // namespace
 

@@ -24,6 +24,8 @@ CXXFLAGS = [
 @dataclass(frozen=True)
 class Patch:
     records: list[ips.Record]
+    # For each hook record's offset, the base code it replaces (hooks.s ".expect.<name>").
+    expected: dict[int, bytes]
     payload_start: int
     payload_end: int
 
@@ -35,7 +37,7 @@ def _tool(name: str) -> str:
     return path
 
 
-def _sections(elf: bytes) -> list[tuple[str, int, int, int, bytes]]:
+def _sections(elf: bytes) -> list[tuple[str, int, int, int, int, bytes]]:
     if elf[:4] != b"\x7fELF" or elf[4] != 1:
         raise ValueError("not a 32-bit ELF")
     shoff = struct.unpack_from("<I", elf, 0x20)[0]
@@ -44,12 +46,12 @@ def _sections(elf: bytes) -> list[tuple[str, int, int, int, bytes]]:
     names = headers[shstrndx]
     out = []
     for name, kind, flags, addr, offset, size, *_ in headers:
-        if not flags & SHF_ALLOC or not size:
+        if not size:
             continue
         start = names[4] + name
         label = elf[start:elf.index(b"\0", start)].decode()
         data = elf[offset:offset + size] if kind == SHT_PROGBITS else b""
-        out.append((label, kind, addr, size, data))
+        out.append((label, kind, flags, addr, size, data))
     return out
 
 
@@ -66,12 +68,22 @@ def build(repo: Path, game: str, payload: int, build_dir: Path) -> Patch:
     subprocess.run([_tool("ld.lld"), "-T", str(source / "link.ld"), f"--defsym=PAYLOAD=0x{payload:X}",
                     "--gc-sections", "-o", str(elf_path), *objects], check=True)
 
-    records, end = [], payload
-    for label, kind, addr, size, data in _sections(elf_path.read_bytes()):
+    sections = _sections(elf_path.read_bytes())
+    expects = {label.removeprefix(".expect."): data for label, kind, flags, _, _, data in sections
+               if label.startswith(".expect.") and not flags & SHF_ALLOC}
+    records, expected, end = [], {}, payload
+    for label, kind, flags, addr, size, data in sections:
+        if not flags & SHF_ALLOC:
+            continue
         if addr >= payload:
             end = max(end, addr + size)
         elif not label.startswith(".patch."):
             raise RuntimeError(f"{label} at 0x{addr:08X} is below the payload and not a .patch. section")
+        else:
+            original = expects.get(label.removeprefix(".patch."))
+            if original is None or len(original) != len(data):
+                raise RuntimeError(f"{label} needs a .expect. section of {len(data)} bytes in hooks.s")
+            expected[addr - CODE_BASE] = original
         if kind == SHT_PROGBITS:
             records.append(ips.Record(addr - CODE_BASE, data))
-    return Patch(records, payload, end)
+    return Patch(records, expected, payload, end)
