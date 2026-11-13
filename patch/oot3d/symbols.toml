@@ -14,6 +14,7 @@ kPlayUpdate = "Play_Update"
 kGameplayDraw = "Gameplay_Draw"
 kGameplayUpdate = "Gameplay_Update"
 kHudSetItemButton = "Hud_SetItemButton"
+kSramWriteSave = "Sram_WriteSave"
 
 [globals]
 kSaveContext = "gSaveContext"

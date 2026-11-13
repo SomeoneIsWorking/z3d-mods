@@ -63,8 +63,12 @@ Built (`patch/oot3d/free_camera.cpp`). Seen on the harness, File 1 as a child:
   so a file played without the patch shows all of them and loses nothing.
 - The pages trade only in plain play (the HUD up, no cutscene, no scene change); a cutscene or a
   scene change puts the first page back at once, because those can change Link's age.
-- An item moved by hand from the grid to a button while its page is away leaves that page. With
-  the grid full, a button with nowhere to put its item keeps it on both pages.
+- An item moved by hand from the grid to a button while its page is away leaves that page: an
+  item is on the page it was put on last. With the grid full, a button with nowhere to put its
+  item keeps it on both pages.
+- The file always holds the first page on the buttons: the first page is put back at the start of
+  the game's save routine (`Sram_WriteSave`), so a save made with the chord button held, or by
+  autosave, is the same file as one made without it.
 - Option: "Second item page", on by default (`patch/oot3d/options.toml`).
 
 ### Status (OoT3D, 2026-11-14)
@@ -77,9 +81,21 @@ Deku Nuts and the Slingshot poked into the inventory (run `oot-ch7`, Kokiri Fore
   cell; held again: the Slingshot is back.
 - Held across a scene change (`oot-ch6`): the first page is in during the change and the second
   returns after it.
-- Not seen: an adult file, the age change itself, a save and reload (the bytes are inside the
-  save context; that the game writes them to the file is not checked), a real pad's stick click,
-  the options menu's switch, a full grid.
+- Saved and reloaded (`oot-sv1` to `oot-sv7`): the 18 bytes are in `save00.bin` at 0x6C. A file
+  saved with the second page away loads with the nuts on the button and the Slingshot on the
+  chord (`oot-sv2`); the same file without our patch shows the stick, the nuts on Y and the
+  Slingshot in the grid, nothing lost (`oot-sv3`). Saved with the chord held, the file has the
+  first page on the buttons (`oot-sv7`); before the save hook it had the second (`oot-sv4`), which
+  the patch still put right on load (`oot-sv5`) and the unpatched game showed with every item
+  present (`oot-sv6`).
+- The same item on both pages (`oot-ch8`): the nuts assigned on the chord page stay there and
+  their first-page button is empty on release.
+- Adult (`oot-ch8`, age poked before a warp): the adult layout and the adult half of the 18 bytes
+  are used; nuts assigned on the adult chord page show on the HUD with the chord held and the
+  adult first page is empty on release. A round trip of the age keeps the child pages (`oot-ad1`,
+  `oot-ad2`).
+- Not seen: an adult first-page assignment made in the item screen, the age change through the
+  Master Sword cutscene, a real pad's stick click, the options menu's switch, a full grid.
 - MM3D: not started.
 
 ## When

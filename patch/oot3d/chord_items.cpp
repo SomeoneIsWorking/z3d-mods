@@ -5,6 +5,7 @@
 #include "../common/guest.hpp"
 #include "game.hpp"
 #include "options.hpp"
+#include "play_update.hpp"
 #include "symbols.hpp"
 
 #include <stdint.h>
@@ -12,7 +13,6 @@
 namespace z3dmods::oot3d {
 namespace {
 
-using PlayUpdateFn = void (*)(void *play);
 using SetItemButtonFn = void (*)(uint32_t button, uint32_t item);
 
 constexpr uint32_t kItemButtons = 4;
@@ -76,6 +76,15 @@ public:
     store->state = static_cast<uint8_t>(kStoreMarker | (wanted ? kStoreChordIn : 0));
   }
 
+  // A saved file always has the first page on the buttons, so it reads the same without the patch.
+  void beforeSave() {
+    auto *store = reinterpret_cast<volatile Store *>(kSaveContext + kSaveUnused);
+    if (store->state == (kStoreMarker | kStoreChordIn)) {
+      trade(store);
+      store->state = kStoreMarker;
+    }
+  }
+
 private:
   static void clear(volatile Store *store) {
     clear(&store->child);
@@ -114,31 +123,40 @@ private:
     volatile Page *page = child ? &store->child : &store->adult;
     auto *layout = reinterpret_cast<volatile uint8_t *>(kSaveContext + (child ? kSaveItemMenuChild : kSaveItemMenuAdult));
     auto *equips = reinterpret_cast<volatile uint8_t *>(kSaveContext + kSaveEquips);
+    // First every arriving item comes off the grid, then the leaving ones go onto it: an item
+    // the player put on both pages stays where it was put last.
+    uint8_t arriving[kItemButtons];
+    uint32_t hole[kItemButtons];
+    for (uint32_t i = 0; i < kItemButtons; ++i) {
+      arriving[i] = page->slots[i];
+      hole[i] = arriving[i] == kSlotNone ? kItemMenuNodes : gridNode(layout, arriving[i], page->nodes[i]);
+      if (hole[i] == kItemMenuNodes) {
+        // The player has since moved it elsewhere.
+        arriving[i] = kSlotNone;
+      } else {
+        layout[hole[i]] = kSlotNone;
+      }
+    }
     for (uint32_t i = 0; i < kItemButtons; ++i) {
       const Lane &lane = kLanes[i];
       const uint8_t leaving = layout[lane.node];
-      // The away page's item comes off the grid, unless the player has since moved it elsewhere.
-      uint8_t arriving = page->slots[i];
-      uint32_t hole = arriving == kSlotNone ? kItemMenuNodes : gridNode(layout, arriving, page->nodes[i]);
-      if (hole == kItemMenuNodes) {
-        arriving = kSlotNone;
-        hole = gridNode(layout, kSlotNone, kItemMenuNodes);
-      }
-      if (leaving != kSlotNone && hole == kItemMenuNodes) {
-        // A full grid has no place for the button's item: this button keeps it on both pages.
-        continue;
-      }
-      if (leaving != kSlotNone || arriving != kSlotNone) {
-        layout[hole] = leaving;
+      if (leaving != kSlotNone) {
+        const uint32_t home = hole[i] != kItemMenuNodes ? hole[i] : gridNode(layout, kSlotNone, kItemMenuNodes);
+        if (home == kItemMenuNodes) {
+          // A full grid has no place for the button's item: this button keeps it on both pages.
+          continue;
+        }
+        layout[home] = leaving;
+        hole[i] = home;
       }
       page->slots[i] = leaving;
-      page->nodes[i] = static_cast<uint8_t>(hole);
-      layout[lane.node] = arriving;
-      const uint8_t item = arriving == kSlotNone
+      page->nodes[i] = static_cast<uint8_t>(hole[i]);
+      layout[lane.node] = arriving[i];
+      const uint8_t item = arriving[i] == kSlotNone
                                ? static_cast<uint8_t>(kItemNone)
-                               : guest::read<uint8_t>(kSaveContext + kSaveInventory + kInventoryItems + arriving);
+                               : guest::read<uint8_t>(kSaveContext + kSaveInventory + kInventoryItems + arriving[i]);
       equips[kEquipsItems + lane.equipsItem] = item;
-      equips[kEquipsSlots + lane.equipsSlot] = arriving;
+      equips[kEquipsSlots + lane.equipsSlot] = arriving[i];
       guest::function<SetItemButtonFn>(kHudSetItemButton)(lane.hudButton, item);
     }
   }
@@ -148,10 +166,13 @@ constinit ChordItems chordItems;
 
 } // namespace
 
-// Called instead of Play_Update by Gameplay_Update (link.ld).
-void updatePlay(void *play) {
+// Called at the start of Sram_WriteSave (hooks.s).
+void beforeSave() {
+  chordItems.beforeSave();
+}
+
+void updateChordItems(void *play) {
   chordItems.update(play);
-  guest::function<PlayUpdateFn>(kPlayUpdate)(play);
 }
 
 } // namespace z3dmods::oot3d

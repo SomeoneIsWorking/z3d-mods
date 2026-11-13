@@ -1,5 +1,6 @@
 // Quick Text: every text box prints in full on its first frame.
 #include "../common/guest.hpp"
+#include "options.hpp"
 #include "symbols.hpp"
 
 #include <stdint.h>
@@ -19,9 +20,14 @@ bool startsBox(const char *next, uint32_t index) {
 
 } // namespace
 
+// Asked by the instant-off control code's handler (hooks.s).
+bool quickTextOn() {
+  return options().quickText != 0;
+}
+
 // Called by Message_LayoutText before it parses each element (hooks.s).
 void quickTextElement(void *text, const char *next, uint32_t index) {
-  if (!startsBox(next, index)) {
+  if (!quickTextOn() || !startsBox(next, index)) {
     return;
   }
   const auto vtable = guest::read<uintptr_t>(text, 0);

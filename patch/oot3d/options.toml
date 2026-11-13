@@ -8,6 +8,12 @@ label = "Cutscene skip (Start)"
 default = true
 
 [[option]]
+id = "quick_text"
+field = "quickText"
+label = "Quick Text"
+default = true
+
+[[option]]
 id = "free_camera"
 field = "freeCamera"
 label = "Free camera (right stick)"
@@ -30,3 +36,9 @@ id = "chord_items"
 field = "chordItems"
 label = "Second item page (hold the chord button)"
 default = true
+
+[[option]]
+id = "autosave"
+field = "autosave"
+label = "Autosave after each scene change"
+default = false
