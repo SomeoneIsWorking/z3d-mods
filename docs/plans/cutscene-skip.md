@@ -60,7 +60,10 @@ to the end (flags, items, time of day, entrance, music), with no other change.
 - MM3D against a watched run (A pressed through the text, `waitscript`), compared at frame 100 of
   the next script: the narration and the woods cutscene each leave CommonData's `start`, `scene`
   and `SaveData` (0x1A90 bytes) byte-identical to watching, and the frames match.
-- Still to prove: a cutscene with a choice; MM3D on standalone Azahar in real time.
+- MM3D on standalone Azahar in real time (File 1 copied from a harness run into the player's save
+  folder for the run, then removed): Start at frame 107 of the narration runs it to its end (780)
+  and the transition within a second; Start in the woods at 118 goes straight to `losthorse.jdb`.
+- Still to prove: a cutscene with a choice.
 
 ## Proof
 On real cutscenes in each game, reached through a warp from a copy of the save: one run watches to

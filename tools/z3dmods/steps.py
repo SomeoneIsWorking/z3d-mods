@@ -142,10 +142,10 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout | None) ->
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
-        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup"):
+        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type"):
             extra = getattr(session, kind, None)
             if extra is None:
-                raise RuntimeError(f"{kind} needs the harness backend (--harness)")
+                raise RuntimeError(f"{kind} is not available on this backend")
             result = extra(*arg.split(",")) if arg else extra()
             log(f"{kind} {arg} {result if result is not None else ''}".rstrip())
         else:

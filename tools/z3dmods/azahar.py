@@ -202,6 +202,13 @@ class Session:
         time.sleep(seconds)
         subprocess.run(["xdotool", "keyup", key], env=env, check=True)
 
+    def type(self, text: str) -> str:
+        """Answers Azahar's software keyboard dialog (a new file's name) with text and Return."""
+        env = dict(os.environ, DISPLAY=self._display)
+        subprocess.run(["xdotool", "type", "--delay", "50", text], env=env, check=True)
+        subprocess.run(["xdotool", "key", "Return"], env=env, check=True)
+        return text
+
     def wait(self, seconds: float) -> None:
         self._check_alive()
         time.sleep(seconds)

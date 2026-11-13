@@ -64,6 +64,8 @@ Build (Clang, Ninja), then name the result in `env-assets/local.json` as `"libre
 runs, plus `savestate:<name>`, `loadstate:<name>`, `watch:<addr>,<size>`, `hits` and
 `keydown:<button>`/`keyup:<button>` (held across steps) and `waitscript:<addr>[,<button>]`
 (waits for that cutscene script, pressing the button meanwhile to advance text).
+Standalone runs (no `--harness`) also take `type:<text>`, which types into Azahar's software
+keyboard dialog and presses Return.
 
 - Verified 2026-11-12: boot, title, file select and the player's save in Link's house with The One
   Screen HUD; from one state, the Kakariko skip and the watched run land where they do on standalone
