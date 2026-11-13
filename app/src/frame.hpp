@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <vector>
@@ -12,10 +11,9 @@ struct FrameSize {
   unsigned height = 0;
 };
 
-// The last frame the core presented, as XRGB8888 rows.
+// A captured frame, as XRGB8888 rows.
 class Frame {
 public:
-  void store(const void *data, FrameSize size, size_t pitch);
   // Tightly packed XRGB8888 rows, top row first.
   void storeRows(std::vector<uint32_t> rows, FrameSize size);
 
@@ -26,7 +24,7 @@ public:
     return height_;
   }
 
-  // Writes an RGB PNG; false if nothing was presented yet or the file cannot be written.
+  // False if nothing was captured yet or the file cannot be written.
   [[nodiscard]] bool writePng(const std::filesystem::path &path) const;
 
 private:

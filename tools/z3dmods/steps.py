@@ -20,7 +20,7 @@ from z3dmods.games import TRANSITION_START, Layout
 
 
 class Session(Protocol):
-    """What a run needs from a backend: the standalone Azahar or the libretro harness."""
+    """What a run needs from a backend: the standalone Azahar or the app's harness."""
 
     def read(self, address: int, size: int) -> bytes: ...
     def u32(self, address: int) -> int: ...

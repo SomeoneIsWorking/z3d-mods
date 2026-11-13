@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import subprocess
 
-from z3dmods import app, core_options
+from z3dmods import app
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -24,6 +24,6 @@ def desktop_id(name: str) -> str:
 
 def play(cfg: Config, name: str, game: GameSet) -> int:
     app.seed_user(cfg, cfg.app_data, fresh=False)
-    args = app.launch_args(cfg, cfg.rom(game.title_id), cfg.app_data, core_options.for_set(game, RESOLUTION))
+    args = app.launch_args(cfg, game, cfg.app_data, RESOLUTION)
     args += ["--title", TITLES[name], "--app-id", desktop_id(name)]
     return subprocess.run(args, env=dict(os.environ, **cfg.session_env), check=False).returncode

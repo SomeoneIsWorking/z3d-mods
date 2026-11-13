@@ -1,88 +1,99 @@
 # z3d app
 
-User: "I had azahar libretro harness for testing", "I can play on the libretro version as well",
-"this needs to be an app using Azahar libretro underneath", "everything is supposed to be VK".
+User: "I had azahar libretro harness for testing", "this needs to be an app using Azahar libretro
+underneath", "everything is supposed to be VK", "you don't have to use the libretro core, it can be
+Azahar's core without qt".
 
 ## What it owns
-`app/` builds `z3d`, a libretro frontend for Azahar's core, Vulkan only. It has two modes:
+`app/` builds `z3d`, a frontend of Azahar's core linked in directly (no Qt, no libretro), Vulkan
+only. It is built inside the core's tree, so it is GPL-2.0-or-later as linked. Two modes:
 
 - Windowed (`z3dmods play <game>`): an SDL3 window on the player's session, sound, keyboard,
   gamepads and the mouse as the touch screen.
-- `--hidden` (the tools): the window is never mapped and nothing is presented; the game runs
-  frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
+- `--hidden` (the tools): the window is never mapped, there is no sound and no pacing; the game
+  runs frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
 
 | Command | Does |
 |---|---|
-| `run <frames>` | runs frames with the held pad |
-| `input <hex>` / `stick <x> <y>` | held joypad bits (`RETRO_DEVICE_ID_JOYPAD`), left stick |
-| `r <va> <size>` / `w <va> <hex>` | guest memory of the live process: code, `.data`, `.bss`, heap |
+| `run <frames>` | runs frames with the held pad and keeps the last one for `shot` |
+| `input <hex>` / `stick <x> <y>` | held buttons (bits in `Settings::NativeButton` order), circle pad (signed 16-bit, y down) |
+| `r <va> <size>` / `w <va> <hex>` | guest memory of the running process: code, `.data`, `.bss`, heap |
 | `savestate <file>` / `loadstate <file>` | the core's own states |
-| `shot <file>` | the last presented frame as PNG |
+| `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
 
-The Azahar core maps face buttons by position: libretro A (east) is the 3DS A.
+Flags (`src/app_config.hpp`): `--rom`, `--user`, `--title`, `--app-id`, `--layout`
+(`default|single_screen|large_screen|side_by_side`), `--textures`, `--resolution`, `--hidden`.
+`tools/z3dmods/app.py` derives them from the set: its `screen_layout`, textures when it has a
+pack, render scale 1 for the tools and 3 for play.
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
-q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by position (east A, south B);
-the mouse on the bottom screen is the stylus.
+q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by position (east A, south B),
+right stick the C-stick; the left mouse button on the bottom screen is the stylus.
 
 ## Core
-`SomeoneIsWorking/azahar`, branch `z3d-harness`, revision `1b86acc48643b09ee02d02cf45fd87296dc1deec`:
-upstream tag 2126.2 (the player's standalone version) plus two commits.
+`SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`
+(`AZAHAR_REVISION`): upstream tag 2126.2 (the player's standalone version) plus our commits.
 
 1. `core`: a write observer on `MemorySystem`, called for writes that land on watchpoint pages (the
    pages the GDB stub already uses, which have no host pointer, so JIT writes reach the slow path).
-2. `libretro`: `src/citra_libretro/azahar_debug.h`, a frontend-private interface offered with
-   `RETRO_ENVIRONMENT_PRIVATE | 1` (RetroArch and other frontends return false and see no change):
-   guest reads and writes through the core's memory system, and write watches.
+2. `cmake`: `AZAHAR_EXTRA_FRONTENDS`, a list of directories built as frontends against the core's
+   targets; `app/CMakeLists.txt` refuses to configure outside it.
 
-The stock memory map is not enough: it is taken at load, before the game allocates its heap, and
-leaves out `.data` and `.bss`. With a stock core the harness still runs, on that map only.
+The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
+not at the pinned revision. Build (Clang, Ninja): `app.configure` runs
 
-Build (Clang, Ninja), then name the result in `env-assets/local.json` as `"libretro_core"`:
+    cmake -S <azahar_source> -B build/app -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DAZAHAR_EXTRA_FRONTENDS=<repo>/app \
+      -DENABLE_QT=OFF -DENABLE_SDL2=OFF -DENABLE_LIBRETRO=OFF ...   (AZAHAR_OPTIONS)
+    ninja -C build/app z3d    # build/app/z3d
 
-    cmake -S <azahar-checkout> -B <azahar-checkout>/build/libretro -G Ninja -DCMAKE_C_COMPILER=clang \
-      -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DENABLE_LIBRETRO=ON -DENABLE_TESTS=OFF
-    ninja -C <azahar-checkout>/build/libretro citra_libretro   # bin/Release/azahar_libretro.so
+`build/app` holds the core's objects as well as the app's: the core has no install or export
+rules to build it once into a shared prefix.
 
 ## Data flow
-- Rendering: the core's Vulkan renderer (`RETRO_HW_CONTEXT_VULKAN`). The app makes the instance
-  from the core's application info and lets the core create the device (negotiation interface v1)
-  with the swapchain extension; the core hands over an image in `SHADER_READ_ONLY_OPTIMAL` on the
-  same queue, which the presenter blits, letterboxed, into a FIFO swapchain, or reads back for `shot`.
-- Sound: the core's batches go to an SDL audio stream; the windowed loop runs a frame whenever less
-  than 50 ms is queued, so the game is paced by the sound card (by the clock without a device).
-- User data: the core keeps it in `<user>/Azahar/`; `tools/z3dmods/app.py` seeds it with copies of
-  the player's `nand`, `sdmc` and `sysdata` and a link to the installed `load/` (mods, textures).
+- `main` composes: `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
+  `EmuWindow`), `Emulator` (settings, load, frames, memory, states, watches), then `Player` or
+  `Repl`.
+- Rendering: the core's own Vulkan renderer presents to the window's native surface (Wayland or
+  X11, from SDL3's window properties). A frame ends when the renderer calls
+  `GameWindow::PollEvents`, which counts it, pumps SDL events and reads the host pad. `shot` frames
+  come from the renderer's screenshot path (XRGB rows), requested before the last frame of a `run`.
+- Sound: the core's own sink (cubeb) when windowed, the null sink when hidden. The windowed loop is
+  paced by the core's frame limiter at 100%.
+- Input: every 3DS button and both sticks are `engine:z3d` devices on one shared pad state; touch
+  is the window's `engine:emu_window`.
+- User data: the core keeps it in `<user>/Azahar/` (its user path); `app.py` seeds it with copies
+  of the player's `nand`, `sdmc` and `sysdata` and a link to the installed `load/` (mods, textures).
   The harness makes a fresh one per run under `scratch/harness/<name>/`, so the player's data is
   only read and a file made in one run is gone in the next; states live in
   `scratch/harness/states/<name>/`. `z3dmods play` seeds `~/.local/share/z3d-mods/` once and keeps
-  it: the app's saves are its own, apart from standalone Azahar's.
-- Core options (`tools/z3dmods/core_options.py`): Vulkan, the set's screen layout, custom textures
-  when the set has a pack, render scale 1 for the tools and 3 for play; every other option takes
-  the core's own default.
-- The core has no LLE-applets option (its setting stays at the default, on); the software keyboard
-  for naming a file works there.
+  it: the app's saves are its own, apart from standalone Azahar's. The core's log is
+  `<user>/Azahar/log/z3d_core.log`.
+- Applets: the core's default ones (the software keyboard enters the console's user name).
 
 ## Invariants
-- One core per process (libretro callbacks carry no context).
+- One core per process (`Core::System` is a singleton).
 - A state holds code memory: after `z3dmods install` rebuilds a patch, states made before it run
   the old patch. Make states in the same run that tests the patch.
 - OoT3D: Start on a file created in the same session is ignored
   (docs/issues/harness-new-file-start.md).
-- `shot` right after `loadstate` fails until a frame has run.
+- `loadstate` clears watches; set them again after it.
 - Watch PC and LR are the running core's at the start of the translated block under the JIT; LR is
-  stale there. Set `citra_use_cpu_jit=disabled` for exact values.
+  stale there.
 
 ## Checking it
 `uv run --frozen z3dmods play mm3d` opens the window; `z3dmods shortcut` adds a desktop shortcut per
 game (this machine only), which builds `build/app` only when no build exists. The window's app id
 (`--app-id z3d-<game>`) is the shortcut's name, which is how the desktop finds its icon.
 
-- Verified 2026-11-13 on Vulkan: hidden, the MM3D title and "PRESS START" read back with the right
-  colours; windowed from the MM3D shortcut on the KWin Wayland session, the title screen at 3x in a
-  1530x1835 swapchain with the z3d icon, an uncorked PipeWire stream named `z3d`, emulated time
-  keeping wall time, and a clean exit on SIGTERM.
+- Verified 2026-11-13 on the core linked directly (Vulkan, RADV): hidden, the MM3D intro and its
+  bottom screen read back at 400x480, a 20 MB savestate saved and loaded, 1260 frames for 21 s of
+  steps; OoT3D single-screen at 400x240, Start reaching file select with the player's "Link" save,
+  guest code and `gGameInfo` read. The unmapped Wayland window presents without stalling.
+  Windowed from `z3dmods play mm3d` on the KWin Wayland session: the intro at 3x in a window titled
+  "Majora's Mask 3D" with the z3d icon, custom textures loading, a running PipeWire stream named
+  `z3d`, and a clean exit on SIGTERM.
 - Not yet checked windowed: keyboard, gamepad and mouse input (no host events were injected into
   the player's desktop).
 
@@ -93,7 +104,7 @@ runs, plus `savestate:<name>`, `loadstate:<name>`, `watch:<addr>,<size>`, `hits`
 Standalone runs (no `--harness`) also take `type:<text>`, which types into Azahar's software
 keyboard dialog and presses Return.
 
-- Verified 2026-11-12: boot, title, file select and the player's save in Link's house with The One
+- Verified 2026-11-12 (on the earlier libretro build): boot, title, file select and the player's save in Link's house with The One
   Screen HUD; from one state, the Kakariko skip and the watched run land where they do on standalone
   Azahar, and the save contexts differ only in `naviTimer` and the counter at +0x15B4; a watch on the
   day time (SaveContext+0x0C) reports one 2-byte write per game frame from 0x45DEA0.

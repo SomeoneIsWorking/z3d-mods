@@ -1,7 +1,9 @@
-"""The z3d app (app/) as the tools see it: its build and the user folder the core reads.
+"""The z3d app (app/) as the tools see it: its build, the user folder the core reads, its flags.
 
-A user folder holds Azahar/ in the core's layout: copies of the player's nand, sdmc and sysdata, and
-a link to the installed load/ folder (mods and textures, which the core only reads).
+The app is an out-of-tree frontend of the SomeoneIsWorking/azahar fork and builds inside that tree
+(local.json "azahar_source", checked out at AZAHAR_REVISION). A user folder holds Azahar/ in the
+core's layout: copies of the player's nand, sdmc and sysdata, and a link to the installed load/
+folder (mods and textures, which the core only reads).
 """
 
 from __future__ import annotations
@@ -11,18 +13,45 @@ import subprocess
 from pathlib import Path
 
 from z3dmods.config import Config
+from z3dmods.install import GameSet
 
+# The fork's z3d-harness branch the app is built against.
+AZAHAR_REVISION = "2d9ab1181"
+AZAHAR_OPTIONS = {
+    "ENABLE_QT": "OFF", "ENABLE_SDL2": "OFF", "ENABLE_LIBRETRO": "OFF", "ENABLE_TESTS": "OFF",
+    "ENABLE_ROOM": "OFF", "ENABLE_WEB_SERVICE": "OFF", "ENABLE_SCRIPTING": "OFF",
+    "ENABLE_GDBSTUB": "OFF", "ENABLE_OPENGL": "OFF", "ENABLE_SOFTWARE_RENDERER": "OFF",
+    "ENABLE_OPENAL": "OFF", "ENABLE_LIBUSB": "OFF",
+}
 COPIED = ("nand", "sdmc", "sysdata")
 LINKED = ("load",)
+
+
+def azahar_source(cfg: Config) -> Path:
+    if cfg.azahar_source is None:
+        raise RuntimeError('set "azahar_source" in env-assets/local.json to the SomeoneIsWorking/azahar checkout')
+    head = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", "HEAD"],
+                          capture_output=True, text=True, check=True).stdout.strip()
+    pinned = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", f"{AZAHAR_REVISION}^{{commit}}"],
+                            capture_output=True, text=True, check=True).stdout.strip()
+    if head != pinned:
+        raise RuntimeError(f"{cfg.azahar_source} is at {head[:12]}, the app pins {AZAHAR_REVISION}")
+    return cfg.azahar_source
+
+
+def configure(cfg: Config) -> None:
+    tree = cfg.app_binary.parent
+    flags = [f"-D{key}={value}" for key, value in AZAHAR_OPTIONS.items()]
+    subprocess.run(["cmake", "-S", str(azahar_source(cfg)), "-B", str(tree), "-G", "Ninja",
+                    "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++",
+                    f"-DAZAHAR_EXTRA_FRONTENDS={cfg.repo / 'app'}", *flags], check=True)
 
 
 def binary(cfg: Config) -> Path:
     """Builds the app only when no build exists; an existing build is used as it is."""
     if not cfg.app_binary.exists():
-        tree = cfg.app_binary.parent
-        subprocess.run(["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
-                        "-DCMAKE_CXX_COMPILER=clang++", "-DCMAKE_BUILD_TYPE=Release"], check=True)
-        subprocess.run(["ninja", "-C", str(tree)], check=True)
+        configure(cfg)
+        subprocess.run(["ninja", "-C", str(cfg.app_binary.parent), "z3d"], check=True)
     return cfg.app_binary
 
 
@@ -42,10 +71,12 @@ def seed_user(cfg: Config, user: Path, fresh: bool) -> None:
             (target / name).symlink_to(source, target_is_directory=True)
 
 
-def launch_args(cfg: Config, rom: Path, user: Path, options: dict[str, str]) -> list[str]:
-    if cfg.libretro_core is None:
-        raise RuntimeError('set "libretro_core" in env-assets/local.json to the built azahar_libretro.so')
-    args = [str(binary(cfg)), "--core", str(cfg.libretro_core), "--rom", str(rom), "--user", str(user)]
-    for key, value in options.items():
-        args += ["--option", f"{key}={value}"]
+def launch_args(cfg: Config, game: GameSet, user: Path, resolution: int,
+                textures: bool | None = None) -> list[str]:
+    """`resolution` is the render scale (1 is the 3DS's own 400x240 top screen); `textures`
+    overrides the set's custom textures."""
+    args = [str(binary(cfg)), "--rom", str(cfg.rom(game.title_id)), "--user", str(user),
+            "--layout", game.screen_layout, "--resolution", str(resolution)]
+    if (game.textures is not None) if textures is None else textures:
+        args.append("--textures")
     return args

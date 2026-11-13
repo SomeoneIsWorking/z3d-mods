@@ -19,8 +19,8 @@ class Config:
     azahar_config: Path
     azahar_appimage: Path
     roms: dict[str, Path]
-    # The SomeoneIsWorking/azahar libretro core the app loads (local.json "libretro_core").
-    libretro_core: Path | None
+    # The SomeoneIsWorking/azahar checkout the app builds inside (local.json "azahar_source").
+    azahar_source: Path | None
     # The z3d app (app/) and the data it plays from (saves, system files, a link to load/).
     app_binary: Path
     app_data: Path
@@ -65,7 +65,7 @@ def load() -> Config:
         azahar_config=config_home / "azahar-emu",
         azahar_appimage=data_home / "opensu/emulators/azahar" / installed["file"],
         roms={tid: Path(path) for tid, path in local["roms"].items()},
-        libretro_core=Path(local["libretro_core"]) if "libretro_core" in local else None,
+        azahar_source=Path(local["azahar_source"]) if "azahar_source" in local else None,
         app_binary=REPO / "build" / "app" / "z3d",
         app_data=data_home / "z3d-mods",
         session_env=_session_env(),

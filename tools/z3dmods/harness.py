@@ -10,16 +10,15 @@ import os
 import subprocess
 from pathlib import Path
 
-from z3dmods import app, core_options
+from z3dmods import app
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
 FPS = 60
-# RETRO_DEVICE_ID_JOYPAD bits; the Azahar core maps face buttons by position, so libretro A (east)
-# is the 3DS A.
+# Azahar's Settings::NativeButton order: the bits of the app's `input` command.
 BUTTONS = {
-    "b": 0, "y": 1, "select": 2, "start": 3, "up": 4, "down": 5, "left": 6, "right": 7,
-    "a": 8, "x": 9, "l": 10, "r": 11, "zl": 12, "zr": 13,
+    "a": 0, "b": 1, "x": 2, "y": 3, "up": 4, "down": 5, "left": 6, "right": 7,
+    "l": 8, "r": 9, "start": 10, "select": 11, "zl": 14, "zr": 15, "home": 16,
 }
 PRESS_FRAMES = 6
 # The tools render at the 3DS's own size: frame-exact runs, small screenshots.
@@ -28,19 +27,19 @@ RESOLUTION = 1
 
 class HarnessSession:
     def __init__(self, cfg: Config, game: GameSet, name: str, log: Path,
-                 extra_options: dict[str, str] | None = None) -> None:
+                 textures: bool | None = None) -> None:
         self._cfg = cfg
-        self._rom = cfg.rom(game.title_id)
+        self._game = game
+        self._textures = textures
         self._user = cfg.repo / "scratch" / "harness" / name
         self._states = cfg.repo / "scratch" / "harness" / "states" / name
         self._log_path = log
-        self._options = core_options.for_set(game, RESOLUTION, extra_options)
         self._process: subprocess.Popen | None = None
         self._held = 0
 
     def __enter__(self) -> HarnessSession:
         app.seed_user(self._cfg, self._user, fresh=True)
-        args = app.launch_args(self._cfg, self._rom, self._user, self._options) + ["--hidden"]
+        args = app.launch_args(self._cfg, self._game, self._user, RESOLUTION, self._textures) + ["--hidden"]
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log = self._log_path.open("wb")
         env = dict(os.environ, **self._cfg.session_env)

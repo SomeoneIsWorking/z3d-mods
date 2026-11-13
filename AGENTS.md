@@ -28,10 +28,11 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   Azahar config is restored afterwards. Steps: `wait:<s>`, `shot:<name>`, `<button>`,
   `hold:<button>,<s>`, `peek:<addr>,<size>`. `--settings '{"Layout":{"layout_option":1}}'` sets
   global settings for that run only. Output: `scratch/runs/<name>/`.
-- `... z3dmods run <game> <name> --harness <steps...>`: the same steps on the libretro harness
-  (the z3d app hidden: frame-exact, savestates, watchpoints) on a copy of the player's data; see
-  [docs/app.md](docs/app.md) for the core pin and build. App build:
-  `cmake -S app -B build/app -G Ninja -DCMAKE_CXX_COMPILER=clang++ && ninja -C build/app`.
+- `... z3dmods run <game> <name> --harness <steps...>`: the same steps on the harness (the z3d
+  app hidden: frame-exact, savestates, watchpoints) on a copy of the player's data;
+  `--no-textures` turns the set's textures off. The app builds inside the pinned Azahar fork
+  (`"azahar_source"` in `env-assets/local.json`); see [docs/app.md](docs/app.md) for the pin and
+  build. Rebuild: `flock <heavy-run-lock> ninja -C build/app z3d`.
 - `... z3dmods play <game>`: the z3d app in a window with the installed set; its saves live in
   `~/.local/share/z3d-mods/`, apart from standalone Azahar's. `... z3dmods shortcut` adds the
   per-machine desktop shortcuts.

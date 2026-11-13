@@ -38,8 +38,7 @@ def run_steps(args: argparse.Namespace) -> None:
     game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
     out = cfg.repo / "scratch" / "runs" / args.name
     if args.harness:
-        with harness.HarnessSession(cfg, game, args.game, out / "harness.log",
-                                    dict(option.split("=", 1) for option in args.core_option)) as session:
+        with harness.HarnessSession(cfg, game, args.game, out / "harness.log", args.textures) as session:
             steps.run(session, args.steps, out, games.layout(cfg.repo, args.game))
             print(f"{session.frames()} frames")
         return
@@ -76,9 +75,9 @@ def main() -> None:
     run.add_argument("steps", nargs="+")
     run.add_argument("--settings", help="global Azahar settings for this run only, as JSON")
     run.add_argument("--harness", action="store_true",
-                     help="run on the libretro harness (frame-exact, savestates) instead of the player's Azahar")
-    run.add_argument("--core-option", action="append", default=[], metavar="KEY=VALUE",
-                     help="harness only: a libretro core option for this run, e.g. citra_custom_textures=disabled")
+                     help="run on the z3d app's harness (frame-exact, savestates) instead of the player's Azahar")
+    run.add_argument("--textures", action=argparse.BooleanOptionalAction, default=None,
+                     help="harness only: custom textures on or off for this run (default: the set's)")
     run.set_defaults(run=run_steps)
     app = commands.add_parser("play", help="play a game in the z3d app with its installed mods")
     app.add_argument("game", choices=["oot3d", "mm3d"])

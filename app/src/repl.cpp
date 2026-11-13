@@ -1,17 +1,22 @@
 #include "repl.hpp"
 
+#include "emulator.hpp"
+#include "pad_input.hpp"
+
 #include <lucent/log.h>
 
 #include <cstdint>
 #include <fstream>
 #include <iterator>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 namespace z3d::app {
 namespace {
 
 constexpr uint32_t kMaxRead = 1U << 24;
+constexpr float kStickFull = 32767.0F;
 
 std::string toHex(const std::vector<uint8_t> &bytes) {
   static constexpr char kDigits[] = "0123456789abcdef";
@@ -55,15 +60,15 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> frames)) {
       return "err run <frames>";
     }
-    core_.runFrames(frames);
-    return "ok " + std::to_string(core_.framesRun());
+    emulator_.runFrames(frames, true);
+    return "ok " + std::to_string(emulator_.framesRun());
   }
   if (command == "input") {
     unsigned mask = 0;
-    if (!(args >> std::hex >> mask) || mask > 0xFFFF) {
+    if (!(args >> std::hex >> mask)) {
       return "err input <hex mask>";
     }
-    core_.setButtons(static_cast<uint16_t>(mask));
+    pad_.setButtons(mask);
     return "ok";
   }
   if (command == "stick") {
@@ -72,7 +77,8 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> x >> y) || x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX) {
       return "err stick <x> <y>";
     }
-    core_.setStick(static_cast<int16_t>(x), static_cast<int16_t>(y));
+    pad_.setStick(Settings::NativeAnalog::CirclePad, static_cast<float>(x) / kStickFull,
+                  -static_cast<float>(y) / kStickFull);
     return "ok";
   }
   if (command == "r") {
@@ -82,7 +88,7 @@ std::string Repl::execute(const std::string &line) {
       return "err r <hex va> <hex size>";
     }
     std::vector<uint8_t> bytes(size);
-    if (!core_.memory().read(address, bytes)) {
+    if (!emulator_.read(address, bytes)) {
       return "err unmapped";
     }
     return "ok " + toHex(bytes);
@@ -94,12 +100,12 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> std::hex >> address >> hex) || !fromHex(hex, bytes)) {
       return "err w <hex va> <hex bytes>";
     }
-    return core_.memory().write(address, bytes) ? "ok" : "err unmapped";
+    return emulator_.write(address, bytes) ? "ok" : "err unmapped";
   }
   if (command == "savestate") {
     std::string path;
     args >> path;
-    const auto state = core_.saveState();
+    const auto state = emulator_.saveState();
     if (!state) {
       return "err core did not serialize";
     }
@@ -112,17 +118,17 @@ std::string Repl::execute(const std::string &line) {
     std::string path;
     args >> path;
     std::ifstream file(path, std::ios::binary);
-    const std::vector<uint8_t> state((std::istreambuf_iterator<char>(file)),
-                                     std::istreambuf_iterator<char>());
+    std::vector<uint8_t> state((std::istreambuf_iterator<char>(file)),
+                               std::istreambuf_iterator<char>());
     if (state.empty()) {
       return "err cannot read " + path;
     }
-    return core_.loadState(state) ? "ok" : "err core refused the state";
+    return emulator_.loadState(std::move(state)) ? "ok" : "err core refused the state";
   }
   if (command == "shot") {
     std::string path;
     args >> path;
-    const Frame &frame = core_.capture();
+    const Frame &frame = emulator_.frame();
     if (!frame.writePng(path)) {
       return "err no frame or cannot write " + path;
     }
@@ -134,23 +140,23 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> std::hex >> address >> size)) {
       return "err watch <hex va> <hex size>";
     }
-    return core_.watchWrites(address, size) ? "ok" : "err core has no write watchpoints";
+    return emulator_.watchWrites(address, size) ? "ok" : "err no running process";
   }
   if (command == "unwatch") {
-    core_.clearWatches();
+    emulator_.clearWatches();
     return "ok";
   }
   if (command == "hits") {
     std::ostringstream reply;
     reply << "ok" << std::hex;
-    for (const azahar_write_hit &hit : core_.takeHits()) {
+    for (const WriteHit &hit : emulator_.takeHits()) {
       reply << ' ' << hit.address << ':' << hit.size << ':' << hit.value << ':' << hit.pc << ':'
             << hit.lr;
     }
     return reply.str();
   }
   if (command == "frames") {
-    return "ok " + std::to_string(core_.framesRun());
+    return "ok " + std::to_string(emulator_.framesRun());
   }
   if (command == "quit") {
     done_ = true;
