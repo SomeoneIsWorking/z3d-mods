@@ -1,7 +1,7 @@
 """Prove the windowed app's input path with real platform events, away from the player's desktop.
 
 The app runs as `z3dmods play` runs it, on a fresh copy of the player's data, inside a headless
-Gamescope session. Keys and the mouse go in as XTest events on that session's X server, the
+Gamescope session; the picker scenario runs the installed desktop shortcut's Exec line itself. Keys and the mouse go in as XTest events on that session's X server, the
 gamepad is a uinput device the app finds like any other pad, and frames come from Gamescope's
 screenshots. Output: scratch/input-test/<game>/.
 """
@@ -9,6 +9,7 @@ screenshots. Output: scratch/input-test/<game>/.
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -17,18 +18,17 @@ from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, play
+from z3dmods import app, config, play, shortcut
 from z3dmods.config import Config
-from z3dmods.install import GameSet
 
 WIDTH, HEIGHT = 1280, 720
 # The player's Azahar keys (pad_input.cpp kKeys), as X keysyms.
 KEYS = {
     "a": "a", "b": "s", "x": "z", "y": "x", "start": "m", "select": "n", "l": "q", "r": "w",
-    "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
+    "menu": "Escape", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
 }
 PAD_BUTTONS = {"a": ecodes.BTN_EAST, "b": ecodes.BTN_SOUTH, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
-               "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT}
+               "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE}
 AXIS = AbsInfo(value=0, min=-32768, max=32767, fuzz=16, flat=128, resolution=0)
 
 
@@ -37,7 +37,7 @@ class Gamepad:
 
     def __init__(self) -> None:
         self._device = UInput(
-            {ecodes.EV_KEY: list(PAD_BUTTONS.values()) + [ecodes.BTN_TL, ecodes.BTN_TR, ecodes.BTN_MODE],
+            {ecodes.EV_KEY: list(PAD_BUTTONS.values()) + [ecodes.BTN_TL, ecodes.BTN_TR],
              ecodes.EV_ABS: [(ecodes.ABS_X, AXIS), (ecodes.ABS_Y, AXIS), (ecodes.ABS_RX, AXIS), (ecodes.ABS_RY, AXIS)]},
             name="z3d input test pad", vendor=0x045E, product=0x028E, version=0x0110, bustype=ecodes.BUS_USB)
 
@@ -62,20 +62,18 @@ class Gamepad:
 
 
 class Session:
-    def __init__(self, cfg: Config, name: str, game: GameSet, out: Path) -> None:
-        self._cfg = cfg
-        self._name = name
-        self._game = game
+    def __init__(self, out: Path, args: list[str], env: dict[str, str] | None = None) -> None:
         self.out = out
+        self._args = args
+        self._extra_env = env or {}
         self._gamescope: subprocess.Popen | None = None
         self._env: dict[str, str] = {}
         self._shots = 0
 
     def __enter__(self) -> Session:
-        user = self.out / "user"
-        app.seed_user(self._cfg, user, fresh=True)
-        args = play.launch_args(self._cfg, self._name, self._game, user)
+        args = self._args
         env = {k: v for k, v in os.environ.items() if k not in ("WAYLAND_DISPLAY", "DISPLAY")}
+        env.update(self._extra_env)
         self.out.mkdir(parents=True, exist_ok=True)
         log = (self.out / "gamescope.log").open("wb")
         self._gamescope = subprocess.Popen(
@@ -193,17 +191,55 @@ def _mm3d(session: Session, pad: Gamepad) -> None:
     session.shot("skipped-to-woods")
 
 
-SCENARIOS = {"oot3d": _oot3d, "mm3d": _mm3d}
+def _picker(session: Session, pad: Gamepad) -> None:
+    """The shortcut's picker: keys boot OoT3D and Escape returns; the pad boots MM3D and Guide
+    returns; a click boots OoT3D again."""
+    session.wait(8)
+    session.shot("picker")
+    session.key("a")
+    session.wait(20)
+    session.shot("oot3d")
+    session.key("menu")
+    session.wait(4)
+    session.shot("picker-after-oot3d")
+    pad.stick(32767, 0, 0.3)
+    session.wait(1)
+    session.shot("picker-mm3d-selected")
+    pad.button("a")
+    session.wait(30)
+    session.shot("mm3d")
+    pad.button("guide")
+    session.wait(4)
+    session.shot("picker-after-mm3d")
+    session.click(0.3, 0.5)
+    session.wait(20)
+    session.shot("oot3d-from-click")
 
 
-def run(cfg: Config, name: str, game: GameSet) -> Path:
-    out = cfg.repo / "scratch" / "input-test" / name
+# Direct launches of one game, and the installed shortcut's picker.
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d}
+SCENARIOS = {**DIRECT, "picker": _picker}
+
+
+def _session(cfg: Config, scenario: str, out: Path) -> Session:
+    user = out / "user"
+    app.seed_user(cfg, user, fresh=True)
+    if scenario in DIRECT:
+        return Session(out, play.launch_args(cfg, scenario, user))
+    entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"
+    if not entry.exists():
+        raise RuntimeError(f"{entry} is missing; run z3dmods shortcut")
+    return Session(out, shlex.split(shortcut.desktop_exec(entry)), {config.APP_DATA_ENV: str(user)})
+
+
+def run(cfg: Config, scenario: str) -> Path:
+    out = cfg.repo / "scratch" / "input-test" / scenario
     if out.exists():
         shutil.rmtree(out)
     pad = Gamepad()
     try:
-        with Session(cfg, name, game, out) as session:
-            SCENARIOS[name](session, pad)
+        with _session(cfg, scenario, out) as session:
+            SCENARIOS[scenario](session, pad)
     finally:
         pad.close()
     return out

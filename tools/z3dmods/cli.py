@@ -29,16 +29,17 @@ def rominfo(args: argparse.Namespace) -> None:
 def install_set(args: argparse.Namespace) -> None:
     cfg = config.load()
     for name in args.games:
-        game = install.GameSet.load(cfg.repo / "sets" / f"{name}.json")
+        game = install.GameSet.named(cfg.repo, name)
         print(f"{name}: installed into {install.install(cfg, game)}")
 
 
 def run_steps(args: argparse.Namespace) -> None:
     cfg = config.load()
-    game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
+    game = install.GameSet.named(cfg.repo, args.game)
     out = cfg.repo / "scratch" / "runs" / args.name
     if args.harness:
-        with harness.HarnessSession(cfg, game, args.game, out / "harness.log", args.textures) as session:
+        with harness.HarnessSession(cfg, game, args.game, out / "harness.log", args.textures,
+                                    args.dump_textures) as session:
             steps.run(session, args.steps, out, games.layout(cfg.repo, args.game))
             print(f"{session.frames()} frames")
         return
@@ -51,14 +52,11 @@ def run_steps(args: argparse.Namespace) -> None:
 
 def play_game(args: argparse.Namespace) -> None:
     cfg = config.load()
-    game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
-    raise SystemExit(play.play(cfg, args.game, game))
+    raise SystemExit(play.play(cfg, args.game))
 
 
 def input_check(args: argparse.Namespace) -> None:
-    cfg = config.load()
-    game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
-    print(input_test.run(cfg, args.game, game))
+    print(input_test.run(config.load(), args.scenario))
 
 
 def install_shortcuts(_: argparse.Namespace) -> None:
@@ -84,14 +82,16 @@ def main() -> None:
                      help="run on the z3d app's harness (frame-exact, savestates) instead of the player's Azahar")
     run.add_argument("--textures", action=argparse.BooleanOptionalAction, default=None,
                      help="harness only: custom textures on or off for this run (default: the set's)")
+    run.add_argument("--dump-textures", action="store_true",
+                     help="harness only: every texture the game uploads, as PNG under scratch/harness/<game>/Azahar/dump/textures/")
     run.set_defaults(run=run_steps)
-    app = commands.add_parser("play", help="play a game in the z3d app with its installed mods")
-    app.add_argument("game", choices=["oot3d", "mm3d"])
+    app = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
+    app.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
     app.set_defaults(run=play_game)
     probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key, mouse and pad events")
-    probe.add_argument("game", choices=["oot3d", "mm3d"])
+    probe.add_argument("scenario", choices=sorted(input_test.SCENARIOS))
     probe.set_defaults(run=input_check)
-    links = commands.add_parser("shortcut", help="add desktop shortcuts that play each game in the app")
+    links = commands.add_parser("shortcut", help="add the desktop shortcut that opens the app's title picker")
     links.set_defaults(run=install_shortcuts)
     args = parser.parse_args()
     args.run(args)

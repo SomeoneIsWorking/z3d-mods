@@ -1,5 +1,6 @@
 // The app's SDL3 window as the core's EmuWindow: the native surface the Vulkan renderer presents
-// to, the event pump the renderer runs once per emulated frame, and touch from the mouse.
+// to, the event pump the renderer runs once per emulated frame, and touch from the mouse. Between
+// games the title picker draws on it and pumps it with pollMenu().
 #pragma once
 
 #include "app_config.hpp"
@@ -7,6 +8,9 @@
 #include "core/frontend/emu_window.h"
 
 #include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
 
 struct SDL_Window;
 struct SDL_FPoint;
@@ -27,6 +31,18 @@ public:
 
   // Called by the renderer at the end of every emulated frame.
   void PollEvents() override;
+  // The picker's pump: no touch; left clicks come back in window pixels.
+  [[nodiscard]] std::vector<SDL_FPoint> pollMenu();
+  // A game's title on the window and the window in its layout's shape (core_settings.hpp).
+  void boot(const std::string &title);
+
+  [[nodiscard]] SDL_Window *sdlWindow() const {
+    return window_;
+  }
+  // Escape or the gamepad's guide button since the last call.
+  [[nodiscard]] bool takeMenuRequest() {
+    return std::exchange(menuRequested_, false);
+  }
 
   [[nodiscard]] uint64_t framesShown() const {
     return frames_;
@@ -36,6 +52,7 @@ public:
   }
 
 private:
+  void pump(bool inGame);
   void fitToDisplay();
   void updateLayout();
   // Window coordinates to framebuffer pixels.
@@ -46,7 +63,9 @@ private:
   SDL_Window *window_ = nullptr;
   uint64_t frames_ = 0;
   bool closeRequested_ = false;
+  bool menuRequested_ = false;
   bool touching_ = false;
+  std::vector<SDL_FPoint> clicks_;
 };
 
 } // namespace z3d::app

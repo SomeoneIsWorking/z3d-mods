@@ -30,8 +30,9 @@ class GameSet:
 
 
     @classmethod
-    def load(cls, path: Path) -> GameSet:
-        raw = json.loads(path.read_text())
+    def named(cls, repo: Path, name: str) -> GameSet:
+        """A game's set, sets/<name>.json."""
+        raw = json.loads((repo / "sets" / f"{name}.json").read_text())
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
                    raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"))
 

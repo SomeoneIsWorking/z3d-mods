@@ -6,6 +6,9 @@
 
 namespace z3d::app {
 
+// Once, before the window.
 void applyCoreSettings(const AppConfig &config);
+// Before each game loads, and before a window for a direct launch takes its shape.
+void applyGameSettings(const GameSetup &game);
 
 } // namespace z3d::app

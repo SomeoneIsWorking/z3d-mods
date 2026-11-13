@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,7 +41,22 @@ class Config:
     def textures_dir(self, title_id: str) -> Path:
         return self.azahar_data / "load" / "textures" / title_id
 
+    def ui_font(self) -> Path:
+        """The title picker's outline font, from fontconfig."""
+        if shutil.which("fc-match") is None:
+            raise RuntimeError("fc-match is missing: sudo dnf install fontconfig (Fedora), "
+                               "sudo apt install fontconfig (Debian/Ubuntu)")
+        found = subprocess.run(["fc-match", "-f", "%{file}", UI_FONT], capture_output=True, text=True,
+                               check=True).stdout.strip()
+        if not found.endswith((".ttf", ".otf")):
+            raise RuntimeError(f"fontconfig has no outline font for {UI_FONT!r}: sudo dnf install "
+                               "google-noto-sans-fonts (Fedora), sudo apt install fonts-noto-core (Debian/Ubuntu)")
+        return Path(found)
 
+
+UI_FONT = "Noto Sans:bold"
+# Moves the app's data (saves included) for a test run of the installed shortcut (input_test.py).
+APP_DATA_ENV = "Z3D_APP_DATA"
 SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")
 
 
@@ -70,6 +86,6 @@ def load() -> Config:
         azahar_source=Path(local["azahar_source"]) if "azahar_source" in local else None,
         dependencies=home / "dev",
         app_binary=REPO / "build" / "app" / "z3d",
-        app_data=data_home / "z3d-mods",
+        app_data=Path(os.environ.get(APP_DATA_ENV) or data_home / "z3d-mods"),
         session_env=_session_env(),
     )

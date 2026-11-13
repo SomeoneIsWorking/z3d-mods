@@ -11,9 +11,9 @@
 - `tools/z3dmods/steps.py`: the scripted step language for runs, over either backend.
 - `tools/z3dmods/app.py`: the z3d app's build: the pinned Azahar fork's core into a per-revision prefix, then the app against it; its user folders (copies of the player's data, a link to `load/`) and its flags for a set.
 - `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
-- `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad.
-- `tools/z3dmods/play.py`: `z3dmods play`: the app in a window on the player's session, with its own saves.
-- `tools/z3dmods/shortcut.py`: per-machine desktop shortcuts that run `z3dmods play`.
+- `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad; the picker scenario runs the installed shortcut.
+- `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.
+- `tools/z3dmods/shortcut.py`: the per-machine desktop shortcut that runs `z3dmods play`.
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld.
@@ -24,12 +24,15 @@
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
-  - `app_config`: the typed command line.
-  - `core_settings`: the core's settings and user path from the config, applied first.
-  - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch.
+  - `app_config`: the typed command line; a game's setup (ROM, layout, textures).
+  - `core_settings`: the core's settings and user path from the config, applied first; a game's settings before it loads.
+  - `core_log`: the core's log backend for the app's lifetime.
+  - `game_library`: the picker's games from the tools' library file, titles and icons from each dump's SMDH.
+  - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.
+  - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
   - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands.
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
-  - `player`: the windowed loop, paced by the core's frame limiter.
+  - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.
   - `frame`: a captured frame and its PNG encoding.
   - `repl`: the stdin command language.
   - `icon/z3d.svg`: the app's icon.

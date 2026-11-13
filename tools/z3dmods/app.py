@@ -92,6 +92,11 @@ def launch_args(cfg: Config, game: GameSet, user: Path, resolution: int,
     overrides the set's custom textures."""
     args = [str(binary(cfg)), "--rom", str(cfg.rom(game.title_id)), "--user", str(user),
             "--layout", game.screen_layout, "--resolution", str(resolution)]
-    if (game.textures is not None) if textures is None else textures:
+    if uses_textures(game, textures):
         args.append("--textures")
     return args
+
+
+def uses_textures(game: GameSet, textures: bool | None = None) -> bool:
+    """The set's custom textures, unless `textures` overrides them."""
+    return (game.textures is not None) if textures is None else textures

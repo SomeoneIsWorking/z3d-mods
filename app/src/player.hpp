@@ -1,4 +1,5 @@
-// The interactive loop: the core runs frames at the 3DS's rate until the window is closed.
+// The interactive loop: the core runs frames at the 3DS's rate until the window is closed or the
+// player asks for the title picker.
 #pragma once
 
 namespace z3d::app {
@@ -8,14 +9,14 @@ class GameWindow;
 
 class Player {
 public:
-  Player(Emulator &emulator, const GameWindow &window) : emulator_(emulator), window_(window) {
+  Player(Emulator &emulator, GameWindow &window) : emulator_(emulator), window_(window) {
   }
 
   void run();
 
 private:
   Emulator &emulator_;
-  const GameWindow &window_;
+  GameWindow &window_;
 };
 
 } // namespace z3d::app

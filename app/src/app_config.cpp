@@ -2,16 +2,15 @@
 
 #include <array>
 #include <stdexcept>
-#include <string_view>
 #include <utility>
 
 namespace z3d::app {
 namespace {
 
 constexpr std::string_view kUsage =
-    "usage: z3d --rom <3ds> --user <dir> [--title <text>] [--app-id <id>] "
-    "[--layout default|single_screen|large_screen|side_by_side] [--textures] "
-    "[--resolution <1..10>] [--hidden]";
+    "usage: z3d --user <dir> (--rom <3ds> [--layout default|single_screen|large_screen|"
+    "side_by_side] [--textures] | --library <json> --font <ttf>) [--title <text>] "
+    "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures]";
 
 constexpr std::array kLayouts{
     std::pair{std::string_view("default"), ScreenLayout::Default},
@@ -21,15 +20,6 @@ constexpr std::array kLayouts{
 };
 
 constexpr uint32_t kMaxResolution = 10;
-
-ScreenLayout parseLayout(std::string_view name) {
-  for (const auto &[text, layout] : kLayouts) {
-    if (text == name) {
-      return layout;
-    }
-  }
-  throw std::invalid_argument("unknown layout " + std::string(name));
-}
 
 uint32_t parseResolution(const std::string &text) {
   const unsigned long value = std::stoul(text);
@@ -41,16 +31,30 @@ uint32_t parseResolution(const std::string &text) {
 
 } // namespace
 
+ScreenLayout parseLayout(std::string_view name) {
+  for (const auto &[text, layout] : kLayouts) {
+    if (text == name) {
+      return layout;
+    }
+  }
+  throw std::invalid_argument("unknown layout " + std::string(name));
+}
+
 AppConfig AppConfig::parse(int argc, char **argv) {
   AppConfig config;
+  GameSetup game;
   for (int i = 1; i < argc; ++i) {
     const std::string_view flag = argv[i];
     if (flag == "--hidden") {
       config.hidden = true;
       continue;
     }
+    if (flag == "--dump-textures") {
+      config.dumpTextures = true;
+      continue;
+    }
     if (flag == "--textures") {
-      config.customTextures = true;
+      game.customTextures = true;
       continue;
     }
     if (i + 1 >= argc) {
@@ -58,7 +62,11 @@ AppConfig AppConfig::parse(int argc, char **argv) {
     }
     const std::string value = argv[++i];
     if (flag == "--rom") {
-      config.rom = value;
+      game.rom = value;
+    } else if (flag == "--library") {
+      config.library = value;
+    } else if (flag == "--font") {
+      config.font = value;
     } else if (flag == "--user") {
       config.userDir = value;
     } else if (flag == "--title") {
@@ -66,14 +74,18 @@ AppConfig AppConfig::parse(int argc, char **argv) {
     } else if (flag == "--app-id") {
       config.appId = value;
     } else if (flag == "--layout") {
-      config.layout = parseLayout(value);
+      game.layout = parseLayout(value);
     } else if (flag == "--resolution") {
       config.resolution = parseResolution(value);
     } else {
       throw std::invalid_argument("unknown flag " + std::string(flag));
     }
   }
-  if (config.rom.empty() || config.userDir.empty()) {
+  if (!game.rom.empty()) {
+    config.game = game;
+  }
+  const bool picker = !config.library.empty() && !config.font.empty() && !config.hidden;
+  if (config.userDir.empty() || config.game.has_value() == picker) {
     throw std::invalid_argument(std::string(kUsage));
   }
   return config;

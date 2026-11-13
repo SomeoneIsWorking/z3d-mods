@@ -44,9 +44,8 @@ void applyCoreSettings(const AppConfig &config) {
   FileUtil::SetUserPath(userPath(config.userDir));
   auto &values = Settings::values;
   values.graphics_api = Settings::GraphicsAPI::Vulkan;
-  values.layout_option = layoutOption(config.layout);
-  values.custom_textures = config.customTextures;
   values.resolution_factor = config.resolution;
+  values.dump_textures = config.dumpTextures;
   values.frame_limit = config.hidden ? 0.0 : kRealTime;
   values.use_vsync = !config.hidden;
   values.output_type = config.hidden ? AudioCore::SinkType::Null : AudioCore::SinkType::Auto;
@@ -56,6 +55,11 @@ void applyCoreSettings(const AppConfig &config) {
   for (const auto &module : Service::service_module_map) {
     values.lle_modules[module.name] = false;
   }
+}
+
+void applyGameSettings(const GameSetup &game) {
+  Settings::values.layout_option = layoutOption(game.layout);
+  Settings::values.custom_textures = game.customTextures;
 }
 
 } // namespace z3d::app

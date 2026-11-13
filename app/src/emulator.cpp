@@ -2,7 +2,6 @@
 
 #include "game_window.hpp"
 
-#include "common/logging/backend.h"
 #include "common/settings.h"
 #include "core/arm/arm_interface.h"
 #include "core/core.h"
@@ -110,17 +109,14 @@ private:
   std::vector<WriteHit> hits_;
 };
 
-Emulator::Emulator(const AppConfig &config, GameWindow &window)
+Emulator::Emulator(const AppConfig &config, const std::filesystem::path &rom, GameWindow &window)
     : system_(Core::System::GetInstance()), window_(window), resolution_(config.resolution) {
-  Common::Log::Initialize("z3d_core.log");
-  Common::Log::Start();
   Frontend::RegisterDefaultApplets(system_);
   system_.RegisterImageInterface(std::make_shared<Frontend::ImageInterface>());
-  const Core::System::ResultStatus status = system_.Load(window_, config.rom.string());
+  const Core::System::ResultStatus status = system_.Load(window_, rom.string());
   if (status != Core::System::ResultStatus::Success) {
     const std::string details = system_.GetStatusDetails();
-    Common::Log::Stop();
-    throw std::runtime_error("cannot load " + config.rom.string() + " (status " +
+    throw std::runtime_error("cannot load " + rom.string() + " (status " +
                              std::to_string(static_cast<int>(status)) + ") " + details);
   }
   system_.RegisterCoreLoopThreadId();
@@ -130,7 +126,6 @@ Emulator::Emulator(const AppConfig &config, GameWindow &window)
 Emulator::~Emulator() {
   watches_.reset();
   system_.Shutdown();
-  Common::Log::Stop();
 }
 
 void Emulator::step() {

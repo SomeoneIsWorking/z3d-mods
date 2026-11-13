@@ -42,6 +42,10 @@ public:
   void setButtons(uint32_t mask);
   void setStick(Settings::NativeAnalog::Values stick, float x, float y);
 
+  [[nodiscard]] const PadState &state() const {
+    return *state_;
+  }
+
 private:
   std::shared_ptr<PadState> state_;
   std::vector<SDL_Gamepad *> pads_;

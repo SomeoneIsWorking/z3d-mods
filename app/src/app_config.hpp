@@ -3,14 +3,29 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <string_view>
 
 namespace z3d::app {
 
 enum class ScreenLayout : uint8_t { Default, SingleScreen, LargeScreen, SideBySide };
 
-struct AppConfig {
+[[nodiscard]] ScreenLayout parseLayout(std::string_view name);
+
+// What one game boots with.
+struct GameSetup {
   std::filesystem::path rom;
+  ScreenLayout layout = ScreenLayout::Default;
+  bool customTextures = false;
+};
+
+struct AppConfig {
+  // A direct launch; without it the window opens the title picker over `library`.
+  std::optional<GameSetup> game;
+  // The tools' list of games (game_library.hpp) and the picker's outline font.
+  std::filesystem::path library;
+  std::filesystem::path font;
   // Holds Azahar/ in the core's user layout (nand, sdmc, sysdata, load).
   std::filesystem::path userDir;
   std::string title = "z3d";
@@ -18,13 +33,13 @@ struct AppConfig {
   std::string appId = "z3d";
   // The tools' mode: unmapped window, no sound, unpaced, driven by stdin lines.
   bool hidden = false;
-  ScreenLayout layout = ScreenLayout::Default;
-  bool customTextures = false;
   // Internal render scale; 1 is the 3DS's own 400x240 top screen.
   uint32_t resolution = 1;
+  // Every texture the game uploads, as PNG under <user>/Azahar/dump/textures/.
+  bool dumpTextures = false;
 
-  // z3d --rom <3ds> --user <dir> [--title t] [--app-id id] [--layout l] [--textures]
-  //     [--resolution n] [--hidden]
+  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] | --library <json> --font <ttf>)
+  //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
 };
 

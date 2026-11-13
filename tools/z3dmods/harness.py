@@ -27,10 +27,11 @@ RESOLUTION = 1
 
 class HarnessSession:
     def __init__(self, cfg: Config, game: GameSet, name: str, log: Path,
-                 textures: bool | None = None) -> None:
+                 textures: bool | None = None, dump_textures: bool = False) -> None:
         self._cfg = cfg
         self._game = game
         self._textures = textures
+        self._dump_textures = dump_textures
         self._user = cfg.repo / "scratch" / "harness" / name
         self._states = cfg.repo / "scratch" / "harness" / "states" / name
         self._log_path = log
@@ -40,6 +41,8 @@ class HarnessSession:
     def __enter__(self) -> HarnessSession:
         app.seed_user(self._cfg, self._user, fresh=True)
         args = app.launch_args(self._cfg, self._game, self._user, RESOLUTION, self._textures) + ["--hidden"]
+        if self._dump_textures:
+            args.append("--dump-textures")
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log = self._log_path.open("wb")
         env = dict(os.environ, **self._cfg.session_env)

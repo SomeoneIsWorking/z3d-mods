@@ -33,12 +33,12 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   `--no-textures` turns the set's textures off. The app builds against the pinned Azahar fork's
   core (`"azahar_source"` in `env-assets/local.json`), installed once per revision under
   `<dependencies>/azahar-core/`; see [docs/app.md](docs/app.md). Rebuild the app: `ninja -C build/app`.
-- `... z3dmods play <game>`: the z3d app in a window with the installed set; its saves live in
-  `~/.local/share/z3d-mods/`, apart from standalone Azahar's. `... z3dmods shortcut` adds the
-  per-machine desktop shortcuts.
-- `flock <heavy-run-lock> uv run --frozen z3dmods inputtest <game>`: the windowed app's
-  input path with real key, mouse and pad events, off the player's desktop; shots in
-  `scratch/input-test/<game>/`.
+- `... z3dmods play [game]`: the z3d app in a window with the installed sets: its title picker, or
+  one game directly; its saves live in `~/.local/share/z3d-mods/`, apart from standalone Azahar's.
+  `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker).
+- `flock <heavy-run-lock> uv run --frozen z3dmods inputtest <oot3d|mm3d|picker>`: the
+  windowed app's input path with real key, mouse and pad events, off the player's desktop; `picker`
+  runs the installed shortcut's Exec line. Shots in `scratch/input-test/<scenario>/`.
 
 The OoT3D save in slot 1 is the player's: load it, never save over it. Check
 `sdmc/.../title/00040000/00033500/data/00000001/` against the backup after a run.

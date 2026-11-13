@@ -8,8 +8,11 @@ Azahar's core without qt".
 `app/` builds `z3d`, a frontend of Azahar's core linked in directly (no Qt, no libretro), Vulkan
 only. It links the core's shared library, so it is GPL-2.0-or-later as linked. Two modes:
 
-- Windowed (`z3dmods play <game>`): an SDL3 window on the player's session, sound, keyboard,
-  gamepads and the mouse as the touch screen.
+- Windowed (`z3dmods play [game]`): an SDL3 window on the player's session, sound, keyboard,
+  gamepads and the mouse as the touch screen. Without a game it opens the title picker: each
+  game's icon and title read from the player's own dump (its SMDH), chosen with left/right and A
+  or Start on the pad or keyboard, or a click. Escape or the gamepad's guide button in a game shuts
+  it down and returns to the picker; closing the window quits.
 - `--hidden` (the tools): the window is never mapped, there is no sound and no pacing; the game
   runs frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
 
@@ -22,10 +25,15 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
 
-Flags (`src/app_config.hpp`): `--rom`, `--user`, `--title`, `--app-id`, `--layout`
-(`default|single_screen|large_screen|side_by_side`), `--textures`, `--resolution`, `--hidden`.
-`tools/z3dmods/app.py` derives them from the set: its `screen_layout`, textures when it has a
-pack, render scale 1 for the tools and 3 for play.
+Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
+(`default|single_screen|large_screen|side_by_side`) and `--textures`, or `--library <json>` and
+`--font <ttf>` for the picker (never `--hidden`); `--title`, `--app-id`, `--resolution`, `--hidden`,
+`--dump-textures` (the core writes every texture without a replacement as PNG under
+`<user>/Azahar/dump/textures/<title id>/`; `z3dmods run ... --harness --dump-textures`).
+`tools/z3dmods/app.py` derives a game's from its set: its `screen_layout`, textures when it has a
+pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
+`<user>/library.json`, an array of `{"rom", "layout", "textures"}` per set, and takes the font from
+fontconfig (`Noto Sans:bold`).
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by position (east A, south B),
@@ -52,9 +60,13 @@ objects. Rebuild the app: `ninja -C build/app`.
 
 ## Data flow
 - `main` composes: `applyCoreSettings` (settings and user path, before anything reads them),
-  `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
+  `CoreLog`, `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
   `EmuWindow`), `Emulator` (load, frames, memory, states, watches), then `Player` or
-  `Repl`.
+  `Repl`. With the picker: `GameLibrary`, then per game `TitlePicker`, `applyGameSettings`,
+  `GameWindow::boot` (title and the layout's window shape), a new `Emulator` and `Player`.
+- The picker draws with an SDL renderer (Vulkan driver) and SDL3_ttf text on the game window, and
+  destroys it before the core's renderer takes the window; the core shuts down
+  (`System::Shutdown`) before the picker opens again.
 - Rendering: the core's own Vulkan renderer presents to the window's native surface (Wayland or
   X11, from SDL3's window properties). A frame ends when the renderer calls
   `GameWindow::PollEvents`, which counts it, pumps SDL events and reads the host pad. `shot` frames
@@ -83,9 +95,15 @@ objects. Rebuild the app: `ninja -C build/app`.
   stale there.
 
 ## Checking it
-`uv run --frozen z3dmods play mm3d` opens the window; `z3dmods shortcut` adds a desktop shortcut per
-game (this machine only), which builds `build/app` only when no build exists. The window's app id
-(`--app-id z3d-<game>`) is the shortcut's name, which is how the desktop finds its icon.
+`uv run --frozen z3dmods play` opens the picker (`play mm3d` one game); `z3dmods shortcut` adds the
+`z3d` desktop shortcut (this machine only: `~/.local/share/applications` and `~/Desktop`), which
+runs `z3dmods play` and so builds `build/app` only when no build exists. The window's app id
+(`--app-id z3d`) is the shortcut's name, which is how the desktop finds its icon.
+
+- Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
+  Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the
+  dumps; the A key boots OoT3D to its title, Escape returns; the pad's stick selects MM3D and its A
+  boots it, the guide button returns; a click on the OoT3D tile boots it again.
 
 - Verified 2026-11-13 on the core linked directly (Vulkan, RADV): hidden, the MM3D intro and its
   bottom screen read back at 400x480, a 20 MB savestate saved and loaded, 1260 frames for 21 s of

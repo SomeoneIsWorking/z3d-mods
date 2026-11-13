@@ -81,6 +81,24 @@ GameWindow::~GameWindow() {
 
 void GameWindow::PollEvents() {
   ++frames_;
+  pump(true);
+}
+
+std::vector<SDL_FPoint> GameWindow::pollMenu() {
+  clicks_.clear();
+  pump(false);
+  return std::exchange(clicks_, {});
+}
+
+void GameWindow::boot(const std::string &title) {
+  SDL_SetWindowTitle(window_, title.c_str());
+  if (!hidden_) {
+    fitToDisplay();
+  }
+  updateLayout();
+}
+
+void GameWindow::pump(bool inGame) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
@@ -91,13 +109,28 @@ void GameWindow::PollEvents() {
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
       updateLayout();
       break;
+    case SDL_EVENT_KEY_DOWN:
+      if (event.key.scancode == SDL_SCANCODE_ESCAPE && !event.key.repeat) {
+        menuRequested_ = true;
+      }
+      break;
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+      if (event.gbutton.button == SDL_GAMEPAD_BUTTON_GUIDE) {
+        menuRequested_ = true;
+      }
+      break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
       if (event.button.button == SDL_BUTTON_LEFT) {
-        touch({event.button.x, event.button.y}, true);
+        if (inGame) {
+          touch({event.button.x, event.button.y}, true);
+        } else {
+          const float density = SDL_GetWindowPixelDensity(window_);
+          clicks_.push_back({event.button.x * density, event.button.y * density});
+        }
       }
       break;
     case SDL_EVENT_MOUSE_BUTTON_UP:
-      if (event.button.button == SDL_BUTTON_LEFT) {
+      if (event.button.button == SDL_BUTTON_LEFT && touching_) {
         touch({event.button.x, event.button.y}, false);
       }
       break;

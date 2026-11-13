@@ -10,16 +10,20 @@ find_package(AzaharCore CONFIG REQUIRED)
 set(LUCENT_ROOT "$ENV{HOME}/repo/lucent" CACHE PATH "Shared Lucent checkout")
 add_subdirectory("${LUCENT_ROOT}" "${CMAKE_BINARY_DIR}/lucent" EXCLUDE_FROM_ALL)
 find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3-shared)
+find_package(SDL3_ttf REQUIRED CONFIG)
 
 add_executable(z3d
   src/main.cpp
   src/app_config.cpp
   src/core_settings.cpp
+  src/core_log.cpp
+  src/game_library.cpp
+  src/title_picker.cpp
   src/game_window.cpp
   src/pad_input.cpp
   src/emulator.cpp
   src/frame.cpp
   src/repl.cpp
   src/player.cpp)
-target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3)
+target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)

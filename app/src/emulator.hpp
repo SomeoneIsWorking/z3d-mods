@@ -6,6 +6,7 @@
 #include "frame.hpp"
 
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <span>
@@ -31,7 +32,8 @@ struct WriteHit {
 
 class Emulator {
 public:
-  Emulator(const AppConfig &config, GameWindow &window);
+  // The core's log (core_log.hpp) outlives every Emulator.
+  Emulator(const AppConfig &config, const std::filesystem::path &rom, GameWindow &window);
   ~Emulator();
   Emulator(const Emulator &) = delete;
   Emulator &operator=(const Emulator &) = delete;
