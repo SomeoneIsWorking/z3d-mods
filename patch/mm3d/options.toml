@@ -1,8 +1,22 @@
-# The patch's switches, one byte each in this order (tools/z3dmods/options.py). The app's options
-# menu lists them by label; a feature reads its own through options() from the generated options.hpp.
+# The game's switches (tools/z3dmods/options.py). The app's options menu lists them by label. One
+# with a field is a byte of the patch's block, in this order, read through options() from the
+# generated options.hpp; one with a pad is the app's.
 
 [[option]]
 id = "cutscene_skip"
 field = "cutsceneSkip"
 label = "Cutscene skip (Start)"
 default = true
+
+# The game turns its camera with the C-stick itself; the app turns the stick around.
+[[option]]
+id = "camera_invert_x"
+pad = "cstick_invert_x"
+label = "Camera stick: invert X"
+default = false
+
+[[option]]
+id = "camera_invert_y"
+pad = "cstick_invert_y"
+label = "Camera stick: invert Y"
+default = false

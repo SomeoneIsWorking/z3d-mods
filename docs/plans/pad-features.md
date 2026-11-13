@@ -27,6 +27,12 @@ The app feeds the host's right stick to the 3DS C-stick and the triggers to ZL/Z
 - MM3D already turns the camera with the C-stick on New 3DS; the patch adds the invert options
   and the recenter button there only if the game's own does not cover them.
 
+### Status (MM3D, 2026-11-14)
+The game's own C-stick camera works in the app (`mm-cstick`, South Clock Town: right turns the
+view, up and down tilt it) and L recenters as on the console. Invert X and Y are app options that
+turn the stick around before the game reads it (`patch/mm3d/options.toml`, `pad`; `mm-cstick-inv`:
+both on, the same stick input turns and tilts the other way). No patch code.
+
 ### Status (OoT3D, 2026-11-14)
 Built (`patch/oot3d/free_camera.cpp`). Seen on the harness, File 1 as a child:
 - Kokiri Forest (`warp:0xEE`, runs `oot-fc6`, `oot-fc8`): the stick turns the view around Link to

@@ -1,6 +1,7 @@
 #include "game_options.hpp"
 
 #include "emulator.hpp"
+#include "pad_input.hpp"
 
 #include <lucent/json.h>
 #include <lucent/log.h>
@@ -10,12 +11,15 @@
 #include <iterator>
 #include <optional>
 #include <stdexcept>
+#include <string_view>
 
 namespace z3d::app {
 namespace {
 
 constexpr const char *kLayoutId = "layout";
 constexpr const char *kTexturesId = "textures";
+constexpr std::string_view kCStickInvertX = "cstick_invert_x";
+constexpr std::string_view kCStickInvertY = "cstick_invert_y";
 // In ScreenLayout's order.
 constexpr std::array<const char *, 5> kLayoutNames{"Both screens", "Top screen only", "Large top screen",
                                                    "Side by side", "Single screen"};
@@ -58,16 +62,22 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
           fallback == nullptr || fallback->boolean() == nullptr) {
         throw std::runtime_error(manifest.string() + ": an option wants id, label and default");
       }
+      const lucent::json::Value *pad = entry.find("pad");
+      const bool onPad = pad != nullptr && pad->string() != nullptr;
+      if (!onPad && blockCount_ != items_.size()) {
+        throw std::runtime_error(manifest.string() + ": the patch's options come before the pad's");
+      }
       items_.push_back({*id->string(), *label->string(), switchChoices(),
-                        static_cast<uint8_t>(*fallback->boolean() ? 1 : 0)});
+                        static_cast<uint8_t>(*fallback->boolean() ? 1 : 0),
+                        onPad ? *pad->string() : std::string()});
+      blockCount_ += onPad ? 0 : 1;
     }
   }
-  patchCount_ = items_.size();
   items_.push_back({kLayoutId, "Screen layout",
                     std::vector<std::string>(kLayoutNames.begin(), kLayoutNames.end()),
-                    static_cast<uint8_t>(setup_.layout)});
+                    static_cast<uint8_t>(setup_.layout), {}});
   if (setup_.customTextures) {
-    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1});
+    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}});
   }
   if (stored_.empty()) {
     return;
@@ -113,12 +123,19 @@ GameSetup GameOptions::setup() const {
   return result;
 }
 
-void GameOptions::apply(Emulator &emulator) const {
-  if (patchCount_ == 0) {
+void GameOptions::apply(Emulator &emulator, PadInput &pad) const {
+  bool invertX = false;
+  bool invertY = false;
+  for (const Option &item : items_) {
+    invertX = invertX || (item.pad == kCStickInvertX && item.value != 0);
+    invertY = invertY || (item.pad == kCStickInvertY && item.value != 0);
+  }
+  pad.invertCStick(invertX, invertY);
+  if (blockCount_ == 0) {
     return;
   }
   std::vector<uint8_t> block;
-  for (size_t i = 0; i < patchCount_; ++i) {
+  for (size_t i = 0; i < blockCount_; ++i) {
     block.push_back(items_[i].value);
   }
   if (!emulator.write(address_, block)) {

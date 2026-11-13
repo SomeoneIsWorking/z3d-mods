@@ -96,7 +96,10 @@ public:
   }
   [[nodiscard]] std::tuple<float, float> GetStatus() const override {
     const auto &[x, y] = state_->sticks[index_];
-    return {x, y};
+    if (index_ != Settings::NativeAnalog::CStick) {
+      return {x, y};
+    }
+    return {state_->cStickInverted[0] ? -x : x, state_->cStickInverted[1] ? -y : y};
   }
 
 private:

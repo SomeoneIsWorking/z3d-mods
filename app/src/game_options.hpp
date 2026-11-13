@@ -14,6 +14,7 @@
 namespace z3d::app {
 
 class Emulator;
+class PadInput;
 
 struct Option {
   std::string id;
@@ -21,6 +22,8 @@ struct Option {
   // What the value picks from; a switch has "Off" and "On".
   std::vector<std::string> choices;
   uint8_t value = 0;
+  // An app switch on the pad (cstick_invert_x, cstick_invert_y); empty for the others.
+  std::string pad;
 };
 
 class GameOptions {
@@ -40,8 +43,8 @@ public:
 
   // The setup to boot with: the set's, with the app's own options applied.
   [[nodiscard]] GameSetup setup() const;
-  // Writes the patch's switches into the running game's options block.
-  void apply(Emulator &emulator) const;
+  // Writes the patch's switches into the running game's options block and sets the pad's.
+  void apply(Emulator &emulator, PadInput &pad) const;
 
 private:
   void save() const;
@@ -49,9 +52,10 @@ private:
   GameSetup setup_;
   std::filesystem::path stored_;
   uint32_t address_ = 0;
-  // The patch's switches first, in block order, then the app's own.
+  // The manifest's switches first, in its order, then layout and textures.
   std::vector<Option> items_;
-  size_t patchCount_ = 0;
+  // How many of the first are the patch's, a byte each of its block.
+  size_t blockCount_ = 0;
 };
 
 } // namespace z3d::app

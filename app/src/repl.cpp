@@ -128,7 +128,7 @@ std::string Repl::execute(const std::string &line) {
       return "err core refused the state";
     }
     // The state carries the options block of the run that made it.
-    options_.apply(emulator_);
+    options_.apply(emulator_, pad_);
     return "ok";
   }
   if (command == "option") {
@@ -137,7 +137,7 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> id >> value) || value > UINT8_MAX || !options_.set(id, static_cast<uint8_t>(value))) {
       return "err option <id> <value>";
     }
-    options_.apply(emulator_);
+    options_.apply(emulator_, pad_);
     return "ok";
   }
   if (command == "shot") {

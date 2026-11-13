@@ -41,7 +41,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   applyGameSettings(options.setup());
   GameWindow window(config, pad);
   Emulator emulator(config, game.rom, window);
-  options.apply(emulator);
+  options.apply(emulator, pad);
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
   if (config.hidden) {
     Repl repl(emulator, pad, options);
@@ -75,7 +75,7 @@ int picker(const AppConfig &config, PadInput &pad) {
     window.boot(game.title);
     {
       Emulator emulator(config, game.setup.rom, window);
-      options[*chosen].apply(emulator);
+      options[*chosen].apply(emulator, pad);
       const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
                                   config.userDir / game.setup.options);
       Player(emulator, window).run();

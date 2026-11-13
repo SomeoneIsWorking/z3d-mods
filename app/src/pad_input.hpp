@@ -19,6 +19,8 @@ struct PadState {
   std::array<bool, Settings::NativeButton::NumButtons> buttons{};
   // Indexed by Settings::NativeAnalog: x right, y up, each -1..1.
   std::array<std::array<float, 2>, Settings::NativeAnalog::NumAnalogs> sticks{};
+  // The C-stick as the game gets it: each axis turned around or not.
+  std::array<bool, 2> cStickInverted{};
 };
 
 class PadInput {
@@ -41,6 +43,10 @@ public:
   // NativeButton bits.
   void setButtons(uint32_t mask);
   void setStick(Settings::NativeAnalog::Values stick, float x, float y);
+  // A game option (game_options.hpp); the picker and menus read the stick as held.
+  void invertCStick(bool x, bool y) {
+    state_->cStickInverted = {x, y};
+  }
 
   [[nodiscard]] const PadState &state() const {
     return *state_;

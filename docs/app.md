@@ -52,6 +52,9 @@ a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
   `patch/<game>/options.toml`): the guest address of the patch's options block and each switch's
   id, label and default, one byte each in order. `--options` and the library's `"options"` name it
   relative to the user folder.
+- An `[[option]]` with `pad` instead of `field` is the app's: `cstick_invert_x` and
+  `cstick_invert_y` turn the C-stick around on its way to the game (MM3D's camera stick, which the
+  game reads itself). The picker and menus read the stick as held.
 - The app's own rows follow: the screen layout, and the texture pack when the set has one.
 - Choices are kept per game in `<user>/options/<rom name>.json`. The tools (`--hidden`) keep none
   and run every game on its defaults; a run changes one with the `option` command
