@@ -32,7 +32,7 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
   generated from the player's ROM and never committed.
 - `tools/z3dmods/stairs.py` reads where the texture paints its steps (row period, nose edge, crease)
   from the texture the player sees: the set's 4K pack replacement when it has one
-  (`texture_pack.py` matches it by look), else the ROM's. The ramp is the pitch line through the
+  (`texture_pack.py` finds it by Azahar's texture hash), else the ROM's. The ramp is the pitch line through the
   step noses, as on real stairs: faces between 10 and 60 degrees are cut at each painted crease and
   nose and folded into vertical risers and flat treads below the ramp, each nose on it. Nothing
   rises above the ramp, so steps stay inside the walls beside them (a version centred on the ramp
