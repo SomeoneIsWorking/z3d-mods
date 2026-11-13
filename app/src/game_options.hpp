@@ -56,8 +56,6 @@ private:
   std::vector<Option> items_;
   // How many of the first are the patch's, a byte each of its block.
   size_t blockCount_ = 0;
-  // The manifest's "pad": a gamepad's X and Y trade places for this game.
-  bool swapXY_ = false;
 };
 
 } // namespace z3d::app

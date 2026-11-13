@@ -81,7 +81,7 @@ new file's name keyboard (`00040030/0000C802`) fails to load and Azahar falls ba
 dialog (`apt/applet_manager.cpp`); shown 2026-11-13, a new MM3D file named that way reached "Save
 completed.". In the tools' headless session that dialog waits for `type:<text>`.
 
-### MM3D: Project Restoration v110 and Omni Xbox UI
+### MM3D: Project Restoration v110
 
 | | |
 |---|---|
@@ -90,12 +90,9 @@ completed.". In the tools' headless session that dialog waits for `type:<text>`.
 | Gives | Zora fast swim, Deku hops, D-pad transformations, instant Bomber's Notebook, Song of Time saving option, boss rebalances, Inverted Song of Time at 1/3 speed, fewer song replays, Bombers no longer interrupting, softlock fixes |
 | Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. The patched code it outputs is laid out like 1.0 (PR rebuilds 1.1 into its 1.0-based code), so our MM3D hooks use 1.0/mm3d-decomp addresses; the installer checks each hook's original word against this bake (0x174374 `bl 0x1846B4` there, not in vanilla 1.1). |
 
-| | |
-|---|---|
-| Textures | Omni Xbox UI for PR 1.3 (HardDanX), GameBanana 569317, `omni_ui_for_project_restoration_13.rar` md5 `74d99a122706fbd46cec2252d88cac71` (matches GameBanana), sha256 `c512206ed5edbc00585b5477f588e63733b1deee167578f931bc2a50dcb20a21`; its `Omni Xbox UI for PR/` folder into `load/textures/0004000000125500/` |
-| Licence | CC BY-NC-ND 4.0: installable, not modifiable or redistributable |
-| Shown | Harness, new game to the Lost Woods, same state with textures on and off: the bottom screen's button labels become RB, a yellow Y, a blue X and LB+RB hints (stock: I, X, Y, II) |
-| Needs | Azahar's custom textures, which the set turns on globally (`[Utility] custom_textures=true`). Its readme also suggests swapping A/B and the bumpers with the triggers in Azahar's input mapping. That is the player's controller setup, so it is documented here and not changed |
+The button prompts are our own: `sets/hud/mm3d-usa-rev1.json` draws port-assets' Xbox glyphs
+over the game's 3DS prompts (plans/xbox-glyphs.md), installed under
+`load/textures/0004000000125500/z3dmods-hud/` with Azahar's custom textures on.
 
 MM3D single screen is not installed yet. DekUI and Majora ReMasked are GPL-2 forks of Azahar, not
 mods for the player's Azahar 2126.2; DekUI draws its single-screen menus in the emulator and builds
@@ -108,7 +105,7 @@ only with Qt, which the player declined. Our MIT patch is planned in
 |---|---|---|---|---|---|
 | Ocarina ReFramed | OoT3D | github.com/OTPR26/OOT3DHud v2.5.1 (2026-10-29), Single and Dual | GPL-3.0-or-later; free-cam base from Roberto-Nessy with no licence | `code.ips` + `exheader.bin` + `romfs/`, or an xdelta ROM patch | Fallback for OoT3D single screen; controller-neutral prompts |
 | OoT3D: Single Screen Experience | OoT3D | GameBanana 695893 v3.2.2 | CC BY-NC-ND 4.0, no source | `exheader.bin` + `romfs/` (+ code) | Not used |
-| Henriko MM3D 4K | MM3D | 3.0b-1, 1080p and 4K, henrikomagnifico.com/zelda-majoras-mask-3d-4k (Drive `1I_QuBQX-_TTKCkS0MHho73ApKFfyckh6`) | None stated | textures, `pack.json` | To install: Drive's download quota was exceeded on 2026-11-12 and the MediaFire mirror reset the connection. It remakes buttons and prompts, so where it and Omni replace the same texture Omni's file wins; if its `pack.json` sets `use_new_hash`, Omni's legacy-hash files would stop matching, so check before installing both |
+| Henriko MM3D 4K | MM3D | 3.0b-1, 1080p and 4K, henrikomagnifico.com/zelda-majoras-mask-3d-4k (Drive `1I_QuBQX-_TTKCkS0MHho73ApKFfyckh6`) | None stated | textures, `pack.json` | To install: Drive's download quota was exceeded on 2026-11-12 and the MediaFire mirror reset the connection. It remakes buttons and prompts, so our glyph sheets must be rebuilt on its copies (plans/hires-hud.md); if its `pack.json` sets `use_new_hash`, our legacy-hash names would stop matching, so check before installing |
 | SSE Controller UI Packs | OoT3D | GameBanana 701929 v3.2 | CC BY-NC-ND | textures | Not used: our own glyphs cover what The One Screen leaves (plans/xbox-glyphs.md) |
 | Touchless Layout UI | OoT3D | GameBanana 567711 v3.1 | CC BY-NC-ND | textures | Fallback glyph pack (Vanilla build) |
 | OoT3D Autosave | OoT3D | GameBanana 686090 | CC BY-NC-ND | `code.ips` only | Not used: our own autosave is in the patch (plans/oot3d-qol.md) |
@@ -116,7 +113,7 @@ only with Qt, which the player declined. Our MIT patch is planned in
 | OoT3D Randomizer | OoT3D | github.com/gamestabled/OoT3D_Randomizer v5.0 | None for its own code: `LICENSE.md` only carries the MIT notice of the N64 OoT-Randomizer code it derives from | `code.ips` + `exheader.bin` | Evidence only: loader, Quick Text, the C-stick free camera (`code/src/camera.c`, by Nessy, HylianFreddy and Colin E, hooked at `Camera_Update`), story-flag skips at save creation |
 | zeldaret/oot3d | OoT3D | WIP decompilation of the USA `code.bin` | CC0 | | Our fork is `decomp/oot3d` |
 | DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Single screen is host code that needs the Qt frontend; the user declined Qt. Evidence for our own patch |
-| Omni Xbox UI | MM3D | as above | CC BY-NC-ND | textures | Installed until our own glyphs exist |
+| Omni Xbox UI for PR | MM3D | GameBanana 569317 v1.3 (HardDanX) | CC BY-NC-ND 4.0 | textures | Not used: our own glyphs replace it (plans/xbox-glyphs.md) |
 | MM3D Randomizer base patch | MM3D | Z3DR/mm3dr | MIT (with permission for its PR code) | | Reference |
 | Zeldocto/MM3D-PC | MM3D | v0.1.9 | GPL-3.0 | native PC port | Not an Azahar mod |
 

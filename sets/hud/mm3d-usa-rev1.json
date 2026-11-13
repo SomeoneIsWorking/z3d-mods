@@ -1,0 +1,66 @@
+{
+  "about": "MM3D (USA rev 1) draws its button prompts as 3DS art; each cell below, in the texture's own pixels [x0, y0, x1, y1], is drawn as port-assets' Xbox pad glyph for the pad button the app binds there (A/B/X/Y by name, L/R the triggers, ZL/ZR the bumpers, START the menu button, the circle pad the left stick). inlay: the prompt sits on a button face, which is filled in under the glyph. scale: no texture pack covers these, so the game's own art is enlarged this much. A texture in a GAR archive is <archive>.gar/<file>.",
+  "scale": 4,
+  "layout/US_English/Joker.Main.gar/parts.ctxb": [
+    {"glyph": "face_a", "box": [112, 0, 128, 16]},
+    {"glyph": "face_b", "box": [128, 0, 144, 16]},
+    {"glyph": "face_x", "box": [144, 0, 160, 16]},
+    {"glyph": "face_y", "box": [160, 0, 176, 16]},
+    {"glyph": "lt", "box": [176, 0, 192, 16]},
+    {"glyph": "rt", "box": [192, 0, 208, 16]},
+    {"glyph": "start", "box": [208, 0, 224, 16]},
+    {"glyph": "dpad", "box": [96, 16, 112, 32]},
+    {"glyph": "dpad_up", "box": [112, 16, 128, 32]},
+    {"glyph": "dpad_right", "box": [128, 16, 144, 32]},
+    {"glyph": "dpad_down", "box": [144, 16, 160, 32]},
+    {"glyph": "dpad_left", "box": [160, 16, 176, 32]},
+    {"glyph": "dpad_vertical", "box": [176, 16, 192, 32]},
+    {"glyph": "dpad_horizontal", "box": [192, 16, 208, 32]},
+    {"glyph": "ls", "box": [208, 16, 224, 32]},
+    {"glyph": "ls_up", "box": [224, 16, 240, 32]},
+    {"glyph": "ls_right", "box": [240, 16, 256, 32]},
+    {"glyph": "ls_down", "box": [96, 32, 112, 48]},
+    {"glyph": "ls_left", "box": [112, 32, 128, 48]},
+    {"glyph": "ls_vertical", "box": [128, 32, 144, 48]},
+    {"glyph": "ls_horizontal", "box": [144, 32, 160, 48]},
+    {"glyph": "face_x", "box": [176, 32, 192, 48]},
+    {"glyph": "face_y", "box": [192, 32, 208, 48]},
+    {"glyph": "lb", "box": [176, 80, 192, 96]},
+    {"glyph": "rb", "box": [192, 80, 208, 96]}
+  ],
+  "layout/US_English/Joker.Main.gar/btn_return.ctxb": [
+    {"glyph": "face_b", "box": [28, 36, 42, 50], "inlay": true},
+    {"glyph": "face_b", "box": [84, 36, 98, 50], "inlay": true}
+  ],
+  "layout/US_English/Joker.Main.gar/menu_popup_parts00.ctxb": [
+    {"glyph": "face_b", "box": [45, 47, 59, 61], "inlay": true},
+    {"glyph": "face_b", "box": [155, 83, 169, 97], "inlay": true}
+  ],
+  "layout/US_English/Joker.Main.Play.gar/hud_patrs00_action_text.ctxb": [
+    {"glyph": "face_a", "box": [22, 0, 34, 12], "inlay": true},
+    {"glyph": "face_b", "box": [60, 0, 74, 12], "inlay": true},
+    {"glyph": "face_x", "box": [482, 100, 494, 112]},
+    {"glyph": "face_y", "box": [498, 100, 510, 112]}
+  ],
+  "layout/US_English/Joker.Main.Play.SubMenu.gar/menu_map_parts00.ctxb": [
+    {"glyph": "face_a", "box": [99, 9, 113, 23], "inlay": true},
+    {"glyph": "face_a", "box": [175, 109, 189, 123], "inlay": true},
+    {"glyph": "face_a", "box": [175, 145, 189, 159], "inlay": true}
+  ],
+  "layout/US_English/Joker.Main.Play.SubMenu.gar/menu_schedule_parts00.ctxb": [
+    {"glyph": "face_a", "box": [432, 31, 446, 45], "inlay": true},
+    {"glyph": "face_x", "box": [55, 103, 69, 117], "inlay": true},
+    {"glyph": "face_a", "box": [399, 105, 413, 119], "inlay": true}
+  ],
+  "layout/US_English/Joker.Main.Play.SubMenu.gar/world_map_base00.ctxb": [
+    {"glyph": "face_x", "box": [196, 208, 211, 223]},
+    {"glyph": "face_x", "box": [196, 224, 211, 239]}
+  ],
+  "layout/Joker.Main.Play.Ocarina.gar/menu_ocarina_parts01.ctxb": [
+    {"glyph": "face_x", "box": [97, 232, 115, 253]},
+    {"glyph": "face_y", "box": [121, 232, 139, 253]},
+    {"glyph": "face_a", "box": [144, 232, 163, 253]},
+    {"glyph": "lt", "box": [445, 149, 463, 170]},
+    {"glyph": "rt", "box": [445, 172, 463, 193]}
+  ]
+}

@@ -31,7 +31,8 @@ class GameSet:
     screen_layout: str
     # Fold the game's stair ramps into steps (OoT3D rooms).
     stairs: bool
-    # The base mod's menu-texture edit table (sets/hud/), redone on the texture pack's copies.
+    # The menu-texture edit table (sets/hud/): the base mod's edits redone on the texture pack's
+    # copies, and the pad glyphs drawn over the game's button prompts.
     hud: str | None
 
 
@@ -145,7 +146,7 @@ def install(cfg: Config, game: GameSet) -> Path:
     rooms = _stepped_rooms(rom, base_romfs, pack) if game.stairs else {}
     menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
                       cfg.glyph_set())
-             if game.hud and pack and base_romfs else {})
+             if game.hud else {})
 
     mods = cfg.mods_dir(game.title_id)
     _remove_recorded(mods)
@@ -165,16 +166,18 @@ def install(cfg: Config, game: GameSet) -> Path:
     _write_record(mods, {"base": game.base["name"], "patch": game.patch or "",
                          "stairs": "yes" if game.stairs else "no"})
 
-    if game.textures:
+    if game.textures or menus:
         textures = cfg.textures_dir(game.title_id)
         _remove_recorded(textures)
         textures.mkdir(parents=True, exist_ok=True)
-        _copy_tree(cfg.env_assets / game.textures["root"], textures)
+        if game.textures:
+            _copy_tree(cfg.env_assets / game.textures["root"], textures)
         for name, png in menus.items():
             target = textures / HUD_FOLDER / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(png)
-        _write_record(textures, {"textures": game.textures["name"], "hud": game.hud or ""})
+        _write_record(textures, {"textures": game.textures["name"] if game.textures else "",
+                                 "hud": game.hud or ""})
     if game.azahar_global:
         azahar_config.set_global(cfg.azahar_config, game.azahar_global)
     return mods

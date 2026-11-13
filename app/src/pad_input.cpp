@@ -64,13 +64,6 @@ constexpr std::array kPadButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, Settings::NativeButton::Right},
 };
 
-constexpr Settings::NativeButton::Values swappedXY(Settings::NativeButton::Values button) {
-  if (button == Settings::NativeButton::X) {
-    return Settings::NativeButton::Y;
-  }
-  return button == Settings::NativeButton::Y ? Settings::NativeButton::X : button;
-}
-
 constexpr int16_t kTriggerPressed = 16384;
 constexpr float kAxisFull = 32767.0F;
 
@@ -181,7 +174,6 @@ void PadInput::handle(const SDL_Event &event) {
 void PadInput::readHost() {
   PadState state;
   state.cStickInverted = state_->cStickInverted;
-  state.swapXY = state_->swapXY;
   const bool *keys = SDL_GetKeyboardState(nullptr);
   for (const KeyBinding &binding : kKeys) {
     state.buttons[binding.button] = keys[binding.key];
@@ -193,7 +185,7 @@ void PadInput::readHost() {
   for (SDL_Gamepad *pad : pads_) {
     for (const PadBinding &binding : kPadButtons) {
       if (SDL_GetGamepadButton(pad, binding.pad)) {
-        state.buttons[state.swapXY ? swappedXY(binding.button) : binding.button] = true;
+        state.buttons[binding.button] = true;
       }
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerPressed) {

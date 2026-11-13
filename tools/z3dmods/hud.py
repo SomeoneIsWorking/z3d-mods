@@ -1,4 +1,4 @@
-"""High-resolution replacements for a base mod's edited menu textures.
+"""Replacements for a game's menu textures: a base mod's edits at a texture pack's scale, and pad glyphs.
 
 A base mod that edits a vanilla texture changes its Azahar hash, so the texture pack's high-resolution
 copy of the vanilla texture no longer applies. Each replacement starts from that copy and redoes the
@@ -6,6 +6,10 @@ mod's edits at the pack's scale, as an edit table lists them (sets/hud/*.json): 
 the pack's vanilla art, moved art is copied, new lettering is drawn in port-assets' key font, and
 the 3DS button prompts the mod leaves become port-assets' Xbox pad glyphs. The result is named after
 the mod's texture, so the pack covers the mod's version too.
+
+A set with no pack or base mod behind a texture (MM3D) gets the game's own art enlarged by the
+table's `scale`, with the same glyph edits. A texture inside a GAR archive is named
+`<archive>.gar/<file>.ctxb`.
 """
 
 from __future__ import annotations
@@ -19,7 +23,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
-from z3dmods import ctr, ctxb, pica_texture
+from z3dmods import ctr, ctxb, gar, pica_texture
 from z3dmods.texture_pack import TexturePack
 
 # A premultiplied channel difference above this is an edit, not the mod's re-encoding.
@@ -161,6 +165,34 @@ def _glyph(size: tuple[int, int], svg: Path, dimmed: bool) -> Image.Image:
     return layer
 
 
+def _inlay_ground(image: Image.Image, box: tuple[int, int, int, int], scale: int) -> Image.Image:
+    """The art under a prompt drawn on a button face: each row of `box` blended between the
+    art just left and just right of it."""
+    x0, y0, x1, y1 = box
+    height = y1 - y0
+    edges = Image.new("RGBa", (2, height))
+    edges.paste(image.crop((max(0, x0 - scale), y0, x0, y1)).convert("RGBa").resize((1, height), Image.BOX), (0, 0))
+    edges.paste(image.crop((x1, y0, min(image.width, x1 + scale), y1)).convert("RGBa").resize((1, height), Image.BOX),
+                (1, 0))
+    return edges.resize((x1 - x0, height), Image.BILINEAR).convert("RGBA")
+
+
+def _enlarged(image: Image.Image, scale: int) -> Image.Image:
+    return image.convert("RGBa").resize((image.width * scale, image.height * scale), Image.LANCZOS).convert("RGBA")
+
+
+def _container(path: str) -> str:
+    """The game file a texture path is in: itself, or its GAR archive."""
+    archive, inside, _ = path.partition(".gar/")
+    return archive + ".gar" if inside else path
+
+
+def _bundle(read, path: str) -> bytes:
+    """A CTXB file, loose or inside a GAR archive."""
+    container = _container(path)
+    return read(path) if container == path else gar.files(read(container))[path[len(container) + 1:]]
+
+
 def _dominant(image: Image.Image) -> tuple[int, int, int, int]:
     opaque = [p for p in image.getdata() if p[3] > 128]
     return tuple(sorted(opaque)[len(opaque) // 2]) if opaque else (255, 255, 255, 255)
@@ -216,7 +248,10 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
             # The letter's outline is about one vanilla pixel wide.
             out.paste(_fill(region, _grown(_yellow_mask(region), scale)), (x0, y0))
         elif kind == "glyph":
-            out.paste(clear, (x0, y0, x1, y1))
+            if edit.get("inlay", False):
+                out.paste(_inlay_ground(texture.hires, (x0, y0, x1, y1), scale), (x0, y0))
+            else:
+                out.paste(clear, (x0, y0, x1, y1))
             out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)), (x0, y0))
         elif kind == "dpad":
             colour = _dominant(texture.modded.crop(tuple(box)))
@@ -228,17 +263,27 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
     return out
 
 
-def build(romfs: ctr.Romfs, base_romfs: Path, pack: TexturePack, table: Path, font: Path,
+def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack | None, table: Path, font: Path,
           glyphs: Path) -> dict[str, bytes]:
-    """Pack file name -> PNG for every texture in the edit table the pack covers."""
-    edits = {k: v for k, v in json.loads(table.read_text()).items() if k != "about"}
+    """Pack file name -> PNG for every texture in the edit table."""
+    document = json.loads(table.read_text())
+    scale = document.get("scale")
+    edits = {k: v for k, v in document.items() if k not in ("about", "scale")}
+
+    def base(path: str) -> bytes:
+        return (base_romfs / path).read_bytes()
+
     textures = {}
     for path in edits:
-        vanilla, gl_format = ctxb.image(romfs.read(path))
-        modded, modded_format = ctxb.image((base_romfs / path).read_bytes())
+        vanilla, gl_format = ctxb.image(_bundle(romfs.read, path))
+        modded, modded_format = vanilla, gl_format
+        if base_romfs and (base_romfs / _container(path)).exists():
+            modded, modded_format = ctxb.image(_bundle(base, path))
         if modded_format != gl_format or modded.size != vanilla.size:
             raise ValueError(f"{path}: the base mod changed the texture's format or size")
-        hires = pack.replacement(vanilla, gl_format)
+        hires = pack.replacement(vanilla, gl_format) if pack else None
+        if hires is None and scale:
+            hires = _enlarged(vanilla, scale)
         if hires is None:
             raise ValueError(f"{path}: the texture pack has no copy of the vanilla texture")
         textures[path] = Texture(vanilla, modded, gl_format, hires)

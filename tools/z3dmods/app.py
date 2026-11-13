@@ -104,5 +104,5 @@ def options_manifest(game: GameSet) -> Path:
 
 
 def uses_textures(game: GameSet, textures: bool | None = None) -> bool:
-    """The set's custom textures, unless `textures` overrides them."""
-    return (game.textures is not None) if textures is None else textures
+    """The set's custom textures (a pack, or our own menu textures), unless `textures` overrides them."""
+    return (game.textures is not None or game.hud is not None) if textures is None else textures
