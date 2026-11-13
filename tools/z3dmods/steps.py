@@ -1,11 +1,12 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes>, warp:<entrance>, waitcs:<s> (wait for a cutscene to start, then end), csframe:<n> (wait until a running cutscene
+poke:<addr>,<hex bytes>, warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), waitcs:<s> (wait for a cutscene to start, then end), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
-keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y up).
+keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y up),
+record:<name> (every frame from here into <name>.mp4), stoprecord.
 """
 
 from __future__ import annotations
@@ -115,6 +116,14 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             session.write(play + layout.next_entrance, struct.pack("<h", int(arg, 0)))
             session.write(play + layout.transition_trigger, bytes([TRANSITION_START]))
             log(f"warp to entrance {arg}")
+        elif kind == "teleport":
+            if layout.player is None:
+                raise RuntimeError("teleport needs the player's actor layout")
+            player = session.u32(_play(session, layout) + layout.player)
+            position = struct.pack("<3f", *(float(part) for part in arg.split(",")))
+            for field in (layout.actor_home, layout.actor_position, layout.actor_previous):
+                session.write(player + field, position)
+            log(f"teleport player 0x{player:08X} to {arg}")
         elif kind == "csframe":
             log(f"cutscene at {_wait_frame(session, layout, int(arg, 0))}")
         elif kind == "waitscript":
@@ -138,7 +147,8 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
-        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick"):
+        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick",
+                      "record", "stoprecord"):
             extra = getattr(session, kind, None)
             if extra is None:
                 raise RuntimeError(f"{kind} is not available on this backend")

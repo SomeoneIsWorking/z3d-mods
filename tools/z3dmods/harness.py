@@ -39,6 +39,8 @@ class HarnessSession:
         self._log_path = log
         self._process: subprocess.Popen | None = None
         self._held = 0
+        self._recording: Path | None = None
+        self._recorded = 0
 
     def __enter__(self) -> HarnessSession:
         app.seed_user(self._cfg, self._user, fresh=True)
@@ -98,8 +100,32 @@ class HarnessSession:
         return int(width), int(height)
 
     def run_frames(self, count: int) -> None:
-        if count > 0:
+        if count <= 0:
+            return
+        if self._recording is None:
             self._send(f"run {count}")
+            return
+        for _ in range(count):
+            self._send("run 1")
+            self._send(f"shot {self._recording / f'{self._recorded:05d}.png'}")
+            self._recorded += 1
+
+    def record(self, name: str) -> str:
+        """Captures every frame from now until stoprecord."""
+        self._recording = self._log_path.parent / name
+        self._recording.mkdir(parents=True, exist_ok=True)
+        self._recorded = 0
+        return str(self._recording)
+
+    def stoprecord(self) -> str:
+        if self._recording is None:
+            raise RuntimeError("stoprecord without record")
+        frames, self._recording = self._recording, None
+        video = frames.with_suffix(".mp4")
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i",
+                        str(frames / "%05d.png"), "-pix_fmt", "yuv420p", "-c:v", "libx264", str(video)],
+                       check=True)
+        return f"{self._recorded} frames into {video}"
 
     def wait(self, seconds: float) -> None:
         self.run_frames(round(seconds * FPS))

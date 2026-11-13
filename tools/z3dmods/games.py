@@ -19,6 +19,20 @@ class Layout:
     cutscene_frames: int
     cutscene_script: int
     scene: int
+    # OoT3D only: PlayState offsets of the player actor pointer and the main camera's look-at and
+    # eye, and the actor's world position.
+    player: int | None = None
+    actor_position: int | None = None
+    # A teleport writes all three: the player restores its position from home while it stands,
+    # and the background check runs from the previous position to the new one.
+    actor_previous: int | None = None
+    actor_home: int | None = None
+    camera_at: int | None = None
+    camera_eye: int | None = None
+
+
+# ACTORCAT_PLAYER, the player's actor list.
+PLAYER_CATEGORY = 2
 
 
 def _oot3d(d: symbols.Decomp) -> Layout:
@@ -33,6 +47,13 @@ def _oot3d(d: symbols.Decomp) -> Layout:
         cutscene_frames=cutscene + symbols.offset(d, "CutsceneContext.frames"),
         cutscene_script=cutscene + symbols.offset(d, "CutsceneContext.segment"),
         scene=symbols.offset(d, "PlayState.sceneNum"),
+        player=(symbols.offset(d, "PlayState.actorCtx") + symbols.offset(d, "ActorContext.actorLists")
+                + PLAYER_CATEGORY * symbols.size(d, "ActorListEntry") + symbols.offset(d, "ActorListEntry.head")),
+        actor_position=symbols.offset(d, "Actor.world"),
+        actor_previous=symbols.offset(d, "Actor.prevPos"),
+        actor_home=symbols.offset(d, "Actor.home"),
+        camera_at=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.at"),
+        camera_eye=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.eye"),
     )
 
 
