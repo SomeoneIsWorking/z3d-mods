@@ -24,7 +24,6 @@ own patches and of texture packs.
   MIT, so it never links or loads Azahar's core in its own process: Azahar (GPL-2.0-or-later) runs
   as a separate program the app starts and drives over a local channel, shipped with its source.
   GPL mods (DekUI, Project Restoration) are evidence only; their code is never copied.
-  Not shipping as a libretro core does not remove this.
 - Third-party mods without a permissive license are never redistributed; the compatibility loaders
   avoid that by applying mods the player already has, not by bundling them.
 
