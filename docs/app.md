@@ -100,6 +100,11 @@ extent (800x384 at scale 2).
    library, `libazahar_core.so` (the four core libraries and their static externals, built
    position-independent), its headers and those its public headers include, and a CMake package
    with the core's compile definitions: `find_package(AzaharCore CONFIG)`.
+3. `rasterizer_cache`: `ValidateSurface` looks its surface up again after a custom texture upload.
+   With `async_custom_loading` off (the tools) the upload runs inside it and replaces the surface,
+   which can move the surface storage; the held reference then crashed the app (SIGSEGV in
+   `boost::icl` under `ValidateSurface`), at boot or after a `loadstate`, on a set with a texture
+   pack.
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and
