@@ -66,6 +66,8 @@ private:
     }
     if (Game::messageIsChoice(play)) {
       choiceAsked_ = true;
+      // An answer may ask again; its text is closed each time.
+      closedFrame_ = 0;
       return false;
     }
     return choiceAsked_;

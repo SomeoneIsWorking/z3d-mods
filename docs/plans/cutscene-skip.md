@@ -24,8 +24,9 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   the box once, stops stepping for that game frame, and resumes once the game has finished closing
   it; closing again every frame stalls the cutscene. A choice is never closed: the skip
   waits there for the player, then closes the answer's own text. A choice box only reports itself
-  once it has printed, so the skip reads the held text entry's type from the script
-  (`patch/oot3d/cutscene_script.hpp`).
+  once it has printed, so the skip reads the held text entry from the script: its type on OoT3D
+  (`patch/oot3d/cutscene_script.hpp`), its alternate texts on MM3D, whose scripts mark a question
+  only by what follows an answer (`patch/mm3d/cutscene_script.hpp`).
 - Transitions: the skip refuses to start, and stops stepping, while a scene transition is requested.
 - `patch/common/cutscene_skip.hpp` is the skip; each game's `cutscene_skip.cpp` supplies only its
   layout as a `Game` trait. The functions, globals and offsets it uses are generated from the game's
@@ -60,8 +61,12 @@ to the end (flags, items, time of day, entrance, music), with no other change.
 - OoT3D Deku Tree after Gohma (`poke:0x588EF8,f1ff warp:0xEE`, script end 4500): Start at frame
   60 runs to the choice at 499 and waits there; Yes or No (D-pad) lands in the next script in scene
   71 as watching does. At its frame 100 the save context differs from watching only in +0x15B4.
-- MM3D: a choice inside a skipped cutscene is likely closed unanswered, untested
-  (`docs/issues/mm3d-skip-closes-choice.md`).
+- MM3D milk run raid (`climia_raiders.jdb`, the game's one script that asks; reached from a new
+  file with `poke:0x77643E,01 poke:0x776447,80` and day 2, 18:45 poked into the save, then
+  `warp:0xCE20`): Start at frame 100 runs to "Do you understand?" at 662 and
+  waits. Yes ends the cutscene at 750 in the arrow minigame; No closes Cremia's reply and asks
+  again, as watching does after her explanation. At the cutscene's end the save differs from
+  watching only where two watched runs differ too (+0x1380..0x1393 and +0x1A88).
 
 ## Proof
 On real cutscenes in each game, reached through a warp from a copy of the save: one run watches to

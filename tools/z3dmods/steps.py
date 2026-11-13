@@ -126,7 +126,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             log(f"poke 0x{address:08X} {data}")
         elif kind == "warp":
             play = _play(session, layout)
-            session.write(play + layout.next_entrance, struct.pack("<h", int(arg, 0)))
+            session.write(play + layout.next_entrance, struct.pack("<H", int(arg, 0) & 0xFFFF))
             session.write(play + layout.transition_trigger, bytes([TRANSITION_START]))
             log(f"warp to entrance {arg}")
         elif kind == "teleport":
