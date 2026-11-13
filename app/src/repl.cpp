@@ -2,10 +2,12 @@
 
 #include "emulator.hpp"
 #include "game_options.hpp"
+#include "game_window.hpp"
 #include "pad_input.hpp"
 
 #include <lucent/log.h>
 
+#include <charconv>
 #include <cstdint>
 #include <fstream>
 #include <iterator>
@@ -80,6 +82,23 @@ std::string Repl::execute(const std::string &line) {
     }
     const auto analog = command == "stick" ? Settings::NativeAnalog::CirclePad : Settings::NativeAnalog::CStick;
     pad_.setStick(analog, static_cast<float>(x) / kStickFull, -static_cast<float>(y) / kStickFull);
+    return "ok";
+  }
+  if (command == "touch") {
+    std::string first;
+    int y = 0;
+    args >> first;
+    if (first == "off") {
+      window_.touchScreen(std::nullopt);
+      return "ok";
+    }
+    int x = 0;
+    const auto [end, error] = std::from_chars(first.data(), first.data() + first.size(), x);
+    if (error != std::errc() || end != first.data() + first.size() || !(args >> y) || x < 0 ||
+        x >= static_cast<int>(Core::kScreenBottomWidth) || y < 0 || y >= static_cast<int>(Core::kScreenBottomHeight)) {
+      return "err touch <x> <y> | touch off";
+    }
+    window_.touchScreen(TouchPoint{static_cast<uint16_t>(x), static_cast<uint16_t>(y)});
     return "ok";
   }
   if (command == "r") {

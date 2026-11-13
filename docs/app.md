@@ -25,6 +25,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
+| `touch <x> <y>` / `touch off` | the stylus held at a pixel of the 320x240 touch screen, wherever the layout draws it, or lifted |
 | `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
 
 Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`

@@ -166,6 +166,12 @@ class HarnessSession:
     def loadstate(self, name: str) -> str:
         return self._send(f"loadstate {self._states / name}.state")
 
+    def touch(self, x: str, y: str, seconds: str = "0.15") -> str:
+        """Holds the stylus at (x, y) of the 320x240 touch screen, then lifts it."""
+        self._send(f"touch {int(x)} {int(y)}")
+        self.run_frames(max(1, round(float(seconds) * FPS)))
+        return self._send("touch off")
+
     def option(self, name: str, value: str) -> str:
         """Sets a game option (app/src/game_options.hpp) in the running game."""
         return self._send(f"option {name} {value}")

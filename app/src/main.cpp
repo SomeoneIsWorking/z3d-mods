@@ -44,7 +44,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   options.apply(emulator, pad);
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
   if (config.hidden) {
-    Repl repl(emulator, pad, options);
+    Repl repl(emulator, window, pad, options);
     std::cout << "ready\n" << std::flush;
     repl.serve(std::cin, std::cout);
     return 0;

@@ -4,6 +4,7 @@
 #include "screen_overlay.hpp"
 
 #include "common/settings.h"
+#include "core/3ds.h"
 #include "core/frontend/framebuffer_layout.h"
 
 #include <SDL3/SDL.h>
@@ -180,6 +181,23 @@ void GameWindow::updateLayout() {
   }
   UpdateCurrentFramebufferLayout(static_cast<unsigned>(std::max(width, 1)),
                                  static_cast<unsigned>(std::max(height, 1)));
+}
+
+void GameWindow::touchScreen(std::optional<TouchPoint> at) {
+  if (!at) {
+    TouchReleased();
+    touching_ = false;
+    return;
+  }
+  const auto &screen = GetFramebufferLayout().bottom_screen;
+  // The middle of the touched pixel.
+  const auto px = screen.left + (static_cast<unsigned>(at->x) * 2 + 1) * screen.GetWidth() / (Core::kScreenBottomWidth * 2);
+  const auto py = screen.top + (static_cast<unsigned>(at->y) * 2 + 1) * screen.GetHeight() / (Core::kScreenBottomHeight * 2);
+  if (touching_) {
+    TouchMoved(px, py);
+  } else {
+    touching_ = TouchPressed(px, py);
+  }
 }
 
 void GameWindow::touch(SDL_FPoint at, bool pressed) {

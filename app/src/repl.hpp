@@ -7,6 +7,7 @@
 namespace z3d::app {
 
 class Emulator;
+class GameWindow;
 class GameOptions;
 class PadInput;
 
@@ -15,11 +16,12 @@ class PadInput;
 //   savestate <file> | loadstate <file> | shot <file> | frames | quit
 //   watch <va> <size> | unwatch | hits (address:size:value:pc:lr per write, hex)
 //   option <id> <value> (a game option, game_options.hpp)
+//   touch <x> <y> | touch off (the stylus on the 320x240 touch screen)
 class Repl {
 public:
   // `stick` values are signed 16-bit, y growing downward.
-  Repl(Emulator &emulator, PadInput &pad, GameOptions &options)
-      : emulator_(emulator), pad_(pad), options_(options) {
+  Repl(Emulator &emulator, GameWindow &window, PadInput &pad, GameOptions &options)
+      : emulator_(emulator), window_(window), pad_(pad), options_(options) {
   }
 
   void serve(std::istream &in, std::ostream &out);
@@ -29,6 +31,7 @@ private:
   std::string execute(const std::string &line);
 
   Emulator &emulator_;
+  GameWindow &window_;
   PadInput &pad_;
   GameOptions &options_;
   bool done_ = false;

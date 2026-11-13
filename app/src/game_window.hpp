@@ -9,6 +9,7 @@
 #include "core/frontend/emu_window.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,6 +20,12 @@ struct SDL_FPoint;
 namespace z3d::app {
 
 class PadInput;
+
+// A pixel of the 320x240 touch screen.
+struct TouchPoint {
+  uint16_t x = 0;
+  uint16_t y = 0;
+};
 
 class GameWindow final : public Frontend::EmuWindow {
 public:
@@ -39,6 +46,9 @@ public:
 
   // Where the overlay layout puts the touch screen from now on.
   void placeOverlay(OverlayPlacement placement);
+
+  // A stylus held at a point of the 320x240 touch screen, wherever the layout draws it, or lifted.
+  void touchScreen(std::optional<TouchPoint> at);
 
   [[nodiscard]] SDL_Window *sdlWindow() const {
     return window_;
