@@ -74,7 +74,11 @@ Global keys in `qt-config.ini`, written by `z3dmods install` from each set's `az
 | Key | Why |
 |---|---|
 | `[Utility] custom_textures=true` | the texture packs load only with it |
-| `[System] lle_applets=false` | Azahar's default `true` runs the system applets from NAND, and the player's NAND has none: a new file's name keyboard (`00040030/0000C802`) failed to load and Azahar hung with no frames. With `false` Azahar's own keyboard dialog takes the name (shown 2026-11-13: a new MM3D file named on standalone Azahar, "Save completed.", the opening). The config before the change is in `env-assets/backup/qt-config-2026-11-13-pre-lle.ini` |
+
+Applets stay at Azahar's default (`lle_applets=true`). The player's NAND has no system applets, so a
+new file's name keyboard (`00040030/0000C802`) fails to load and Azahar falls back to its own keyboard
+dialog (`apt/applet_manager.cpp`); shown 2026-11-13, a new MM3D file named that way reached "Save
+completed.". In the tools' headless session that dialog waits for `type:<text>`.
 
 ### MM3D: Project Restoration v110 and Omni Xbox UI
 
