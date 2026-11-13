@@ -53,7 +53,7 @@ right stick the C-stick; the left mouse button on the bottom screen is the stylu
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and
-toolchain into `<dependencies>/azahar-core/<revision>-clang/prefix` (build tree beside it), with
+toolchain into `<dependencies>/azahar-core/<revision>-clang/prefix` (`Config.dependencies`, build tree beside it), with
 `AZAHAR_OPTIONS` (no Qt, SDL2, libretro, OpenGL, software renderer, OpenAL, tests or network
 services). `app.binary` then configures `app/` on its own into `build/app` with
 `-DCMAKE_PREFIX_PATH=<prefix>` (Clang, Ninja); `build/app` holds only the app's and Lucent's

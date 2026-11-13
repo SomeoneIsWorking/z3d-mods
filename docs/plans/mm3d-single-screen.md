@@ -9,8 +9,7 @@ DekUI: "Look, no, no Qt".
 
 DekUI (GPL-2.0) is not usable: it is its own Azahar fork whose single screen is host code in the
 emulator (`src/mm3d/`, native inventory, file select, notebook and minimap drawn by the frontend),
-and it builds only with the Qt or Android frontend. Its source (v1.1.0, `5cf063e`, checked out
-read-only at `<dekui-checkout>`) is evidence for which guest functions and state each menu uses;
+and it builds only with the Qt or Android frontend. Its source (v1.1.0, `5cf063e`, read only) is evidence for which guest functions and state each menu uses;
 its code is not copied.
 
 User, 2026-11-13: "this needs to be an app using Azahar libretro underneath": single screen moves

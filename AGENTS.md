@@ -2,7 +2,7 @@
 
 Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000125500) on Azahar
 2126.2, as openSU launches it. Azahar data: `~/.local/share/azahar-emu` (mods under
-`load/mods/<titleID>/`). ROMs: `<roms>/`. Third-party mod downloads live in gitignored
+`load/mods/<titleID>/`). ROMs: the player's own dumps, named in `env-assets/local.json`. Third-party mod downloads live in gitignored
 `env-assets/`, never in git.
 
 - What is installed and why: [docs/mods.md](docs/mods.md). Module map: [docs/codemap.md](docs/codemap.md).
@@ -22,7 +22,7 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
 ## Commands
 - `uv run --frozen z3dmods rominfo <rom.3ds>`: title, remaster version and `code.bin` hash.
 - `uv run --frozen z3dmods install oot3d mm3d`: install the sets into the player's Azahar.
-- `flock <heavy-run-lock> uv run --frozen z3dmods run <game> <name> <steps...>`: the player's
+- `uv run --frozen z3dmods run <game> <name> <steps...>`: the player's
   Azahar headless in a Gamescope headless session on the player's data; keys go in as XTest events
   on the player's keyboard bindings, frames and RAM come over Azahar's RPC server, and the player's
   Azahar config is restored afterwards. Steps: `wait:<s>`, `shot:<name>`, `<button>`,
@@ -32,11 +32,11 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   app hidden: frame-exact, savestates, watchpoints) on a copy of the player's data;
   `--no-textures` turns the set's textures off. The app builds against the pinned Azahar fork's
   core (`"azahar_source"` in `env-assets/local.json`), installed once per revision under
-  `<dependencies>/azahar-core/`; see [docs/app.md](docs/app.md). Rebuild the app: `ninja -C build/app`.
+  `azahar-core/` in the shared dependency prefix (`Config.dependencies`); see [docs/app.md](docs/app.md). Rebuild the app: `ninja -C build/app`.
 - `... z3dmods play [game]`: the z3d app in a window with the installed sets: its title picker, or
   one game directly; its saves live in `~/.local/share/z3d-mods/`, apart from standalone Azahar's.
   `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker).
-- `flock <heavy-run-lock> uv run --frozen z3dmods inputtest <oot3d|mm3d|picker>`: the
+- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker>`: the
   windowed app's input path with real key, mouse and pad events, off the player's desktop; `picker`
   runs the installed shortcut's Exec line. Shots in `scratch/input-test/<scenario>/`.
 
