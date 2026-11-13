@@ -17,6 +17,9 @@
   "azahar_global": {
     "Utility": {
       "custom_textures": true
+    },
+    "System": {
+      "lle_applets": false
     }
   }
 }

@@ -68,6 +68,14 @@ layout hotkey). The set does not set it, because of the per-game leak above.
 Hooks it owns (our patch must not touch them): 0x452390 and 0x452434 (before/after the play update),
 plus the 44 render, HUD and input sites in its `source/generated/linker.ld`.
 
+### Azahar settings both sets change
+Global keys in `qt-config.ini`, written by `z3dmods install` from each set's `azahar_global`:
+
+| Key | Why |
+|---|---|
+| `[Utility] custom_textures=true` | the texture packs load only with it |
+| `[System] lle_applets=false` | Azahar's default `true` runs the system applets from NAND, and the player's NAND has none: a new file's name keyboard (`00040030/0000C802`) failed to load and Azahar hung with no frames. With `false` Azahar's own keyboard dialog takes the name (shown 2026-11-13: a new MM3D file named on standalone Azahar, "Save completed.", the opening). The config before the change is in `env-assets/backup/qt-config-2026-11-13-pre-lle.ini` |
+
 ### MM3D: Project Restoration v110 and Omni Xbox UI
 
 | | |
@@ -82,7 +90,7 @@ plus the 44 render, HUD and input sites in its `source/generated/linker.ld`.
 | Textures | Omni Xbox UI for PR 1.3 (HardDanX), GameBanana 569317, `omni_ui_for_project_restoration_13.rar` md5 `74d99a122706fbd46cec2252d88cac71` (matches GameBanana), sha256 `c512206ed5edbc00585b5477f588e63733b1deee167578f931bc2a50dcb20a21`; its `Omni Xbox UI for PR/` folder into `load/textures/0004000000125500/` |
 | Licence | CC BY-NC-ND 4.0: installable, not modifiable or redistributable |
 | Shown | Harness, new game to the Lost Woods, same state with textures on and off: the bottom screen's button labels become RB, a yellow Y, a blue X and LB+RB hints (stock: I, X, Y, II) |
-| Needs | Azahar's custom textures, which the set turns on globally (`[Utility] custom_textures=true`; the only change to the player's `qt-config.ini`). Its readme also suggests swapping A/B and the bumpers with the triggers in Azahar's input mapping. That is the player's controller setup, so it is documented here and not changed |
+| Needs | Azahar's custom textures, which the set turns on globally (`[Utility] custom_textures=true`). Its readme also suggests swapping A/B and the bumpers with the triggers in Azahar's input mapping. That is the player's controller setup, so it is documented here and not changed |
 
 MM3D single screen is not installed yet: every existing one (DekUI, Majora ReMasked) is a GPL-2 fork
 of Azahar, not a mod for the player's Azahar 2126.2, and accepts only the USA 1.1 dump
