@@ -20,8 +20,10 @@ own patches and of texture packs.
 - The user's own install keeps all current mods: the app reads the same sets `z3dmods install` uses.
 
 ## Licensing facts
-- Azahar is GPL-2.0-or-later. An app that links or loads the core and is distributed is a combined
-  work under the GPL: we ship its full source, and our MIT code stays compatible with that.
+- User: "I can make my own project GPL but I don't like having any restrictions". The app stays
+  MIT, so it never links or loads Azahar's core in its own process: Azahar (GPL-2.0-or-later) runs
+  as a separate program the app starts and drives over a local channel, shipped with its source.
+  GPL mods (DekUI, Project Restoration) are evidence only; their code is never copied.
   Not shipping as a libretro core does not remove this.
 - Third-party mods without a permissive license are never redistributed; the compatibility loaders
   avoid that by applying mods the player already has, not by bundling them.
