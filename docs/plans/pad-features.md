@@ -43,12 +43,38 @@ Built (`patch/oot3d/free_camera.cpp`). Seen on the harness, File 1 as a child:
   the game's table, so the orbit cannot hold there), a Master Quest file, and the options menu.
 
 ## Chord item buttons
-- While ZL is held, X/Y/A/B use four extra item slots; the normal X/Y (and MM3D's I/II) items stay
-  as they are. Slots are assigned in the game's own item menu: with ZL held, the button that
-  assigns an item to X/Y assigns it to that chord slot instead.
-- The HUD shows the chord slots while ZL is held, with our own glyphs.
-- RE first: the item-button use path and the item menu's assignment in both decomps, and whether
-  either game already reads ZL (then the chord takes ZR).
+- While the chord button is held, the four item buttons (Y, X and the two the HUD draws as LB and
+  RB) hold a second page of items; released, the first page is back. Each age has its own two
+  pages. Items are assigned in the game's own item screen: opened with the chord button held, it
+  shows and edits the second page.
+- The chord button is pad bit 12, which no 3DS button sets and the game ignores. The app holds it
+  from the left stick's click and the 3 key (app.md). The plan said ZL, but The One Screen already
+  uses ZL and ZR for the LB and RB items, and every other button has a job.
+- The item screen's layout in the save owns the buttons (decomp/oot3d `docs/item_buttons.md`):
+  the game derives the equipped items and the HUD from it whenever the screen opens. So the pages
+  trade places there. The page that is away sits in the screen's grid like any unassigned item;
+  18 bytes of the save that read zero in the files seen remember which grid items it is. Every item stays in the layout,
+  so a file played without the patch shows all of them and loses nothing.
+- The pages trade only in plain play (the HUD up, no cutscene, no scene change); a cutscene or a
+  scene change puts the first page back at once, because those can change Link's age.
+- An item moved by hand from the grid to a button while its page is away leaves that page. With
+  the grid full, a button with nowhere to put its item keeps it on both pages.
+- Option: "Second item page", on by default (`patch/oot3d/options.toml`).
+
+### Status (OoT3D, 2026-11-14)
+Built (`patch/oot3d/chord_items.cpp`). Seen on the harness, File 1 as a child with a Deku Stick,
+Deku Nuts and the Slingshot poked into the inventory (run `oot-ch7`, Kokiri Forest):
+- First page: Deku Nuts assigned in the item screen; the HUD draws them on the button.
+- Chord held: the HUD's four buttons empty; the item screen shows the nuts back in the grid;
+  the Slingshot assigned there appears on the HUD button and that button aims it.
+- Released: the nuts are back on the HUD and the item screen shows the Slingshot in its grid
+  cell; held again: the Slingshot is back.
+- Held across a scene change (`oot-ch6`): the first page is in during the change and the second
+  returns after it.
+- Not seen: an adult file, the age change itself, a save and reload (the bytes are inside the
+  save context; that the game writes them to the file is not checked), a real pad's stick click,
+  the options menu's switch, a full grid.
+- MM3D: not started.
 
 ## When
 After the title picker; free camera first (OoT3D), then the chord buttons, then the glyphs.

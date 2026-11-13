@@ -179,7 +179,7 @@ private:
         guest::read<uintptr_t>(play, kPlayCameras) != reinterpret_cast<uintptr_t>(camera)) {
       return false;
     }
-    if (guest::read<uint8_t>(play, kPlayCutscene + kCsState) != 0 || guest::read<int8_t>(play, kPlaySceneLoadFlag) != 0) {
+    if (guest::read<uint8_t>(play, kPlayCutscene + kCsState) != 0 || guest::read<int8_t>(play, kPlayTransitionTrigger) != 0) {
       return false;
     }
     return guest::read<int16_t>(camera, kCamStatus) == kCamStatActive && follows(cameraFunction(camera));

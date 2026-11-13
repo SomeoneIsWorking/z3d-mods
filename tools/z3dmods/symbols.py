@@ -2,7 +2,7 @@
 
 Reads the decomp's function maps (linker-script lines `name 0xaddr` or a `vaddr,name` CSV) and
 headers (`/* 0x.. */` field offset comments, `} Name; // size = 0x..`, `extern T name; //0xaddr`
-globals, `#define` integer expressions). A patch names what it needs in patch/<game>/symbols.toml
+globals, `#define` integer expressions, `/* 0x.. */ NAME,` enumerators). A patch names what it needs in patch/<game>/symbols.toml
 and gets a generated C++ header and linker-script fragment; the tools resolve names directly.
 """
 
@@ -23,6 +23,7 @@ _STRUCT_CLOSE = re.compile(r"^\s*\}\s*(\w*)\s*;")
 _FIELD = re.compile(r"/\*\s*0x([0-9A-Fa-f]+)\s*\*/[^;]*?\b(\w+)\s*(?:\[[^\]]*\])?\s*;")
 _EXTERN = re.compile(r"^\s*extern\s+[^;]*?\b(\w+)\s*(?:\[[^\]]*\])?\s*;\s*//\s*0x([0-9A-Fa-f]+)")
 _DEFINE = re.compile(r"^\s*#define\s+(\w+)\s+([^/\n]+?)\s*(?://.*)?$")
+_ENUMERATOR = re.compile(r"^\s*/\*\s*0x([0-9A-Fa-f]+)\s*\*/\s*([A-Z][A-Z0-9_]*)\s*(?:=[^,]*)?,?\s*(?://.*)?$")
 _SIZE = re.compile(r"//\s*size\s*=\s*0x([0-9A-Fa-f]+)")
 _OPERATORS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
               ast.LShift: operator.lshift, ast.RShift: operator.rshift, ast.BitOr: operator.or_}
@@ -39,7 +40,7 @@ SOURCES = {
     "oot3d": Source("decomp/oot3d", ("data/oot3d.ld",),
                     ("include/z3D.hpp", "include/z3Dactor.hpp", "include/z3Dcamera.hpp", "include/z3Dsave.hpp",
                      "include/variables.hpp", "include/regs.hpp", "include/z3Dcutscene.hpp",
-                     "include/z3Dmessage.hpp")),
+                     "include/z3Dmessage.hpp", "include/z3Ditem.hpp")),
     "mm3d": Source("decomp/mm3d", ("symbols/functions.csv",), ("include/z3D.h",)),
 }
 
@@ -91,6 +92,9 @@ def _read_header(path: Path, decomp: Decomp) -> None:
                 continue
             elif (define := _DEFINE.match(line)) is not None:
                 decomp.defines[define.group(1)] = define.group(2)
+                continue
+            elif (enumerator := _ENUMERATOR.match(line)) is not None:
+                decomp.defines[enumerator.group(2)] = f"0x{enumerator.group(1)}"
                 continue
             else:
                 continue

@@ -24,3 +24,9 @@ id = "free_camera_invert_y"
 field = "freeCameraInvertY"
 label = "Free camera: invert Y"
 default = false
+
+[[option]]
+id = "chord_items"
+field = "chordItems"
+label = "Second item page (hold the chord button)"
+default = true

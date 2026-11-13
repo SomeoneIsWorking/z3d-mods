@@ -18,7 +18,7 @@ FPS = 60
 # Azahar's Settings::NativeButton order: the bits of the app's `input` command.
 BUTTONS = {
     "a": 0, "b": 1, "x": 2, "y": 3, "up": 4, "down": 5, "left": 6, "right": 7,
-    "l": 8, "r": 9, "start": 10, "select": 11, "zl": 14, "zr": 15, "home": 16,
+    "l": 8, "r": 9, "start": 10, "select": 11, "debug": 12, "zl": 14, "zr": 15, "home": 16,
 }
 PRESS_FRAMES = 6
 # The tools render at the 3DS's own size unless a run asks for more: small screenshots.

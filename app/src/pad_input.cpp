@@ -33,6 +33,7 @@ constexpr std::array kKeys{
     KeyBinding{SDL_SCANCODE_W, Settings::NativeButton::R},
     KeyBinding{SDL_SCANCODE_1, Settings::NativeButton::ZL},
     KeyBinding{SDL_SCANCODE_2, Settings::NativeButton::ZR},
+    KeyBinding{SDL_SCANCODE_3, Settings::NativeButton::Debug},
     KeyBinding{SDL_SCANCODE_T, Settings::NativeButton::Up},
     KeyBinding{SDL_SCANCODE_G, Settings::NativeButton::Down},
     KeyBinding{SDL_SCANCODE_F, Settings::NativeButton::Left},
@@ -54,6 +55,8 @@ constexpr std::array kPadButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_BACK, Settings::NativeButton::Select},
     PadBinding{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, Settings::NativeButton::L},
     PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, Settings::NativeButton::R},
+    // No button of the console: our patches read it as the chord button.
+    PadBinding{SDL_GAMEPAD_BUTTON_LEFT_STICK, Settings::NativeButton::Debug},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_UP, Settings::NativeButton::Up},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_DOWN, Settings::NativeButton::Down},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_LEFT, Settings::NativeButton::Left},

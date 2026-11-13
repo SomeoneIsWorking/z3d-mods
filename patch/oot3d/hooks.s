@@ -29,6 +29,11 @@
     bl _ZN7z3dmods5oot3d18updateActiveCameraEPvS1_
 .section .expect.update_camera, "", %progbits
     .word 0xEBFFD047 @ bl 0x2D84C4
+@ Gameplay_Update: the play update.
+.section .patch.play_update, "ax", %progbits
+    bl _ZN7z3dmods5oot3d10updatePlayEPv
+.section .expect.play_update, "", %progbits
+    .word 0xEBFA428C @ bl 0x2E2E60
 @ Gameplay_Update's tail call: The One Screen's orbit camera hook, back to the retail branch.
 .section .patch.base_camera, "ax", %progbits
     b kGameplayDraw
