@@ -30,12 +30,13 @@ class Layout:
     camera_at: int | None = None
     camera_eye: int | None = None
     # MM3D only: where the game keeps the touch screen that is up, the table of play's screens,
-    # and the main and blank ones' indices in it.
+    # and where the app's overlay layout puts the touch screen for each entry (screen_overlay.hpp).
     active_screen: int | None = None
     screens: int | None = None
-    screen_count: int | None = None
-    main_screen: int | None = None
-    black_screen: int | None = None
+    screen_placements: tuple[str, ...] | None = None
+    # CommonData.hudVisibility and its values that leave the main touch screen blank or dimmed.
+    hud_visibility: int | None = None
+    hud_hidden: tuple[int, ...] | None = None
 
 
 # ACTORCAT_PLAYER, the player's actor list.
@@ -64,6 +65,19 @@ def _oot3d(d: symbols.Decomp) -> Layout:
     )
 
 
+# The touch screen is blank, the HUD, a menu of its own, or half of a two-screen view.
+_MM3D_PLACEMENTS = {"UI_SCREEN_BLACK": "top_only", "UI_SCREEN_MAIN": "inset", "UI_SCREEN_OCARINA": "inset",
+                    "UI_SCREEN_GEAR": "menu", "UI_SCREEN_ITEMS": "menu", "UI_SCREEN_MASKS": "menu",
+                    "UI_SCREEN_MAP": "split"}
+
+
+def _mm3d_placements(d: symbols.Decomp) -> tuple[str, ...]:
+    placements = ["split"] * d.define("UI_SCREEN_COUNT")
+    for name, placement in _MM3D_PLACEMENTS.items():
+        placements[d.define(name)] = placement
+    return tuple(placements)
+
+
 def _mm3d(d: symbols.Decomp) -> Layout:
     cutscene = symbols.offset(d, "PlayState.csCtx")
     return Layout(
@@ -79,9 +93,9 @@ def _mm3d(d: symbols.Decomp) -> Layout:
         scene=symbols.offset(d, "PlayState.sceneNum"),
         active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
         screens=symbols.global_(d, "gUiScreens"),
-        screen_count=d.define("UI_SCREEN_COUNT"),
-        main_screen=d.define("UI_SCREEN_MAIN"),
-        black_screen=d.define("UI_SCREEN_BLACK"),
+        screen_placements=_mm3d_placements(d),
+        hud_visibility=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.hudVisibility"),
+        hud_hidden=(d.define("HUD_VISIBILITY_NONE"), d.define("HUD_VISIBILITY_NONE_ALT")),
     )
 
 

@@ -80,14 +80,16 @@ changes what the touch screen shows:
   and the map tabs;
 - with one of play's other touch screens up (Items, Masks, Gear, Map) the touch screen is drawn
   large and opaque under the menu's title bar;
-- while the game blanks the touch screen or a cutscene runs (it dims the main screen then) only
-  the top screen is drawn;
-- anywhere else (boot, title, file select) the two screens sit side by side.
+- while the game blanks the touch screen or dims its main one (its HUD visibility says so: an
+  area's title card, a cutscene) only the top screen is drawn;
+- the ocarina's screen stays an inset, since the notes play on the top screen;
+- the map, whose other half is on the top screen, and anything outside play (boot, title, file
+  select) put the two screens side by side.
 
 The game says which it is: the install writes `"screens"` into `z3d-options.json` (the address of
-the game's pointer to the touch screen that is up, the table of play's screens with the main and
-blank ones' indices, and the play state's cutscene byte, from the decomp through
-`tools/z3dmods/games.py`), and `ScreenOverlay` reads them after every frame. Touch follows the layout, so the mouse works on the touch screen
+the game's pointer to the touch screen that is up, the table of play's screens with a placement
+for each, and the HUD visibility word with the values that hide the main screen, from the decomp
+through `tools/z3dmods/games.py`), and `ScreenOverlay` reads them after every frame. Touch follows the layout, so the mouse works on the touch screen
 wherever it is drawn. A tool screenshot of the side-by-side placement is cut to the screens'
 extent (800x384 at scale 2).
 

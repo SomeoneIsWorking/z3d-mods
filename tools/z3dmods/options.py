@@ -64,7 +64,6 @@ def manifest(repo: Path, game: str, address: int) -> str:
     layout = games.layout(repo, game)
     if layout.active_screen is not None:
         document["screens"] = {"active": layout.active_screen, "table": layout.screens,
-                               "count": layout.screen_count, "main": layout.main_screen,
-                               "black": layout.black_screen, "play": layout.play_pointer,
-                               "cutscene": layout.cutscene_state}
+                               "placements": layout.screen_placements, "hud": layout.hud_visibility,
+                               "hud_hidden": layout.hud_hidden}
     return json.dumps(document, indent=2) + "\n"

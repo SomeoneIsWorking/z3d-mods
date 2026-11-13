@@ -9,12 +9,14 @@
 #include <SDL3/SDL_rect.h>
 #include <lucent/json.h>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <fstream>
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace z3d::app {
@@ -42,6 +44,19 @@ std::optional<uint32_t> readPointer(const Emulator &emulator, uint32_t address) 
   uint32_t value = 0;
   std::memcpy(&value, bytes.data(), sizeof(value));
   return value;
+}
+
+OverlayPlacement parsePlacement(std::string_view name) {
+  constexpr std::array kNames{std::pair{std::string_view("split"), OverlayPlacement::Split},
+                              std::pair{std::string_view("inset"), OverlayPlacement::Inset},
+                              std::pair{std::string_view("menu"), OverlayPlacement::Menu},
+                              std::pair{std::string_view("top_only"), OverlayPlacement::TopOnly}};
+  for (const auto &[text, placement] : kNames) {
+    if (text == name) {
+      return placement;
+    }
+  }
+  throw std::invalid_argument("unknown overlay placement " + std::string(name));
 }
 
 } // namespace
@@ -110,14 +125,26 @@ ScreenOverlay::ScreenOverlay(GameWindow &window, Emulator &emulator, const GameS
   }
   Screens found;
   for (const auto &[name, field] : {std::pair{"active", &found.active}, std::pair{"table", &found.table},
-                                    std::pair{"count", &found.count}, std::pair{"main", &found.main},
-                                    std::pair{"black", &found.black}, std::pair{"play", &found.play},
-                                    std::pair{"cutscene", &found.cutscene}}) {
+                                    std::pair{"hud", &found.hud}}) {
     const lucent::json::Value *value = screens->find(name);
     if (value == nullptr || !value->integer()) {
-      throw std::runtime_error(manifest.string() + ": \"screens\" wants active, table, count, main, black, play and cutscene");
+      throw std::runtime_error(manifest.string() + ": \"screens\" wants active, table and hud");
     }
     *field = static_cast<uint32_t>(*value->integer());
+  }
+  const lucent::json::Value *placements = screens->find("placements");
+  const lucent::json::Value *hidden = screens->find("hud_hidden");
+  if (placements == nullptr || placements->array() == nullptr || hidden == nullptr || hidden->array() == nullptr) {
+    throw std::runtime_error(manifest.string() + ": \"screens\" wants placements and hud_hidden");
+  }
+  for (const lucent::json::Value &entry : *hidden->array()) {
+    if (!entry.integer()) {
+      throw std::runtime_error(manifest.string() + ": hud_hidden holds numbers");
+    }
+    found.hudHidden.push_back(static_cast<uint16_t>(*entry.integer()));
+  }
+  for (const lucent::json::Value &entry : *placements->array()) {
+    found.placements.push_back(parsePlacement(entry.string() != nullptr ? *entry.string() : std::string()));
   }
   screens_ = found;
   emulator_.onFrame([this] { update(); });
@@ -128,24 +155,23 @@ OverlayPlacement ScreenOverlay::placement() const {
   if (!active || *active == 0) {
     return OverlayPlacement::Split;
   }
-  for (uint32_t i = 0; i < screens_->count; ++i) {
-    if (readPointer(emulator_, screens_->table + i * sizeof(uint32_t)) == active) {
-      if (i == screens_->black) {
-        return OverlayPlacement::TopOnly;
-      }
-      if (i != screens_->main) {
-        return OverlayPlacement::Menu;
-      }
-      return inCutscene() ? OverlayPlacement::TopOnly : OverlayPlacement::Inset;
+  for (size_t i = 0; i < screens_->placements.size(); ++i) {
+    if (readPointer(emulator_, screens_->table + static_cast<uint32_t>(i * sizeof(uint32_t))) == active) {
+      const OverlayPlacement placement = screens_->placements[i];
+      return placement == OverlayPlacement::Inset && hudHidden() ? OverlayPlacement::TopOnly : placement;
     }
   }
   return OverlayPlacement::Split;
 }
 
-bool ScreenOverlay::inCutscene() const {
-  const std::optional<uint32_t> play = readPointer(emulator_, screens_->play);
-  std::array<uint8_t, 1> state{};
-  return play && *play != 0 && emulator_.read(*play + screens_->cutscene, state) && state[0] != 0;
+bool ScreenOverlay::hudHidden() const {
+  std::array<uint8_t, sizeof(uint16_t)> bytes{};
+  if (!emulator_.read(screens_->hud, bytes)) {
+    return false;
+  }
+  uint16_t visibility = 0;
+  std::memcpy(&visibility, bytes.data(), sizeof(visibility));
+  return std::ranges::find(screens_->hudHidden, visibility) != screens_->hudHidden.end();
 }
 
 void ScreenOverlay::update() {

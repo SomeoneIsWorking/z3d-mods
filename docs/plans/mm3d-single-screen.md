@@ -19,12 +19,18 @@ fallback for plain Azahar.
 Status (2026-11-14): the app's `overlay` layout is MM3D's set default (docs/app.md, "Overlay
 layout"): the game's own touch screen drawn over the top screen, small in play and large in a
 menu, placed from `gUiScreenContext.activeScreen` (mm3d-decomp `docs/ui.md`). It is the game's
-touch screen composited, not a redrawn HUD. Left:
-- The pad cannot press the touch-only buttons (items I and II, View, the map tabs' touch targets,
-  the ocarina and Pictograph buttons); the mouse can. Chord item buttons (pad-features.md) cover
-  I and II.
-- Only Main and Items are checked in the screen table; the Bombers' Notebook, the Ocarina screen
-  and the Song of Soaring map have not been looked at in this layout.
+touch screen composited, not a redrawn HUD.
+
+Seen (`mm-ov-final`, `mm-ov-screens`, South Clock Town): the area's title card and its cutscene
+draw the top screen alone (`hudVisibility` 2), play has the inset, Gear, Items and Masks are large,
+the map puts the two screens side by side with the map itself on the top one, the ocarina keeps
+the top screen. The pad reaches the touch-only buttons through Project Restoration: ZL is View,
+ZR with X is item I and ZR with Y is item II (`mm-zl`, `mm-zr3`).
+
+Left:
+- The Bombers' Notebook (table entry 2, side by side until it is looked at), the Song of Soaring
+  map and the Pictograph Box have not been seen in this layout.
+- The ocarina button and the map tabs have no pad button; Start and Select open Gear and Items.
 - A redrawn HUD (hearts, rupees and buttons as their own elements on the top screen) needs the
   game's layouts drawn by the app or moved by a patch.
 
