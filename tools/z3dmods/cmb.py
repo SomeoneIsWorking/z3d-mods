@@ -23,6 +23,13 @@ SLICES = ("position", "normal", "color", "tex0", "tex1", "tex2", "bone_indices",
 WIDTHS = {"position": 3, "normal": 3, "color": 4, "tex0": 2, "tex1": 2, "tex2": 2}
 SEPD_ATTRIBUTES = 0x24
 ATTRIBUTE_SIZE = 0x1C
+# A sepd's primitive set table: a bone dimension word, then one u16 offset per prms chunk.
+SEPD_TABLE = SEPD_ATTRIBUTES + 8 * ATTRIBUTE_SIZE
+SEPD_COUNT = 0x08
+CHUNK_SIZE = 0x04
+SKLM = 0x30
+# Header offsets of the chunks that follow the skeleton-mesh chunk.
+LATER_CHUNKS = (0x34, 0x38, 0x3C, 0x40)
 VATR_TABLE = 0x0C
 VATR_DATA = VATR_TABLE + len(SLICES) * 8
 INDEX_COUNT = 0x20
@@ -106,7 +113,7 @@ class Cmb:
         if version != OCARINA:
             raise ValueError(f"CMB version {version}, not OoT3D's {OCARINA}")
         name = data[0x10:0x20].split(b"\0")[0].decode("ascii")
-        skl, mats, tex, sklm, luts, vatr, indices = struct.unpack_from("<7I", data, 0x24)
+        _skl, mats, tex, sklm, _luts, vatr, indices = struct.unpack_from("<7I", data, 0x24)
         return cls(data, name, _textures(data, tex), _materials(data, mats), *_sklm(data, sklm),
                    _vatr(data, vatr), indices)
 
@@ -155,11 +162,16 @@ class Cmb:
         """The model with a shape's triangles replaced.
 
         The new vertices go after the end of each vatr slice at one common index, and the new
-        indices after the index buffer, so every other shape keeps its data and offsets.
+        indices after the index buffer, so every other shape keeps its data and offsets. Indices
+        beyond one primitive's count are spread over copies of the shape's one primitive set.
         """
         shape = self.shapes[shape_index]
-        if len(shape.prm_chunks) != 1:
-            raise ValueError(f"shape {shape_index} has {len(shape.prm_chunks)} primitive sets")
+        sets = -(-len(indices) // (MAX_PRIMITIVE_INDICES // 3 * 3))
+        if len(shape.prm_chunks) != sets:
+            if len(shape.prm_chunks) != 1:
+                raise ValueError(f"shape {shape_index} has {len(shape.prm_chunks)} primitive sets")
+            return Cmb.parse(_with_primitive_sets(self.data, shape.offset, sets)).with_shape(
+                shape_index, vertices, indices)
         arrays = self.arrays(shape)
         if set(arrays) != set(vertices):
             raise ValueError(f"shape {shape_index} has arrays {arrays}, got {sorted(vertices)}")
@@ -169,8 +181,6 @@ class Cmb:
             attribute = shape.attribute(name)
             stride = COMPONENTS[attribute.data_type][1] * WIDTHS[name]
             base = max(base, -(-(self.vatr[name][1] - attribute.start) // stride))
-        if len(indices) > MAX_PRIMITIVE_INDICES:
-            raise ValueError(f"{len(indices)} indices; a primitive holds at most {MAX_PRIMITIVE_INDICES}")
         if base + count > 0xFFFF:
             raise ValueError("new vertices do not fit 16-bit indices")
 
@@ -202,6 +212,8 @@ class Cmb:
 
         index_count = struct.unpack_from("<I", self.data, INDEX_COUNT)[0]
         index_data = bytearray(self.data[self.index_offset:self.index_offset + index_count * 2])
+        if index_count + len(indices) > 0xFFFF:
+            raise ValueError("index buffer outgrows 16-bit primitive offsets")
         index_data.extend(struct.pack(f"<{len(indices)}H", *(base + i for i in indices)))
         texture_data = struct.unpack_from("<I", self.data, TEXTURE_DATA)[0]
         size = struct.unpack_from("<I", self.data, 4)[0]
@@ -219,10 +231,46 @@ class Cmb:
         struct.pack_into("<I", out, INDEX_COUNT, index_count + len(indices))
         struct.pack_into("<I", out, INDEX_CHUNK, new_index)
         struct.pack_into("<I", out, TEXTURE_DATA, new_texture_data)
-        prm = shape.prm_chunks[0]
-        struct.pack_into("<H", out, prm + 0x10, UNSIGNED_SHORT)
-        struct.pack_into("<HH", out, prm + 0x14, len(indices), index_count)
+        # Whole triangles per set, each under the game's signed count.
+        per_set = -(-len(indices) // 3 // len(shape.prm_chunks)) * 3
+        for i, prm in enumerate(shape.prm_chunks):
+            count = len(indices[i * per_set:(i + 1) * per_set])
+            struct.pack_into("<H", out, prm + 0x10, UNSIGNED_SHORT)
+            struct.pack_into("<HH", out, prm + 0x14, count, index_count + i * per_set)
         return bytes(out)
+
+
+def _with_primitive_sets(data: bytes, sepd: int, sets: int) -> bytes:
+    """The model with a one-set sepd holding copies of its prms chunk; later chunks move."""
+    old_size = struct.unpack_from("<I", data, sepd + CHUNK_SIZE)[0]
+    table = sepd + SEPD_TABLE + 4
+    prms = sepd + struct.unpack_from("<H", data, table)[0]
+    prms_chunk = data[prms:prms + struct.unpack_from("<I", data, prms + CHUNK_SIZE)[0]]
+    first = SEPD_TABLE + 4 + sets * 2
+    first += -first % 4
+    new = bytearray(data[sepd:sepd + SEPD_TABLE + 4])
+    new.extend(struct.pack(f"<{sets}H", *(first + i * len(prms_chunk) for i in range(sets))))
+    new.extend(bytes(first - len(new)))
+    new.extend(prms_chunk * sets)
+    # Pad so every later chunk keeps its alignment.
+    new.extend(bytes(-(len(new) - old_size) % CHUNK_ALIGN))
+    grow = len(new) - old_size
+    struct.pack_into("<I", new, CHUNK_SIZE, len(new))
+    struct.pack_into("<H", new, SEPD_COUNT, sets)
+    out = bytearray(data[:sepd] + new + data[sepd + old_size:])
+
+    sklm = struct.unpack_from("<I", data, SKLM)[0]
+    shp = sklm + struct.unpack_from("<I", data, sklm + 0x0C)[0]
+    for chunk in (sklm, shp):
+        struct.pack_into("<I", out, chunk + CHUNK_SIZE, struct.unpack_from("<I", data, chunk + CHUNK_SIZE)[0] + grow)
+    for i in range(struct.unpack_from("<I", data, shp + 0x08)[0]):
+        at = shp + 0x10 + i * 2
+        offset = struct.unpack_from("<H", data, at)[0]
+        if shp + offset > sepd:
+            struct.pack_into("<H", out, at, offset + grow)
+    for at in (CHUNK_SIZE, *LATER_CHUNKS):
+        struct.pack_into("<I", out, at, struct.unpack_from("<I", data, at)[0] + grow)
+    return bytes(out)
 
 
 def _encode(values: list[tuple[float, ...]], attribute: Attribute, code: str) -> bytes:

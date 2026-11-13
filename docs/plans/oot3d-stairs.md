@@ -32,20 +32,25 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
   generated from the player's ROM and never committed.
 - `tools/z3dmods/stairs.py` reads where the texture paints its steps (row period, nose edge, crease)
   from the texture the player sees: the set's 4K pack replacement when it has one
-  (`texture_pack.py` matches it by look), else the ROM's. Faces between 10 and 60 degrees are cut
-  at each painted crease and nose and folded into vertical risers and flat treads that straddle
-  the ramp by half a step; skirts close the open edges. The painted shading lands on the matching
-  face because the cuts follow the texture's own v.
+  (`texture_pack.py` matches it by look), else the ROM's. The ramp is the pitch line through the
+  step noses, as on real stairs: faces between 10 and 60 degrees are cut at each painted crease and
+  nose and folded into vertical risers and flat treads below the ramp, each nose on it. Nothing
+  rises above the ramp, so steps stay inside the walls beside them (a version centred on the ramp
+  poked its corners out of Kakariko's rock walls). The texture's stripe-free edge columns stay flat
+  on the ramp as curbs along both sides, as the vanilla flights paint them; two-sided side panels
+  close the steps up to the curbs and the open edges. The painted shading lands on the matching
+  face because the cuts follow the texture's own v and u.
 - Shown in game: Kakariko's intro cutscene, frame 140 (`warp:0xDB csframe:140`), the flight by
   the well has a stepped silhouette where vanilla has a straight ramp edge, with the 4K pack on.
-- A stepped shape stays under 32767 indices per primitive (Kakariko's is 30606); more crashes the
-  game (decomp/oot3d `scene_collision.md`). `cmb.py` refuses to write more.
+- A primitive set holds at most 32767 indices; more crashes the game (decomp/oot3d
+  `scene_collision.md`). `cmb.py` spreads a larger shape over copies of its primitive set:
+  Kakariko's 40188 indices draw as two sets. Shown in game: `stairs-video4`, teleported to the well
+  flight (515,100,627) and the upper flight (-464,120,-56), orbiting and walking each.
 
 ## Still open
-- Collision is the ramp's: Link walks the slope through the steps by up to half a step.
+- Collision is the ramp's: Link walks the pitch line, up to one step above the tread under him.
 - Our own stair texture: the steps use the game's (or the pack's) painted texture.
 - The per-game options toggle.
-- Kakariko is near the index limit; splitting a shape into several primitives would lift it.
 
 ## Majora's Mask 3D
 Rev 1 room files (`scenes/*_<n>_info.zsi`, all uncompressed) name these stair textures:

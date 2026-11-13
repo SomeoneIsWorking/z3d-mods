@@ -1,9 +1,12 @@
 """Stepped geometry for OoT3D's stair ramps.
 
 The game draws stairs as smooth ramps with steps painted on (textures named *kaidan*, "stairs").
-Each ramp is cut where its texture paints a step edge and folded into vertical risers and flat
-treads that straddle the ramp by half a step, so the painted shading lands on the matching face.
-Collision is untouched: Link still walks the ramp.
+The ramp is the stairs' pitch line, the line through the step noses, as on real stairs: each ramp
+is cut where its texture paints a step edge and folded into vertical risers and flat treads below
+it, with each nose on the ramp where the paint has it. The curbs the texture paints along its sides
+stay flat on the ramp, and the steps sit between them; side faces close every step edge up to the
+ramp. Nothing rises above the ramp, so the steps stay inside the walls that meet it. Collision is
+untouched: Link still walks the ramp.
 """
 
 from __future__ import annotations
@@ -24,6 +27,10 @@ STAIR_TEXTURE = "kaidan"
 MIN_SLOPE = math.radians(10)
 MAX_SLOPE = math.radians(60)
 PROFILE_BINS = 64
+# A curb column's step-period strength is below this share of the strong columns', and a curb is
+# at most this share of the texture wide.
+CURB_STRENGTH = 0.4
+MAX_CURB = 0.25
 KEY = 1e-3
 # Normals are stored as signed bytes.
 NORMAL_STEPS = 127
@@ -40,6 +47,10 @@ class Profile:
     crease: float
     # Fraction of a step the riser takes.
     riser: float
+    # The steps lie between these u (fractions of the tile); outside are the curbs painted along
+    # the sides, which stay flat on the ramp.
+    first: float = 0.0
+    last: float = 1.0
 
 
 def profile(image: Image.Image) -> Profile:
@@ -76,7 +87,30 @@ def profile(image: Image.Image) -> Profile:
     # Row phase to uphill step phase: t = -row / period.
     nose_t = -((nose + 1) / PROFILE_BINS) % 1
     crease_t = -((crease + 0.5) / PROFILE_BINS) % 1
-    return Profile(steps, crease_t, (nose_t - crease_t) % 1)
+    first, last = _curbs(gray, steps)
+    return Profile(steps, crease_t, (nose_t - crease_t) % 1, first, last)
+
+
+def _curbs(gray: Image.Image, steps: int) -> tuple[float, float]:
+    """The u range with painted steps: edge columns where the step period is weak are curbs."""
+    width, height = gray.size
+    pixels = gray.tobytes()
+    strength = []
+    for x in range(width):
+        column = pixels[x::width]
+        mean = sum(column) / height
+        strength.append(abs(sum((v - mean) * cmath.exp(-2j * math.pi * steps * y / height)
+                                for y, v in enumerate(column))))
+    strong = sorted(strength)[width * 3 // 4] * CURB_STRENGTH
+    first = 0
+    while first < width and strength[first] < strong:
+        first += 1
+    last = width
+    while last > first and strength[last - 1] < strong:
+        last -= 1
+    first = first if first <= width * MAX_CURB else 0
+    last = last if width - last <= width * MAX_CURB else width
+    return first / width, last / width
 
 
 @dataclass
@@ -161,103 +195,108 @@ class Stairs:
             return Vertex(positions[i], extras[i], uvs[i], along.get(_key(positions[i]), (0.0, 0.0, 0.0)))
 
         self._triangles = [[vertex(i) for i in tri] for tri in triangles]
-        # Edges no other triangle shares, with the triangle's third corner to tell inside from out.
-        edges: dict[frozenset, list[tuple[Vertex, Vertex, Vertex]]] = {}
-        for tri in self._triangles:
-            for a, b, c in ((tri[0], tri[1], tri[2]), (tri[1], tri[2], tri[0]), (tri[2], tri[0], tri[1])):
-                edges.setdefault(frozenset((_key(a.position), _key(b.position))), []).append((a, b, c))
-        self._boundary = [found[0] for found in edges.values() if len(found) == 1]
 
     def _t(self, vertex: Vertex) -> float:
         return vertex.uv[1] * self._profile.steps_per_tile
 
-    def _levels(self, low: float, high: float) -> list[float]:
-        p = self._profile
-        out = []
-        k = math.floor(low - p.crease) - 1
-        while True:
-            for level in (k + p.crease, k + p.crease + p.riser):
-                if low + EPSILON < level < high - EPSILON:
-                    out.append(level)
-            if k + p.crease > high:
-                return out
-            k += 1
+    def _u(self, vertex: Vertex) -> float:
+        return vertex.uv[0]
 
-    def _split(self, polygon: list[Vertex]) -> list[list[Vertex]]:
-        ts = [self._t(v) for v in polygon]
-        pieces = []
-        rest = polygon
-        for level in self._levels(min(ts), max(ts)):
-            below, above = [], []
-            for i, a in enumerate(rest):
-                b = rest[(i + 1) % len(rest)]
-                ta, tb = self._t(a), self._t(b)
-                if ta <= level + EPSILON:
-                    below.append(a)
-                if ta >= level - EPSILON:
-                    above.append(a)
-                if (ta - level) * (tb - level) < 0:
-                    cut = _mix(a, b, (level - ta) / (tb - ta))
-                    below.append(cut)
-                    above.append(cut)
-            if len(below) >= 3:
-                pieces.append(below)
-            rest = above
-            if len(rest) < 3:
-                break
-        if len(rest) >= 3:
-            pieces.append(rest)
-        return pieces
+    def _t_levels(self, low: float, high: float) -> list[float]:
+        p = self._profile
+        return _levels(low, high, (p.crease, p.crease + p.riser))
+
+    def _u_levels(self, low: float, high: float) -> list[float]:
+        p = self._profile
+        return _levels(low, high, tuple(cut for cut in (p.first, p.last) if 0 < cut < 1))
+
+    def _stepped(self, piece: list[Vertex]) -> bool:
+        u = sum(self._u(v) for v in piece) / len(piece) % 1
+        return self._profile.first <= u <= self._profile.last
 
     def _place(self, vertex: Vertex) -> tuple[float, float, float]:
-        """Fold a ramp point onto the staircase."""
+        """Fold a ramp point onto the staircase: the ramp is the line through the noses."""
         p = self._profile
         t = self._t(vertex)
         j = math.floor(t - p.crease)
         u = t - p.crease - j
-        nose = p.crease + j + p.riser / 2
+        nose = p.crease + j + p.riser
         if u < p.riser:
-            across, up = nose, nose - 0.5 + u / p.riser
+            across, up = nose, nose - 1 + u / p.riser
         else:
-            across, up = nose + (u - p.riser) / (1 - p.riser), nose + 0.5
+            across, up = nose + (u - p.riser) / (1 - p.riser), nose
         d = vertex.along
         scale = 1 / p.steps_per_tile
         return (vertex.position[0] + d[0] * (across - t) * scale,
                 vertex.position[1] + d[1] * (up - t) * scale,
                 vertex.position[2] + d[2] * (across - t) * scale)
 
-    def _boundary_chain(self, a: Vertex, b: Vertex) -> list[Vertex]:
-        ta, tb = self._t(a), self._t(b)
-        if abs(tb - ta) < EPSILON:
-            return [a, b]
-        levels = self._levels(min(ta, tb), max(ta, tb))
-        cuts = [_mix(a, b, (level - ta) / (tb - ta)) for level in levels]
-        if tb < ta:
-            cuts.reverse()
-        return [a, *cuts, b]
-
     def triangles(self) -> list[tuple[tuple[tuple[float, ...], tuple[float, ...]], ...]]:
         """Output triangles as three (position, extra) corners, flat shaded by the caller."""
         out = []
+        stepped = []
         for tri in self._triangles:
-            for piece in self._split(tri):
-                corners = [(self._place(v), v.extra) for v in piece]
-                for i in range(1, len(corners) - 1):
-                    out.append((corners[0], corners[i], corners[i + 1]))
-        # Skirts close the gap between the ramp's open edges and the steps, facing outward.
-        for a, b, inside in self._boundary:
-            chain = self._boundary_chain(a, b)
-            for c, d in zip(chain, chain[1:]):
-                low_c, low_d = (c.position, c.extra), (d.position, d.extra)
-                high_c, high_d = (self._place(c), c.extra), (self._place(d), d.extra)
-                quad = (low_c, low_d, high_d, high_c)
-                normal = _cross(_sub(low_d[0], low_c[0]), _sub(high_c[0], low_c[0]))
-                middle = _lerp(c.position, d.position, 0.5)
-                if _dot(normal, _sub(inside.position, middle)) > 0:
-                    quad = (low_c, high_c, high_d, low_d)
+            for column in _split(tri, self._u, self._u_levels):
+                for piece in _split(column, self._t, self._t_levels):
+                    folds = self._stepped(piece)
+                    corners = [(self._place(v) if folds else v.position, v.extra) for v in piece]
+                    out.extend((corners[0], corners[i], corners[i + 1]) for i in range(1, len(corners) - 1))
+                    if folds:
+                        stepped.append(piece)
+        # The steps' sides, up to the ramp wherever no other step continues them: the curbs' inner
+        # faces and the ramp's open edges, seen from either side.
+        edges: dict[frozenset, list[tuple[Vertex, Vertex]]] = {}
+        for piece in stepped:
+            for a, b in zip(piece, piece[1:] + piece[:1]):
+                edges.setdefault(frozenset((_key(a.position), _key(b.position))), []).append((a, b))
+        for found in edges.values():
+            if len(found) != 1:
+                continue
+            a, b = found[0]
+            edge_a, edge_b = (a.position, a.extra), (b.position, b.extra)
+            step_a, step_b = (self._place(a), a.extra), (self._place(b), b.extra)
+            for quad in ((edge_a, edge_b, step_b, step_a), (edge_a, step_a, step_b, edge_b)):
                 out.append((quad[0], quad[1], quad[2]))
                 out.append((quad[0], quad[2], quad[3]))
         return out
+
+
+def _levels(low: float, high: float, phases: tuple[float, ...]) -> list[float]:
+    """Every `k + phase` strictly between low and high, ascending."""
+    out = []
+    k = math.floor(low) - 1
+    while k - 1 <= high:
+        out.extend(k + phase for phase in phases if low + EPSILON < k + phase < high - EPSILON)
+        k += 1
+    return sorted(out)
+
+
+def _split(polygon: list[Vertex], coordinate, levels) -> list[list[Vertex]]:
+    """A convex polygon cut into slabs at each level of a coordinate linear across it."""
+    values = [coordinate(v) for v in polygon]
+    pieces = []
+    rest = polygon
+    for level in levels(min(values), max(values)):
+        below, above = [], []
+        for i, a in enumerate(rest):
+            b = rest[(i + 1) % len(rest)]
+            ca, cb = coordinate(a), coordinate(b)
+            if ca <= level + EPSILON:
+                below.append(a)
+            if ca >= level - EPSILON:
+                above.append(a)
+            if (ca - level) * (cb - level) < 0:
+                cut = _mix(a, b, (level - ca) / (cb - ca))
+                below.append(cut)
+                above.append(cut)
+        if len(below) >= 3:
+            pieces.append(below)
+        rest = above
+        if len(rest) < 3:
+            break
+    if len(rest) >= 3:
+        pieces.append(rest)
+    return pieces
 
 
 def _flat(triangles, extras: list[str]) -> tuple[dict[str, list[tuple[float, ...]]], list[int]]:
