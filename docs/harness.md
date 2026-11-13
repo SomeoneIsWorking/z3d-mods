@@ -4,7 +4,7 @@ User: "I had azahar libretro harness for testing", "we can make a new one", "if 
 have it, I have tokens to spare", and "I can play on the libretro version as well".
 
 ## What it owns
-`harness/` builds `z3d_harness`, a headless libretro frontend for Azahar's core. It runs a 3DS game
+`app/` builds `z3d`, a libretro frontend for Azahar's core. It runs a 3DS game
 frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
 
 | Command | Does |

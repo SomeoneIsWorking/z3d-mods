@@ -8,7 +8,7 @@
 using EGLDisplay = void *;
 using EGLContext = void *;
 
-namespace z3d::harness {
+namespace z3d::app {
 
 // A windowless OpenGL core context on the GPU (EGL surfaceless) with one framebuffer the core
 // renders into.
@@ -43,4 +43,4 @@ private:
   unsigned depth_ = 0;
 };
 
-} // namespace z3d::harness
+} // namespace z3d::app

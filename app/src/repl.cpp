@@ -8,7 +8,7 @@
 #include <sstream>
 #include <vector>
 
-namespace z3d::harness {
+namespace z3d::app {
 namespace {
 
 constexpr uint32_t kMaxRead = 1U << 24;
@@ -159,4 +159,4 @@ std::string Repl::execute(const std::string &line) {
   return "err unknown command " + command;
 }
 
-} // namespace z3d::harness
+} // namespace z3d::app

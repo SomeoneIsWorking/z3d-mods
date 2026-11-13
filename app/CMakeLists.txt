@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(z3d_harness LANGUAGES CXX)
+project(z3d LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,14 +22,14 @@ find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL)
 # The fork's frontend-private extensions (azahar_debug.h).
 set(Z3D_AZAHAR_SOURCE "$ENV{HOME}/repo/3ds/azahar" CACHE PATH "SomeoneIsWorking/azahar checkout")
 
-add_executable(z3d_harness
+add_executable(z3d
   src/main.cpp
   src/libretro_core.cpp
   src/guest_memory.cpp
   src/frame.cpp
   src/gl_context.cpp
   src/repl.cpp)
-target_include_directories(z3d_harness SYSTEM PRIVATE "${libretro_header_SOURCE_DIR}"
+target_include_directories(z3d SYSTEM PRIVATE "${libretro_header_SOURCE_DIR}"
   "${Z3D_AZAHAR_SOURCE}/src/citra_libretro")
-target_link_libraries(z3d_harness PRIVATE lucent ZLIB::ZLIB OpenGL::OpenGL OpenGL::EGL ${CMAKE_DL_LIBS})
-target_compile_options(z3d_harness PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(z3d PRIVATE lucent ZLIB::ZLIB OpenGL::OpenGL OpenGL::EGL ${CMAKE_DL_LIBS})
+target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)

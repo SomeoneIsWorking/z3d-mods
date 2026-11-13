@@ -10,7 +10,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace z3d::harness {
+namespace z3d::app {
 namespace {
 
 void check(bool ok, const char *what) {
@@ -94,4 +94,4 @@ void GlContext::read(FrameSize size, std::vector<uint32_t> &out) const {
                GL_UNSIGNED_INT_8_8_8_8_REV, out.data());
 }
 
-} // namespace z3d::harness
+} // namespace z3d::app

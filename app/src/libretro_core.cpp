@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace z3d::harness {
+namespace z3d::app {
 
 LibretroCore *LibretroCore::active_ = nullptr;
 
@@ -303,4 +303,4 @@ bool LibretroCore::environment(unsigned command, void *data) {
   }
 }
 
-} // namespace z3d::harness
+} // namespace z3d::app

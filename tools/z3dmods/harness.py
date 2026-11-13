@@ -1,4 +1,4 @@
-"""Drive the libretro harness (harness/, build/harness/z3d_harness) on a copy of the player's data.
+"""Drive the z3d app (app/, build/app/z3d) headless as the frame-exact harness, on a copy of the player's data.
 
 The core's user dir is scratch/harness/<game>/Azahar: each run copies in the player's nand, sdmc and
 sysdata, and links the installed load/ folder (mods and textures, which the core only reads), so the
@@ -47,9 +47,9 @@ class HarnessSession:
 
     def __enter__(self) -> HarnessSession:
         self._copy_player_data()
-        binary = self._cfg.repo / "build" / "harness" / "z3d_harness"
+        binary = self._cfg.repo / "build" / "app" / "z3d"
         if not binary.exists():
-            raise RuntimeError(f"{binary} missing: cmake -S harness -B build/harness -G Ninja && ninja -C build/harness")
+            raise RuntimeError(f"{binary} missing: cmake -S app -B build/app -G Ninja && ninja -C build/app")
         args = [str(binary), "--core", str(self._cfg.libretro_core), "--rom", str(self._rom), "--user", str(self._user)]
         for key, value in self._options.items():
             args += ["--option", f"{key}={value}"]

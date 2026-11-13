@@ -6,7 +6,7 @@
 #include <ostream>
 #include <string>
 
-namespace z3d::harness {
+namespace z3d::app {
 
 // Line commands on stdin, one reply line each: "ok [value]" or "err <reason>".
 //   run <frames> | input <hex joypad mask> | stick <x> <y> | r <va> <size> | w <va> <hex>
@@ -27,4 +27,4 @@ private:
   bool done_ = false;
 };
 
-} // namespace z3d::harness
+} // namespace z3d::app

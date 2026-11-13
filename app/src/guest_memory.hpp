@@ -7,7 +7,7 @@
 struct retro_memory_map;
 struct azahar_debug_interface;
 
-namespace z3d::harness {
+namespace z3d::app {
 
 // Guest virtual memory: through the fork's debug interface when the core offers it (every mapped
 // page, live), else the regions a stock core publishes with RETRO_ENVIRONMENT_SET_MEMORY_MAPS.
@@ -35,4 +35,4 @@ private:
   const azahar_debug_interface *debug_ = nullptr;
 };
 
-} // namespace z3d::harness
+} // namespace z3d::app

@@ -1,5 +1,5 @@
-// z3d_harness: an Azahar libretro core driven frame by frame from stdin.
-//   z3d_harness --core <so> --rom <3ds> --user <dir> [--option key=value]...
+// z3d: an Azahar libretro core driven frame by frame from stdin.
+//   z3d --core <so> --rom <3ds> --user <dir> [--option key=value]...
 #include "libretro_core.hpp"
 #include "repl.hpp"
 
@@ -11,8 +11,8 @@
 
 namespace {
 
-z3d::harness::CoreConfig parseArgs(int argc, char **argv) {
-  z3d::harness::CoreConfig config;
+z3d::app::CoreConfig parseArgs(int argc, char **argv) {
+  z3d::app::CoreConfig config;
   for (int i = 1; i + 1 < argc; i += 2) {
     const std::string_view flag = argv[i];
     const std::string value = argv[i + 1];
@@ -34,7 +34,7 @@ z3d::harness::CoreConfig parseArgs(int argc, char **argv) {
   }
   if (config.core.empty() || config.rom.empty() || config.userDir.empty()) {
     throw std::invalid_argument(
-        "usage: z3d_harness --core <so> --rom <3ds> --user <dir> [--option k=v]...");
+        "usage: z3d --core <so> --rom <3ds> --user <dir> [--option k=v]...");
   }
   return config;
 }
@@ -43,13 +43,13 @@ z3d::harness::CoreConfig parseArgs(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   try {
-    z3d::harness::LibretroCore core(parseArgs(argc, argv));
-    z3d::harness::Repl repl(core);
+    z3d::app::LibretroCore core(parseArgs(argc, argv));
+    z3d::app::Repl repl(core);
     std::cout << "ready\n" << std::flush;
     repl.serve(std::cin, std::cout);
     return 0;
   } catch (const std::exception &error) {
-    lucent::error("harness", "{}", error.what());
+    lucent::error("z3d", "{}", error.what());
     return 1;
   }
 }

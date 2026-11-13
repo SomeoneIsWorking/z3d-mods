@@ -7,7 +7,7 @@
 #include <fstream>
 #include <string_view>
 
-namespace z3d::harness {
+namespace z3d::app {
 namespace {
 
 void putBe32(std::vector<uint8_t> &out, uint32_t value) {
@@ -91,4 +91,4 @@ bool Frame::writePng(const std::filesystem::path &path) const {
   return static_cast<bool>(file);
 }
 
-} // namespace z3d::harness
+} // namespace z3d::app

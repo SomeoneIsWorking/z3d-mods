@@ -15,7 +15,7 @@
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
-- `harness/`: `z3d_harness`, a headless libretro frontend for the Azahar core, driven by stdin lines.
+- `app/`: `z3d`, the libretro frontend for the Azahar core, driven by stdin lines.
   - `libretro_core`: loads the core, answers its environment, owns input, frames and the GL context.
   - `guest_memory`: guest virtual addresses to host pointers from the core's memory maps.
   - `gl_context`: the windowless EGL OpenGL context and framebuffer the core renders into.

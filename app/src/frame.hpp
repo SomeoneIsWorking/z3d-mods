@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <vector>
 
-namespace z3d::harness {
+namespace z3d::app {
 
 struct FrameSize {
   unsigned width = 0;
@@ -35,4 +35,4 @@ private:
   std::vector<uint32_t> pixels_;
 };
 
-} // namespace z3d::harness
+} // namespace z3d::app

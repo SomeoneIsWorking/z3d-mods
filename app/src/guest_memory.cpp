@@ -6,7 +6,7 @@
 
 #include <cstring>
 
-namespace z3d::harness {
+namespace z3d::app {
 
 void GuestMemory::assign(const retro_memory_map &map) {
   regions_.clear();
@@ -55,4 +55,4 @@ bool GuestMemory::write(uint32_t address, std::span<const uint8_t> data) const {
   return true;
 }
 
-} // namespace z3d::harness
+} // namespace z3d::app

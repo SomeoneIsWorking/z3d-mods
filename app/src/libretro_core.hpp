@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace z3d::harness {
+namespace z3d::app {
 
 struct CoreConfig {
   std::filesystem::path core;
@@ -125,4 +125,4 @@ private:
   std::vector<azahar_write_hit> hits_;
 };
 
-} // namespace z3d::harness
+} // namespace z3d::app
