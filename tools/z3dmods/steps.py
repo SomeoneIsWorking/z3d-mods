@@ -75,6 +75,19 @@ def _wait_frame(session: Session, layout: Layout | None, frame: int, timeout: fl
     raise RuntimeError(f"cutscene did not reach frame {frame} within {timeout}s")
 
 
+def _wait_script(session: Session, layout: Layout | None, script: int, button: str,
+                 timeout: float = 120) -> tuple[int, int]:
+    """Waits for the cutscene to run `script`, pressing `button` meanwhile to advance its text."""
+    for _ in range(round(timeout / POLL)):
+        play = _play(session, layout)
+        if play and session.u32(play + layout.cutscene_script) == script:
+            return _cutscene(session, layout)
+        if button:
+            session.press(button)
+        session.wait(POLL)
+    raise RuntimeError(f"cutscene script 0x{script:08X} did not start within {timeout}s")
+
+
 def run(session: Session, steps: list[str], out: Path, layout: Layout | None) -> None:
     start = time.monotonic()
 
@@ -106,6 +119,9 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout | None) ->
             log(f"warp to entrance {arg}")
         elif kind == "csframe":
             log(f"cutscene at {_wait_frame(session, layout, int(arg, 0))}")
+        elif kind == "waitscript":
+            script, _, button = arg.partition(",")
+            log(f"script {script} at {_wait_script(session, layout, int(script, 0), button)}")
         elif kind == "waitcs":
             _wait_cutscene(session, layout, float(arg), log)
         elif kind == "cs":

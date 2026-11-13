@@ -62,7 +62,8 @@ Build (Clang, Ninja), then name the result in `env-assets/local.json` as `"libre
 ## Checking it
 `uv run --frozen z3dmods run oot3d <name> --harness <steps...>` with the same steps as the standalone
 runs, plus `savestate:<name>`, `loadstate:<name>`, `watch:<addr>,<size>`, `hits` and
-`keydown:<button>`/`keyup:<button>` (held across steps).
+`keydown:<button>`/`keyup:<button>` (held across steps) and `waitscript:<addr>[,<button>]`
+(waits for that cutscene script, pressing the button meanwhile to advance text).
 
 - Verified 2026-11-12: boot, title, file select and the player's save in Link's house with The One
   Screen HUD; from one state, the Kakariko skip and the watched run land where they do on standalone

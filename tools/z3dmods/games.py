@@ -35,7 +35,7 @@ LAYOUTS = {
     "mm3d": Layout(
         play_pointer=0x00667890,
         save_context=0x007751D8,
-        save_size=0x36C8,
+        save_size=0x8 + 0x1A88,  # start, scene, SaveData
         next_entrance=0xC52E,
         transition_trigger=0xC529,
         cutscene_state=0x2428 + 0x264,

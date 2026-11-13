@@ -57,8 +57,10 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   select and the demo is not skipped. Start at frame 119 of the opening narration (`legend.jdb`)
   closes each box and lands in the Lost Woods script `lw_meetstk.jdb` (scene 101), where watching
   it also leads. Start there at frame 296 ends it and the game runs on into `losthorse.jdb`.
-- Still to prove: a cutscene with a choice; MM3D against a watched run's CommonData, and on
-  standalone Azahar in real time.
+- MM3D against a watched run (A pressed through the text, `waitscript`), compared at frame 100 of
+  the next script: the narration and the woods cutscene each leave CommonData's `start`, `scene`
+  and `SaveData` (0x1A90 bytes) byte-identical to watching, and the frames match.
+- Still to prove: a cutscene with a choice; MM3D on standalone Azahar in real time.
 
 ## Proof
 On real cutscenes in each game, reached through a warp from a copy of the save: one run watches to
