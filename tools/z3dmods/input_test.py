@@ -27,7 +27,7 @@ KEYS = {
     "a": "a", "b": "s", "x": "z", "y": "x", "start": "m", "select": "n", "l": "q", "r": "w",
     "menu": "Escape", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
 }
-PAD_BUTTONS = {"a": ecodes.BTN_EAST, "b": ecodes.BTN_SOUTH, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
+PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
                "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE}
 # File select's second slot on MM3D's touch screen, which the overlay layout puts beside the top
 # screen there: the right two fifths of the window, half its height, centred.

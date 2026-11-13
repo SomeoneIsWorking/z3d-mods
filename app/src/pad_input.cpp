@@ -45,16 +45,17 @@ struct PadBinding {
   Button button;
 };
 
-// By position, as on the 3DS: east is A, south is B.
+// By name on an Xbox pad, which is what the sets' HUDs draw: A is A (south), B is B (east), the
+// triggers are L and R, the bumpers ZL and ZR.
 constexpr std::array kPadButtons{
-    PadBinding{SDL_GAMEPAD_BUTTON_EAST, Settings::NativeButton::A},
-    PadBinding{SDL_GAMEPAD_BUTTON_SOUTH, Settings::NativeButton::B},
-    PadBinding{SDL_GAMEPAD_BUTTON_NORTH, Settings::NativeButton::X},
-    PadBinding{SDL_GAMEPAD_BUTTON_WEST, Settings::NativeButton::Y},
+    PadBinding{SDL_GAMEPAD_BUTTON_SOUTH, Settings::NativeButton::A},
+    PadBinding{SDL_GAMEPAD_BUTTON_EAST, Settings::NativeButton::B},
+    PadBinding{SDL_GAMEPAD_BUTTON_WEST, Settings::NativeButton::X},
+    PadBinding{SDL_GAMEPAD_BUTTON_NORTH, Settings::NativeButton::Y},
     PadBinding{SDL_GAMEPAD_BUTTON_START, Settings::NativeButton::Start},
     PadBinding{SDL_GAMEPAD_BUTTON_BACK, Settings::NativeButton::Select},
-    PadBinding{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, Settings::NativeButton::L},
-    PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, Settings::NativeButton::R},
+    PadBinding{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, Settings::NativeButton::ZL},
+    PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, Settings::NativeButton::ZR},
     // No button of the console: our patches read it as the chord button.
     PadBinding{SDL_GAMEPAD_BUTTON_LEFT_STICK, Settings::NativeButton::Debug},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_UP, Settings::NativeButton::Up},
@@ -62,6 +63,13 @@ constexpr std::array kPadButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_LEFT, Settings::NativeButton::Left},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, Settings::NativeButton::Right},
 };
+
+constexpr Settings::NativeButton::Values swappedXY(Settings::NativeButton::Values button) {
+  if (button == Settings::NativeButton::X) {
+    return Settings::NativeButton::Y;
+  }
+  return button == Settings::NativeButton::Y ? Settings::NativeButton::X : button;
+}
 
 constexpr int16_t kTriggerPressed = 16384;
 constexpr float kAxisFull = 32767.0F;
@@ -172,6 +180,8 @@ void PadInput::handle(const SDL_Event &event) {
 
 void PadInput::readHost() {
   PadState state;
+  state.cStickInverted = state_->cStickInverted;
+  state.swapXY = state_->swapXY;
   const bool *keys = SDL_GetKeyboardState(nullptr);
   for (const KeyBinding &binding : kKeys) {
     state.buttons[binding.button] = keys[binding.key];
@@ -183,14 +193,14 @@ void PadInput::readHost() {
   for (SDL_Gamepad *pad : pads_) {
     for (const PadBinding &binding : kPadButtons) {
       if (SDL_GetGamepadButton(pad, binding.pad)) {
-        state.buttons[binding.button] = true;
+        state.buttons[state.swapXY ? swappedXY(binding.button) : binding.button] = true;
       }
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerPressed) {
-      state.buttons[Settings::NativeButton::ZL] = true;
+      state.buttons[Settings::NativeButton::L] = true;
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerPressed) {
-      state.buttons[Settings::NativeButton::ZR] = true;
+      state.buttons[Settings::NativeButton::R] = true;
     }
     // SDL's y grows downward; the 3DS's grows upward.
     circle[0] = stronger(circle[0], axis(pad, SDL_GAMEPAD_AXIS_LEFTX));

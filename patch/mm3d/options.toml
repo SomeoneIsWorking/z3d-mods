@@ -20,3 +20,8 @@ id = "camera_invert_y"
 pad = "cstick_invert_y"
 label = "Camera stick: invert Y"
 default = false
+
+# The installed Xbox UI pack draws X and Y where the 3DS has them (X north, Y west), so a pad's
+# X and Y trade places for this game.
+[pad]
+swap_xy = true

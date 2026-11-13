@@ -28,8 +28,9 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
 - Not seen in a dialog yet: the stick, D-pad, A, B, LT, RT and menu glyphs (same sheet, same edit).
 
 ## Still open
-- The app binds a pad by position, so these glyphs name the wrong button until it binds OoT3D by
-  name (issues/pad-mapping-vs-hud-labels.md).
+- MM3D's installed Xbox UI pack draws X and Y by position, so the app trades a pad's X and Y
+  there (`[pad] swap_xy` in `patch/mm3d/options.toml`); our own MM3D glyphs name the buttons as
+  OoT3D's do and that switch goes with the pack.
 - MM3D: Project Restoration's HUD and prompts; the CC BY-NC-ND Omni pack stays installed until then.
 
 ## When

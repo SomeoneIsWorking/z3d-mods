@@ -54,6 +54,10 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
       throw std::runtime_error(manifest.string() + " wants \"address\" and \"options\"");
     }
     address_ = static_cast<uint32_t>(*address->integer());
+    if (const lucent::json::Value *pad = document->find("pad")) {
+      const lucent::json::Value *swap = pad->find("swap_xy");
+      swapXY_ = swap != nullptr && swap->boolean() != nullptr && *swap->boolean();
+    }
     for (const lucent::json::Value &entry : *options->array()) {
       const lucent::json::Value *id = entry.find("id");
       const lucent::json::Value *label = entry.find("label");
@@ -131,6 +135,7 @@ void GameOptions::apply(Emulator &emulator, PadInput &pad) const {
     invertY = invertY || (item.pad == kCStickInvertY && item.value != 0);
   }
   pad.invertCStick(invertX, invertY);
+  pad.swapXY(swapXY_);
   if (blockCount_ == 0) {
     return;
   }

@@ -21,6 +21,8 @@ struct PadState {
   std::array<std::array<float, 2>, Settings::NativeAnalog::NumAnalogs> sticks{};
   // The C-stick as the game gets it: each axis turned around or not.
   std::array<bool, 2> cStickInverted{};
+  // A gamepad's X and Y trade places (a game whose HUD draws them by position).
+  bool swapXY = false;
 };
 
 class PadInput {
@@ -46,6 +48,9 @@ public:
   // A game option (game_options.hpp); the picker and menus read the stick as held.
   void invertCStick(bool x, bool y) {
     state_->cStickInverted = {x, y};
+  }
+  void swapXY(bool swap) {
+    state_->swapXY = swap;
   }
 
   [[nodiscard]] const PadState &state() const {

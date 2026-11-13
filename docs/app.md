@@ -39,8 +39,10 @@ pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
 fontconfig (`Noto Sans:bold`).
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
-q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by position (east A, south B),
-right stick the C-stick; the left mouse button on the bottom screen is the stylus. The left stick's
+q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
+which is what both sets' HUDs draw (A south, B east, X west, Y north, LT and RT are L and R, LB
+and RB are ZL and ZR; a game's manifest can trade X and Y, which MM3D's does while its HUD pack
+draws them by position), right stick the C-stick; the left mouse button on the bottom screen is the stylus. The left stick's
 click and the 3 key hold pad bit 12 (the core's Debug button), which no 3DS button sets: our patches
 read it as the chord button (plans/pad-features.md).
 
