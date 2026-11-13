@@ -10,6 +10,9 @@ but for my own installation I want the mods to be here".
 A windowed app grown from `harness/`: it loads the Azahar core from our fork, runs one game, and
 owns a per-game options menu (cutscene skip, quick text, layout, texture set) with hotswap of our
 own patches and of texture packs.
+- Single screen (MM3D first) is the app's: it owns the presented frames and the input, so it draws
+  the bottom-screen UI on the top screen and maps input to it, written from facts (mm3d-decomp,
+  Project Restoration and DekUI as evidence). No Qt.
 
 ## What ships and what does not
 - Ships: the app, our MIT patches (`patch/`), and loaders that apply third-party mod formats
@@ -20,10 +23,10 @@ own patches and of texture packs.
 - The user's own install keeps all current mods: the app reads the same sets `z3dmods install` uses.
 
 ## Licensing facts
-- User: "I can make my own project GPL but I don't like having any restrictions". The app stays
-  MIT, so it never links or loads Azahar's core in its own process: Azahar (GPL-2.0-or-later) runs
-  as a separate program the app starts and drives over a local channel, shipped with its source.
-  GPL mods (DekUI, Project Restoration) are evidence only; their code is never copied.
+- User: "I don't like having any restrictions", then "this needs to be an app using Azahar
+  libretro underneath". The app loads the Azahar core (GPL-2.0-or-later) in process, so a
+  distributed build is a combined work under the GPL: it ships with the full source. Our own files
+  stay MIT. GPL mods (DekUI, Project Restoration) are evidence only; their code is never copied.
 - Third-party mods without a permissive license are never redistributed; the compatibility loaders
   avoid that by applying mods the player already has, not by bundling them.
 

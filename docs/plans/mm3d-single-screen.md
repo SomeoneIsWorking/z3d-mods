@@ -13,7 +13,11 @@ and it builds only with the Qt or Android frontend. Its source (v1.1.0, `5cf063e
 read-only at `<dekui-checkout>`) is evidence for which guest functions and state each menu uses;
 its code is not copied.
 
-Ours is an MIT code patch that moves the bottom-screen UI (items, masks, map, notebook, Ocarina,
+User, 2026-11-13: "this needs to be an app using Azahar libretro underneath": single screen moves
+to the packed app (docs/plans/packed-app.md), drawn by the app. The code-patch route below is the
+fallback for plain Azahar.
+
+Fallback: an MIT code patch that moves the bottom-screen UI (items, masks, map, notebook, Ocarina,
 file select) onto the top screen in the game's own code, in the same `code.ips` as the skip, on
 Project Restoration's v1.0-layout `code.bin`, built from mm3d-decomp and PR's source (GPL, evidence
 only). It does not fork Azahar.
