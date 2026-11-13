@@ -47,10 +47,33 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
   Kakariko's 40188 indices draw as two sets. Shown in game: `stairs-video4`, teleported to the well
   flight (515,100,627) and the upper flight (-464,120,-56), orbiting and walking each.
 
+## Collision (2026-11-14)
+- The scene file (`scene/<scene>_info.zsi`) holds the collision for all its rooms (decomp/oot3d
+  `docs/notes/scene_collision.md`). `stairs.collision` takes each sloped floor triangle that lies
+  on a drawn stair ramp (all three corners within 4 units of it) and folds it with the same
+  cuts as the drawn steps, reading the step positions from the drawn triangle under it: flat
+  treads and vertical risers, each inheriting the ramp triangle's surface type and flags. The
+  steps' end faces are left out: they are lower than the height the game checks walls at. The
+  curbs stay ramps, as drawn.
+- The longer vertex and triangle lists are written after the end of the scene file and the
+  collision header pointed at them; nothing else in the file moves. `z3dmods install oot3d`
+  writes the seven scenes beside their stepped rooms.
+- Counts: Kakariko 1222 → 5581 triangles and 786 → 4601 vertices (a triangle can name 8192);
+  Zora's Domain 1421 → 2306; Ganon's Castle 5434 → 7349. Desert Colossus's stair shapes have no
+  collision triangle on them, so nothing changes there.
+- Shown in game (`oot-st1`, Kakariko, the flight by the well): dropped onto the flight every 4
+  units along it, Link lands at 42, 50, 57, 65, 72 and 80, three or four drops on each, where the
+  ramp gave a new height every drop; walked up it, his height goes 35, 42, 50, 57, 65, 72, 80
+  without stopping at a riser. `oot-st2`, Zora's Domain's rock stairs: 417, 427, 437, 447, 457.
+- Not seen: the other five scenes, an adult, Epona or a rolling bomb on the steps, enemies.
+
 ## Still open
-- Collision is the ramp's: Link walks the pitch line, up to one step above the tread under him.
-- Our own stair texture: the steps use the game's (or the pack's) painted texture.
-- The per-game options toggle.
+- Our own stair texture: the steps use the game's (or the pack's) painted texture. The eight
+  stair textures differ by place (wood, dark rock, sandstone, moss); one drawn texture would
+  replace all of them, so this waits for the player's word.
+- The per-game options toggle: the steps are files the install writes, not code, so a switch
+  means installing with or without them (`"stairs"` in `sets/oot3d.json`), or the app choosing
+  between two romfs folders.
 
 ## Majora's Mask 3D
 Rev 1 room files (`scenes/*_<n>_info.zsi`, all uncompressed) name these stair textures:

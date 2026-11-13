@@ -5,8 +5,8 @@ The ramp is the stairs' pitch line, the line through the step noses, as on real 
 is cut where its texture paints a step edge and folded into vertical risers and flat treads below
 it, with each nose on the ramp where the paint has it. The curbs the texture paints along its sides
 stay flat on the ramp, and the steps sit between them; side faces close every step edge up to the
-ramp. Nothing rises above the ramp, so the steps stay inside the walls that meet it. Collision is
-untouched: Link still walks the ramp.
+ramp. Nothing rises above the ramp, so the steps stay inside the walls that meet it. The scene's
+collision triangles that lie on a stepped ramp are folded the same way, so Link walks the treads.
 """
 
 from __future__ import annotations
@@ -35,7 +35,11 @@ KEY = 1e-3
 # Normals are stored as signed bytes.
 NORMAL_STEPS = 127
 EPSILON = 1e-9
-ROOM_FILE = re.compile(r"^scene/.+_\d+_info\.zsi$")
+ROOM_FILE = re.compile(r"^scene/(.+)_\d+_info\.zsi$")
+# A collision triangle lies on a drawn ramp when it is this close to it: above or below, and
+# sideways past the ramp's edge (N64 units; collision vertices are integers).
+ON_RAMP = 4.0
+PAST_EDGE = 8.0
 
 
 @dataclass(frozen=True)
@@ -231,8 +235,9 @@ class Stairs:
                 vertex.position[1] + d[1] * (up - t) * scale,
                 vertex.position[2] + d[2] * (across - t) * scale)
 
-    def triangles(self) -> list[tuple[tuple[tuple[float, ...], tuple[float, ...]], ...]]:
-        """Output triangles as three (position, extra) corners, flat shaded by the caller."""
+    def triangles(self, sides: bool = True) -> list[tuple[tuple[tuple[float, ...], tuple[float, ...]], ...]]:
+        """Output triangles as three (position, extra) corners, flat shaded by the caller. `sides`
+        adds the faces that close the steps' ends."""
         out = []
         stepped = []
         for tri in self._triangles:
@@ -243,6 +248,8 @@ class Stairs:
                     out.extend((corners[0], corners[i], corners[i + 1]) for i in range(1, len(corners) - 1))
                     if folds:
                         stepped.append(piece)
+        if not sides:
+            return out
         # The steps' sides, up to the ramp wherever no other step continues them: the curbs' inner
         # faces and the ramp's open edges, seen from either side.
         edges: dict[frozenset, list[tuple[Vertex, Vertex]]] = {}
@@ -337,22 +344,89 @@ def texture_image(model: cmb.Cmb, texture: cmb.Texture, pack: TexturePack | None
     return found or image
 
 
+def _stair_shapes(model: cmb.Cmb) -> list[tuple[int, int]]:
+    """(shape, texture slot) of every stair-textured shape, once each."""
+    found: dict[int, int] = {}
+    for mesh in model.meshes:
+        slot = model.materials[mesh.material][0]
+        if slot >= 0 and STAIR_TEXTURE in model.textures[slot].name:
+            found.setdefault(mesh.shape, slot)
+    return list(found.items())
+
+
+@dataclass(frozen=True)
+class Ramp:
+    """One drawn ramp triangle, before stepping: corners, their texture coordinates, its steps."""
+
+    positions: tuple[tuple[float, float, float], ...]
+    uvs: tuple[tuple[float, float], ...]
+    profile: Profile
+
+    def _weights(self, x: float, z: float) -> tuple[float, float, float] | None:
+        (ax, _, az), (bx, _, bz), (cx, _, cz) = self.positions
+        det = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz)
+        if abs(det) < EPSILON:
+            return None
+        wa = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / det
+        wb = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / det
+        return wa, wb, 1 - wa - wb
+
+    def height(self, x: float, z: float) -> float | None:
+        """The ramp plane's height over (x, z)."""
+        w = self._weights(x, z)
+        return None if w is None else sum(f * p[1] for f, p in zip(w, self.positions))
+
+    def uv(self, x: float, z: float) -> tuple[float, float]:
+        """The ramp's texture coordinates continued to (x, z)."""
+        w = self._weights(x, z)
+        return tuple(sum(f * uv[axis] for f, uv in zip(w, self.uvs)) for axis in range(2))
+
+    def reach(self, x: float, z: float) -> float:
+        """How far (x, z) lies outside the triangle seen from above; 0 inside."""
+        worst = 0.0
+        p = self.positions
+        turn = 0.0
+        for i in range(3):
+            (ax, _, az), (bx, _, bz) = p[i], p[(i + 1) % 3]
+            turn += ax * bz - bx * az
+        for i in range(3):
+            (ax, _, az), (bx, _, bz) = p[i], p[(i + 1) % 3]
+            length = math.hypot(bx - ax, bz - az)
+            if length < EPSILON:
+                continue
+            side = ((bx - ax) * (z - az) - (bz - az) * (x - ax)) / length
+            worst = max(worst, -side if turn > 0 else side)
+        return worst
+
+
+def ramps(model: cmb.Cmb, pack: TexturePack | None) -> list[Ramp]:
+    """Every ramp triangle `rebuild` steps."""
+    out = []
+    for shape_index, slot in _stair_shapes(model):
+        shape = model.shapes[shape_index]
+        steps = profile(texture_image(model, model.textures[slot], pack))
+        positions = model.vertices(shape, "position")
+        uvs = model.vertices(shape, "tex0")
+        indices = model.indices(shape)
+        for i in range(0, len(indices) - 2, 3):
+            corners = tuple(positions[j] for j in indices[i:i + 3])
+            coordinates = tuple(uvs[j] for j in indices[i:i + 3])
+            if _along(list(corners), [uv[1] for uv in coordinates]) is not None:
+                out.append(Ramp(corners, coordinates, steps))
+    return out
+
+
 def rebuild(model: cmb.Cmb, pack: TexturePack | None) -> tuple[bytes, list[str]]:
     """The model with every stair-textured shape stepped, and the textures it stepped."""
     data = model.data
     stepped = []
-    done: set[int] = set()
-    for mesh in model.meshes:
-        slot = model.materials[mesh.material][0]
-        if slot < 0 or STAIR_TEXTURE not in model.textures[slot].name or mesh.shape in done:
-            continue
-        done.add(mesh.shape)
+    for shape_index, slot in _stair_shapes(model):
         current = cmb.Cmb.parse(data)
         texture = current.textures[slot]
-        shape = current.shapes[mesh.shape]
+        shape = current.shapes[shape_index]
         arrays = current.arrays(shape)
         if not {"position", "normal", "tex0"} <= set(arrays):
-            raise ValueError(f"{texture.name}: shape {mesh.shape} has arrays {arrays}")
+            raise ValueError(f"{texture.name}: shape {shape_index} has arrays {arrays}")
         extras = [name for name in arrays if name not in ("position", "normal")]
         columns = [current.vertices(shape, name) for name in extras]
         # Slices hold the vertices of every later shape too; the shape's own are the shortest run.
@@ -362,9 +436,76 @@ def rebuild(model: cmb.Cmb, pack: TexturePack | None) -> tuple[bytes, list[str]]
         stairs = Stairs(positions, packed, current.vertices(shape, "tex0"), current.indices(shape),
                         profile(texture_image(current, texture, pack)))
         vertices, indices = _flat(stairs.triangles(), extras)
-        data = current.with_shape(mesh.shape, vertices, indices)
+        data = current.with_shape(shape_index, vertices, indices)
         stepped.append(texture.name)
     return data, stepped
+
+
+def _on_ramp(corners: list[tuple[int, int, int]], drawn: list[Ramp]) -> Ramp | None:
+    """The drawn ramp triangle a collision triangle lies on with all three corners, if any."""
+    centre = [sum(c[axis] for c in corners) / 3 for axis in range(3)]
+    under = None
+    for ramp in drawn:
+        if ramp.reach(centre[0], centre[2]) > 0:
+            continue
+        height = ramp.height(centre[0], centre[2])
+        if height is not None and abs(height - centre[1]) <= ON_RAMP:
+            under = ramp
+            break
+    if under is None:
+        return None
+    for x, y, z in corners:
+        if abs(under.height(x, z) - y) > ON_RAMP:
+            return None
+        if not any(r.profile == under.profile and r.reach(x, z) <= PAST_EDGE
+                   and abs(r.height(x, z) - y) <= ON_RAMP for r in drawn if r.height(x, z) is not None):
+            return None
+    return under
+
+
+def collision(scene: zsi.Scene, drawn: list[Ramp]) -> bytes | None:
+    """The scene with the collision triangles on stepped ramps folded into the same steps; None
+    when no triangle lies on one."""
+    groups: dict[Profile, list[tuple[int, Ramp]]] = {}
+    for index, polygon in enumerate(scene.polygons):
+        corners = [scene.vertices[i] for i in polygon.vertices()]
+        slope = abs(polygon.normal[1]) / zsi.NORMAL_ONE
+        if polygon.normal[1] <= 0 or not math.cos(MAX_SLOPE) <= slope <= math.cos(MIN_SLOPE):
+            continue
+        ramp = _on_ramp(corners, drawn)
+        if ramp is not None:
+            groups.setdefault(ramp.profile, []).append((index, ramp))
+    if not groups:
+        return None
+    vertices = list(scene.vertices)
+    named = {vertex: i for i, vertex in enumerate(vertices)}
+    folded = {index for group in groups.values() for index, _ in group}
+    polygons = [polygon for index, polygon in enumerate(scene.polygons) if index not in folded]
+    for steps, group in groups.items():
+        positions, sources, uvs = [], [], []
+        for index, ramp in group:
+            for corner in scene.polygons[index].vertices():
+                x, y, z = scene.vertices[corner]
+                positions.append((float(x), float(y), float(z)))
+                sources.append((float(index),))
+                uvs.append(ramp.uv(x, z))
+        # No side faces: they are lower than the height the game checks walls at.
+        for triangle in Stairs(positions, sources, uvs, list(range(len(positions))), steps).triangles(sides=False):
+            source = scene.polygons[round(triangle[0][1][0])]
+            corners = []
+            for position, _ in triangle:
+                vertex = tuple(round(v) for v in position)
+                corners.append(named.setdefault(vertex, len(vertices)))
+                if corners[-1] == len(vertices):
+                    vertices.append(vertex)
+            if len(set(corners)) < 3:
+                continue
+            a, b, c = (vertices[i] for i in corners)
+            if all((b[i] - a[i]) * (c[(i + 1) % 3] - a[(i + 1) % 3]) == (b[(i + 1) % 3] - a[(i + 1) % 3]) * (c[i] - a[i])
+                   for i in range(3)):
+                continue
+            polygons.append(zsi.Polygon(source.surface, tuple(corners), (0, 0, 0), 0.0).facing(vertices, source))
+    return scene.with_collision(vertices, polygons)
 
 
 def room(data: bytes, pack: TexturePack | None) -> tuple[bytes, list[str]]:
@@ -379,5 +520,12 @@ def room(data: bytes, pack: TexturePack | None) -> tuple[bytes, list[str]]:
     return data, stepped
 
 
-def is_room(path: str) -> bool:
-    return bool(ROOM_FILE.match(path))
+def room_ramps(data: bytes, pack: TexturePack | None) -> list[Ramp]:
+    """The ramp triangles `room` steps, as the room file has them."""
+    return [ramp for model in zsi.Room.parse(data).models() for ramp in ramps(cmb.Cmb.parse(data[model:]), pack)]
+
+
+def scene_of(path: str) -> str | None:
+    """The scene file a room file belongs to; None when `path` is not a room."""
+    found = ROOM_FILE.match(path)
+    return f"scene/{found.group(1)}_info.zsi" if found else None

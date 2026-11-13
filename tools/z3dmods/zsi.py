@@ -1,4 +1,4 @@
-"""OoT3D room files (.zsi): header commands and the room's CMB models.
+"""OoT3D room and scene files (.zsi): header commands, a room's CMB models, a scene's collision.
 
 Header offsets count from 0x10, the end of the file header. Command layout after noclip.website's
 src/OcarinaOfTime3D/zsi.ts (MIT, Jasper St. Pierre and contributors).
@@ -93,3 +93,91 @@ def _model_pointers(data: bytes, header: int) -> list[int]:
         raise ValueError(f"mesh header with {count} entries")
     return [entries + field for field in MESH_ENTRY_MODELS
             if struct.unpack_from("<I", data, entries + field)[0]]
+
+
+COLLISION = 0x03
+# Collision header fields (decomp/oot3d docs/notes/scene_collision.md).
+COLLISION_VERTEX_COUNT = 0x0C
+COLLISION_POLYGON_COUNT = 0x0E
+COLLISION_VERTICES = 0x18
+COLLISION_POLYGONS = 0x1C
+VERTEX_SIZE = 6
+POLYGON_SIZE = 20
+VERTEX_INDEX = 0x1FFF
+MAX_VERTICES = VERTEX_INDEX + 1
+NORMAL_ONE = 32767
+
+
+@dataclass(frozen=True)
+class Polygon:
+    """A collision triangle. `corners` keep the flags in their top three bits."""
+
+    surface: int
+    corners: tuple[int, int, int]
+    normal: tuple[int, int, int]
+    distance: float
+
+    def vertices(self) -> tuple[int, int, int]:
+        return tuple(corner & VERTEX_INDEX for corner in self.corners)
+
+    def facing(self, positions: list[tuple[int, int, int]], flags: Polygon) -> Polygon:
+        """This triangle over `positions`, with its plane computed and `flags`' corner flags."""
+        a, b, c = (positions[i] for i in self.vertices())
+        u = [b[i] - a[i] for i in range(3)]
+        v = [c[i] - a[i] for i in range(3)]
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        length = sum(x * x for x in n) ** 0.5
+        unit = tuple(x / length for x in n)
+        corners = tuple(i | (f & ~VERTEX_INDEX) for i, f in zip(self.vertices(), flags.corners))
+        return Polygon(self.surface, corners, tuple(round(x * NORMAL_ONE) for x in unit),
+                       -sum(x * y for x, y in zip(unit, a)))
+
+
+@dataclass(frozen=True)
+class Scene:
+    """A scene file's collision: its vertices (integers, world space) and triangles."""
+
+    data: bytes
+    header: int
+    vertices: list[tuple[int, int, int]]
+    polygons: list[Polygon]
+
+    @classmethod
+    def parse(cls, data: bytes) -> Scene:
+        if data[0:4] != MAGIC:
+            raise ValueError("not an OoT3D scene file")
+        offset = BASE
+        while True:
+            code, word = struct.unpack_from("<BxxxI", data, offset)
+            if code == COLLISION:
+                break
+            if code == END:
+                raise ValueError("scene without collision")
+            offset += 8
+        header = BASE + word
+        vertex_count, polygon_count = struct.unpack_from("<HH", data, header + COLLISION_VERTEX_COUNT)
+        vertices_at, polygons_at = (BASE + v for v in struct.unpack_from("<II", data, header + COLLISION_VERTICES))
+        vertices = [struct.unpack_from("<3h", data, vertices_at + i * VERTEX_SIZE) for i in range(vertex_count)]
+        polygons = []
+        for i in range(polygon_count):
+            surface, a, b, c, _, nx, ny, nz, distance = struct.unpack_from("<5H3hf", data, polygons_at + i * POLYGON_SIZE)
+            polygons.append(Polygon(surface, (a, b, c), (nx, ny, nz), distance))
+        return cls(data, header, vertices, polygons)
+
+    def with_collision(self, vertices: list[tuple[int, int, int]], polygons: list[Polygon]) -> bytes:
+        """The scene with new vertex and triangle lists, written after everything else."""
+        if len(vertices) > MAX_VERTICES:
+            raise ValueError(f"{len(vertices)} collision vertices; a triangle can name {MAX_VERTICES}")
+        out = bytearray(self.data)
+        out.extend(bytes(-len(out) % 4))
+        vertices_at = len(out)
+        for vertex in vertices:
+            out.extend(struct.pack("<3h", *vertex))
+        out.extend(bytes(-len(out) % 4))
+        polygons_at = len(out)
+        for polygon in polygons:
+            out.extend(struct.pack("<5H3hf", polygon.surface, *polygon.corners, 0, *polygon.normal,
+                                   polygon.distance))
+        struct.pack_into("<HH", out, self.header + COLLISION_VERTEX_COUNT, len(vertices), len(polygons))
+        struct.pack_into("<II", out, self.header + COLLISION_VERTICES, vertices_at - BASE, polygons_at - BASE)
+        return bytes(out)

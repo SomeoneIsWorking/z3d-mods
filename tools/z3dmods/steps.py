@@ -1,7 +1,7 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state), warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
+poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state), warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), where (print the player's position), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
@@ -138,6 +138,12 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             for field in (layout.actor_home, layout.actor_position, layout.actor_previous):
                 session.write(player + field, position)
             log(f"teleport player 0x{player:08X} to {arg}")
+        elif kind == "where":
+            if layout.player is None:
+                raise RuntimeError("where needs the player's actor layout")
+            player = session.u32(_play(session, layout) + layout.player)
+            x, y, z = struct.unpack("<3f", session.read(player + layout.actor_position, 12))
+            log(f"player at {x:.1f} {y:.1f} {z:.1f}")
         elif kind == "csframe":
             log(f"cutscene at {_wait_frame(session, layout, int(arg, 0))}")
         elif kind == "waitscript":

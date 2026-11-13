@@ -9,7 +9,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, hud, ips, options, patch_build, stairs
+from z3dmods import azahar_config, bps, ctr, hud, ips, options, patch_build, stairs, zsi
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -107,16 +107,28 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, pack: TexturePack | None) -> dict[str, bytes]:
-    """Every room with stair ramps, stepped; a room the base mod replaces is stepped from its copy."""
+    """Every room with stair ramps, stepped, and its scene with the collision on those ramps
+    stepped; a file the base mod replaces is stepped from its copy."""
     files = rom.romfs()
-    out = {}
-    for path in files.files:
-        if not stairs.is_room(path):
-            continue
+
+    def read(path: str) -> bytes:
         base = base_romfs / path if base_romfs else None
-        data, stepped = stairs.room(base.read_bytes() if base and base.exists() else files.read(path), pack)
+        return base.read_bytes() if base and base.exists() else files.read(path)
+
+    out = {}
+    drawn: dict[str, list[stairs.Ramp]] = {}
+    for path in files.files:
+        scene = stairs.scene_of(path)
+        if scene is None:
+            continue
+        data, stepped = stairs.room(read(path), pack)
         if stepped:
             out[path] = data
+            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), pack))
+    for scene, ramps in drawn.items():
+        data = stairs.collision(zsi.Scene.parse(read(scene)), ramps)
+        if data is not None:
+            out[scene] = data
     return out
 
 
