@@ -29,6 +29,14 @@ Both go into the same MIT `code.ips` as the cutscene skip ([cutscene-skip.md](cu
   with it on, entering the Know-It-All Brothers' house writes the file (save count 4 to 5, the
   saved scene the house, 99 rupees poked in before); after a restart the file loads with the 99
   rupees.
-- Not seen: an autosave in a dungeon, as an adult, after a death or a void-out, or over a long
-  session; the save runs on the game's own thread while play goes on, where the pause screen
-  waits for it.
+  Through a door (`oot-as6`): walking out of the house's door into Kokiri Forest writes the file.
+  Out of a dungeon (`oot-as6`): walking out of the Deku Tree starts a cutscene in the forest;
+  nothing is written while it runs, and the file is written once it has ended. Into the Deku
+  Tree (`oot-as4`): nothing during its first-visit cutscene, the write after it.
+  Boss room (`oot-as5`, Gohma's): one write as Link stands inside the door, in plain play before
+  the boss appears; none during the boss's entrance or in the 25 s after it. That file loads at
+  the Deku Tree's entrance (`oot-as7`), which is the game's rule for a save made anywhere in a
+  dungeon and so what the pause screen's Save gives in the same room (same routine; the pause
+  screen's Save was not pressed in the boss room to compare).
+- Not seen: an autosave as an adult, after a death or a void-out, or over a long session; the
+  save runs on the game's own thread while play goes on, where the pause screen waits for it.

@@ -250,9 +250,39 @@ def _options(session: Session, pad: Gamepad) -> None:
     session.shot("narration-after-start")
 
 
+def _options_oot3d(session: Session, pad: Gamepad) -> None:
+    """The picker's options for OoT3D: X opens them, Down and A turn Quick Text off, and the text
+    Link reads beside his bed in File 1 then types itself out."""
+    session.wait(8)
+    session.key("x")
+    session.wait(1)
+    session.shot("options")
+    session.key("stick_down")
+    session.wait(1)
+    session.key("a")
+    session.wait(1)
+    session.shot("quick-text-off")
+    session.key("b")
+    session.wait(1)
+    session.key("a")
+    session.wait(20)
+    session.key("start")
+    session.wait(3)
+    session.key("a")
+    session.wait(2)
+    session.key("a")
+    session.wait(10)
+    session.shot("house")
+    session.key("a", 0.05)
+    for shot in ("text-1", "text-2", "text-3"):
+        session.shot(shot)
+    session.wait(4)
+    session.shot("text-late")
+
+
 # Direct launches of one game, and the installed shortcut's picker.
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d}
-SCENARIOS = {**DIRECT, "picker": _picker, "options": _options}
+SCENARIOS = {**DIRECT, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:

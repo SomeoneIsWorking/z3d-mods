@@ -94,8 +94,17 @@ Deku Nuts and the Slingshot poked into the inventory (run `oot-ch7`, Kokiri Fore
   are used; nuts assigned on the adult chord page show on the HUD with the chord held and the
   adult first page is empty on release. A round trip of the age keeps the child pages (`oot-ad1`,
   `oot-ad2`).
-- Not seen: an adult first-page assignment made in the item screen, the age change through the
-  Master Sword cutscene, a real pad's stick click, the options menu's switch, a full grid.
+- The age change itself (`oot-ag7`, `oot-ag8`): a child with nuts on the first page and the
+  Slingshot on the second pulls the Master Sword at the pedestal (entrance 0x2CA, A on "Grab").
+  Through the pull and the Chamber of Sages the buttons do not trade, also with the chord button
+  held. Adult Link stands in the Temple of Time with the Master Sword on B and no items on either
+  page; the child's pages are still in the 18 bytes.
+- Adult assignments in the item screen (`oot-ag10`, `oot-ag11`): nuts put on Y on the first page
+  by touch, bombs on X on the second page with the chord held; the HUD shows the nuts, the bombs
+  while held, the nuts again on release.
+- Not seen: the way back to a child through the pedestal (Sheik stands on it until the Forest
+  Temple is done; the age set back by hand keeps the child's pages, `oot-ad2`), a real pad's
+  stick click, a full grid.
 - MM3D: not started.
 
 ## When
