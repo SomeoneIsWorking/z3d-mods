@@ -66,8 +66,8 @@ struct Game {
   // Same minimum as the game's title-demo skip: one second of cutscene frames. That skip also
   // requires the in-cutscene flag (0x5043D4+0x18) clear, which blocks every gameplay cutscene.
   static uint32_t minimumFrames() {
-    const auto timing = guest::read<uintptr_t>(kFrameRatePointer);
-    const auto divisor = guest::read<int16_t>(reinterpret_cast<void *>(timing), kFrameRateDivisor);
+    const auto timing = guest::read<uintptr_t>(kGameInfo);
+    const auto divisor = guest::read<int16_t>(reinterpret_cast<void *>(timing), kUpdateRate);
     return static_cast<uint32_t>(60.0F / static_cast<float>(divisor) + 0.5F);
   }
 };
@@ -76,7 +76,7 @@ constinit CutsceneSkip<Game> skip;
 
 } // namespace
 
-// Called instead of the interpreter from its two call sites (0x322040, 0x322070).
+// Called instead of the interpreter from its two call sites (link.ld).
 void stepCutscene(void *play, void *cutscene, const void *script) {
   skip.step(play, cutscene, script);
 }

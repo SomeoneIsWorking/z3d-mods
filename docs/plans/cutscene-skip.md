@@ -20,29 +20,21 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   frame up to the script's end frame, so every command the script would have issued (destination,
   flags, time of day, music, the stop command) runs in order, and the game ends the cutscene itself.
   It sets no flags of its own. User: "don't fast forward please, skip entirely".
-- Text: a text command (0x13) holds its end frame while `Message_GetState()` (0x3769D8) is not
-  0, 2, 7 or 8 (0x2C7AD4). On a hold the skip calls `Message_CloseTextbox(play)` (0x3725E0) once,
-  stops stepping for that game frame, and resumes on the next frame once the game's message update
-  has finished closing (manager byte +0xF38 = 0x0E, counter +0xFA4 below 2). Closing again every
-  frame resets that counter and stalls the cutscene. A choice (state 4) is never closed: the skip
-  waits there for the player.
-- Transitions: `play + 0x5C2D` is 20 when a scene transition is requested, -20 during the incoming
-  fade (it stays -20 through the black opening narration until frame ~160), 0 otherwise. The skip
-  refuses to start, and stops stepping, only at 20.
+- Text: a text command holds its end frame while the textbox is open. On a hold the skip closes
+  the box once, stops stepping for that game frame, and resumes once the game has finished closing
+  it; closing again every frame stalls the cutscene. A choice is never closed: the skip waits there
+  for the player.
+- Transitions: the skip refuses to start, and stops stepping, while a scene transition is requested.
 - `patch/common/cutscene_skip.hpp` is the skip; each game's `cutscene_skip.cpp` supplies only its
-  layout as a `Game` trait.
-- OoT3D: `patch/oot3d/` replaces the interpreter `FUN_002c5ba0` at its two call sites in the
-  cutscene update `FUN_00321f50` (0x322040, 0x322070) with `stepCutscene`. `csCtx = play + 0x2298`:
-  state +0x08 (2 running), end frame +0x18, current frame +0x20. Start is `play + 0x18` bit 3 in
-  normal play (`gameMode` 0), after the first second of the cutscene, with no transition pending.
-  The game's own title-demo skip in the destination handler `FUN_00491364` also requires
-  `*(0x5043D4 + 0x18) == 0`; that word is 1 during every gameplay cutscene, so ours does not.
-- MM3D: `patch/mm3d/` replaces the interpreter 0x1846B4 at its three call sites (cutscene start
-  0x174374, the state-1 handler 0x4CF9F0, the state-2/4 tail call 0x3F1A74). `csCtx = play +
-  0x2428`: state +0x264 (2 running), current frame +0x20; the end frame is the script header's u16
-  at +0x34. Start is `play + 0x34` bit 3. The title screen's demo is a play-state cutscene, so the
-  skip requires CommonData (0x7751D8) `setup` (+0x1361C) to be 0; it is 1 on the title.
-  `Message_GetState(play + 0x8020)` is 0x1C5018, `Message_CloseTextbox()` 0x1EF228.
+  layout as a `Game` trait. The functions, globals and offsets it uses are generated from the game's
+  decomp (`patch/<game>/symbols.toml`, `tools/z3dmods/symbols.py`); the RE behind them is in
+  `decomp/oot3d/docs/cutscene.md` and `decomp/mm3d/docs/cutscene.md`.
+- OoT3D: `patch/oot3d/` replaces the interpreter at its two call sites in
+  `CutsceneHandler_RunScript`. Start counts in normal play, after the first second of the cutscene
+  (the game's own title-demo minimum), with no transition pending.
+- MM3D: `patch/mm3d/` replaces the interpreter at its three call sites (`Cutscene_BeginScript`,
+  `CutsceneHandler_StartScript`, `CutsceneHandler_RunScript`). The title screen's demo is a
+  play-state cutscene, so the skip requires `CommonData.setup` to be 0.
 
 ## Status
 - OoT3D Kakariko intro (warp 0xDB from Link's house, misc stop at frame 255): Start at frame 57 ends

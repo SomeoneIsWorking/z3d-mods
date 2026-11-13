@@ -1,0 +1,21 @@
+# Guest constants generated from the MM3D decomp, USA 1.0 layout (tools/z3dmods/symbols.py).
+
+[functions]
+kCutsceneBeginScript = "Cutscene_BeginScript"
+kCutsceneStartScript = "CutsceneHandler_StartScript"
+kCutsceneRunScript = "CutsceneHandler_RunScript"
+kCutsceneInterpreter = "Cutscene_ProcessCommands"
+kMessageGetState = "Message_GetState"
+kMessageCloseTextbox = "Message_CloseTextbox"
+
+[globals]
+kCommonData = "gCommonData"
+
+[offsets]
+kGameMode = "CommonData.setup"
+kPlayInputPressed = "PlayState.buttonsPressed"
+kPlayMessageContext = "PlayState.msgCtx"
+kPlayTransitionTrigger = "PlayState.transitionTrigger"
+kCsFrames = "CutsceneContext.frames"
+kCsState = "CutsceneContext.state"
+kScriptEndFrame = "CutsceneScript.endFrame"

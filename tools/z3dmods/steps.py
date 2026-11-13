@@ -31,9 +31,7 @@ class Session(Protocol):
     def press(self, button: str) -> None: ...
 
 
-def _play(session: Session, layout: Layout | None) -> int:
-    if layout is None:
-        raise RuntimeError("this game has no RAM layout in tools/z3dmods/games.py yet")
+def _play(session: Session, layout: Layout) -> int:
     return session.u32(layout.play_pointer)
 
 
@@ -66,7 +64,7 @@ def _wait_cutscene(session: Session, layout: Layout, timeout: float, log) -> Non
     raise RuntimeError(f"cutscene did not {'end' if seen else 'start'} within {timeout}s (last {last})")
 
 
-def _wait_frame(session: Session, layout: Layout | None, frame: int, timeout: float = 60) -> tuple[int, int]:
+def _wait_frame(session: Session, layout: Layout, frame: int, timeout: float = 60) -> tuple[int, int]:
     for _ in range(round(timeout / POLL)):
         state, frames = _cutscene(session, layout)
         if state and frames >= frame:
@@ -75,7 +73,7 @@ def _wait_frame(session: Session, layout: Layout | None, frame: int, timeout: fl
     raise RuntimeError(f"cutscene did not reach frame {frame} within {timeout}s")
 
 
-def _wait_script(session: Session, layout: Layout | None, script: int, button: str,
+def _wait_script(session: Session, layout: Layout, script: int, button: str,
                  timeout: float = 120) -> tuple[int, int]:
     """Waits for the cutscene to run `script`, pressing `button` meanwhile to advance its text."""
     for _ in range(round(timeout / POLL)):
@@ -88,7 +86,7 @@ def _wait_script(session: Session, layout: Layout | None, script: int, button: s
     raise RuntimeError(f"cutscene script 0x{script:08X} did not start within {timeout}s")
 
 
-def run(session: Session, steps: list[str], out: Path, layout: Layout | None) -> None:
+def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
     start = time.monotonic()
 
     def log(text: str) -> None:
@@ -136,8 +134,6 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout | None) ->
             log(f"play 0x{play:08X} scene {scene} state/frames {_cutscene(session, layout)} "
                 f"trigger {trigger} script 0x{script:08X} head {head.hex()}")
         elif kind == "save":
-            if layout is None:
-                raise RuntimeError("this game has no RAM layout in tools/z3dmods/games.py yet")
             data = session.read(layout.save_context, layout.save_size)
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]

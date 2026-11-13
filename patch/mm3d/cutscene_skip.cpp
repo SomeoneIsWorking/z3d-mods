@@ -64,7 +64,7 @@ constinit CutsceneSkip<Game> skip;
 
 } // namespace
 
-// Called instead of the interpreter from its three call sites (0x174374, 0x4CF9F0, 0x3F1A74).
+// Called instead of the interpreter from its three call sites (link.ld).
 void stepCutscene(void *play, void *cutscene, const void *script) {
   skip.step(play, cutscene, script);
 }

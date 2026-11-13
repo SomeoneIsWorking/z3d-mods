@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import ips
+from z3dmods import ips, symbols
 
 CODE_BASE = 0x00100000
 SHT_PROGBITS, SHT_NOBITS, SHF_ALLOC = 1, 8, 2
@@ -58,14 +58,15 @@ def _sections(elf: bytes) -> list[tuple[str, int, int, int, int, bytes]]:
 def build(repo: Path, game: str, payload: int, build_dir: Path) -> Patch:
     source = repo / "patch" / game
     build_dir.mkdir(parents=True, exist_ok=True)
+    generated = symbols.generate(repo, game, build_dir / "generated")
     objects = []
     for path in sorted(source.glob("*.cpp")) + sorted(source.glob("*.s")):
         obj = build_dir / (path.name + ".o")
-        flags = CXXFLAGS if path.suffix == ".cpp" else CXXFLAGS[:5]
+        flags = [*CXXFLAGS, f"-I{generated.header.parent}"] if path.suffix == ".cpp" else CXXFLAGS[:5]
         subprocess.run([_tool("clang++"), *flags, "-c", str(path), "-o", str(obj)], check=True)
         objects.append(str(obj))
     elf_path = build_dir / f"{game}.elf"
-    subprocess.run([_tool("ld.lld"), "-T", str(source / "link.ld"), f"--defsym=PAYLOAD=0x{payload:X}",
+    subprocess.run([_tool("ld.lld"), "-L", str(generated.linker.parent), "-T", str(source / "link.ld"), f"--defsym=PAYLOAD=0x{payload:X}",
                     "--gc-sections", "-o", str(elf_path), *objects], check=True)
 
     sections = _sections(elf_path.read_bytes())

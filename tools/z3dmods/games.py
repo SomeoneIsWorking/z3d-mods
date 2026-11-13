@@ -1,8 +1,11 @@
-"""Guest RAM layout the maintainer tools read, per title (the patch's own copy is patch/<game>/game.hpp)."""
+"""Guest RAM layout the maintainer tools read, per title, resolved from the game's decomp."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+
+from z3dmods import symbols
 
 
 @dataclass(frozen=True)
@@ -18,31 +21,42 @@ class Layout:
     scene: int
 
 
-LAYOUTS = {
-    # oot3d-decomp docs/ram_map.md; csCtx = play + 0x2298 (Randomizer z3D.h).
-    "oot3d": Layout(
-        play_pointer=0x0050AF34,
-        save_context=0x00587958,
-        save_size=0x15C4,
-        next_entrance=0x5C32,
-        transition_trigger=0x5C2D,
-        cutscene_state=0x2298 + 0x08,
-        cutscene_frames=0x2298 + 0x20,
-        cutscene_script=0x2298 + 0x04,
-        scene=0x104,
-    ),
-    # Project Restoration's v1.0 code layout; csCtx = play + 0x2428 (patch/mm3d/game.hpp).
-    "mm3d": Layout(
-        play_pointer=0x00667890,
-        save_context=0x007751D8,
-        save_size=0x8 + 0x1A88,  # start, scene, SaveData
-        next_entrance=0xC52E,
-        transition_trigger=0xC529,
-        cutscene_state=0x2428 + 0x264,
-        cutscene_frames=0x2428 + 0x20,
-        cutscene_script=0x2688,
-        scene=0x148,
-    ),
-}
+def _oot3d(d: symbols.Decomp) -> Layout:
+    cutscene = symbols.offset(d, "PlayState.csCtx")
+    return Layout(
+        play_pointer=symbols.global_(d, "gPlayState"),
+        save_context=symbols.global_(d, "gSaveContext"),
+        save_size=symbols.size(d, "SaveContext"),
+        next_entrance=symbols.offset(d, "PlayState.nextEntranceIndex"),
+        transition_trigger=symbols.offset(d, "PlayState.sceneLoadFlag"),
+        cutscene_state=cutscene + symbols.offset(d, "CutsceneContext.state"),
+        cutscene_frames=cutscene + symbols.offset(d, "CutsceneContext.frames"),
+        cutscene_script=cutscene + symbols.offset(d, "CutsceneContext.segment"),
+        scene=symbols.offset(d, "PlayState.sceneNum"),
+    )
+
+
+def _mm3d(d: symbols.Decomp) -> Layout:
+    cutscene = symbols.offset(d, "PlayState.csCtx")
+    return Layout(
+        play_pointer=symbols.global_(d, "gPlayState"),
+        save_context=symbols.global_(d, "gCommonData"),
+        # start, scene and SaveData
+        save_size=symbols.offset(d, "CommonData.save") + symbols.size(d, "SaveData"),
+        next_entrance=symbols.offset(d, "PlayState.nextEntrance"),
+        transition_trigger=symbols.offset(d, "PlayState.transitionTrigger"),
+        cutscene_state=cutscene + symbols.offset(d, "CutsceneContext.state"),
+        cutscene_frames=cutscene + symbols.offset(d, "CutsceneContext.frames"),
+        cutscene_script=cutscene + symbols.offset(d, "CutsceneContext.script"),
+        scene=symbols.offset(d, "PlayState.sceneNum"),
+    )
+
+
+_LAYOUTS = {"oot3d": _oot3d, "mm3d": _mm3d}
+
+
+def layout(repo: Path, game: str) -> Layout:
+    return _LAYOUTS[game](symbols.load(repo, game))
+
 
 TRANSITION_START = 20

@@ -113,7 +113,7 @@ only with Qt, which the player declined. Our MIT patch is planned in
 | OoT3D Autosave | OoT3D | GameBanana 686090 | CC BY-NC-ND | `code.ips` only | To bake into the base `code.bin` with The One Screen if their writes do not overlap; our MIT one later |
 | Door of Time Skip, Zora's River Waterfall Skip, Unfreeze Zora's Domain | OoT3D | GameBanana 713704, 711124, 710508 | CC BY-NC-ND | romfs only | Not used; Door of Time Skip can softlock adult Link |
 | OoT3D Randomizer | OoT3D | github.com/gamestabled/OoT3D_Randomizer v5.0 | MIT | `code.ips` + `exheader.bin` | Reference: loader, Quick Text, story-flag skips at save creation |
-| zeldaret/oot3d | OoT3D | WIP decompilation of the USA `code.bin` | CC0 | | Reference |
+| zeldaret/oot3d | OoT3D | WIP decompilation of the USA `code.bin` | CC0 | | Our fork is `decomp/oot3d` |
 | DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Single screen is host code that needs the Qt frontend; the user declined Qt. Evidence for our own patch |
 | Omni Xbox UI | MM3D | as above | CC BY-NC-ND | textures | Installed until our own glyphs exist |
 | MM3D Randomizer base patch | MM3D | Z3DR/mm3dr | MIT (with permission for its PR code) | | Reference |
@@ -124,9 +124,9 @@ Project Restoration skips only the Stone Tower statue cutscene.
 
 ## Our own patches
 
-All MIT, written from scratch with the OoT3D Randomizer (MIT), zeldaret/oot3d (CC0) and the
-player's own oot3d-decomp and mm3d-decomp as references. Each ships as the `code.ips` that rides on
-the set's baked `code.bin`.
+All MIT, written from scratch on each game's decomp (`decomp/oot3d`, our fork of zeldaret/oot3d;
+`decomp/mm3d`, the player's mm3d-decomp), which holds the addresses they use and the RE behind them.
+Each ships as the `code.ips` that rides on the set's baked `code.bin`.
 
 - Press-Start cutscene skip, both games: [plans/cutscene-skip.md](plans/cutscene-skip.md).
 - Quick Text and optional autosave for OoT3D: [plans/oot3d-qol.md](plans/oot3d-qol.md).

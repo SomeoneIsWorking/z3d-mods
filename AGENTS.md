@@ -14,8 +14,10 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
 - `tools/z3dmods/`: the maintainer CLI (`uv run --frozen z3dmods ...`).
 - `env-assets/local.json` (gitignored): ROM paths per title ID. `env-assets/downloads/<mod>/`: each
   third-party download in its own folder, extracted into `x/`. `env-assets/backup/`: the player's
-  Azahar config and data, copied before any change. `env-assets/ref/`: the player's own
-  oot3d-decomp and mm3d-decomp checkouts, read as references.
+  Azahar config and data, copied before any change. `decomp/<game>/`: each game's
+  decomp as a submodule (`git submodule update --init decomp/oot3d decomp/mm3d`, not recursive):
+  guest addresses and RE findings live there, and a finding a change needs is committed to the
+  decomp first.
 
 ## Commands
 - `uv run --frozen z3dmods rominfo <rom.3ds>`: title, remaster version and `code.bin` hash.

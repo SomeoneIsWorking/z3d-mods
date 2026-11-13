@@ -1,0 +1,24 @@
+# Guest constants generated from the OoT3D decomp (tools/z3dmods/symbols.py).
+
+[functions]
+kCutsceneRunScript = "CutsceneHandler_RunScript"
+kCutsceneInterpreter = "Cutscene_ProcessCommands"
+kMessageCloseTextbox = "Message_CloseTextbox"
+kMessageGetState = "Message_GetState"
+
+[globals]
+kSaveContext = "gSaveContext"
+kGameInfo = "gGameInfo"
+
+[offsets]
+kSaveFileNum = "SaveContext.fileNum"
+kSaveGameMode = "SaveContext.gameMode"
+kPlayInputPressed = "GameState.buttonsPressed"
+kPlayTransitionTrigger = "PlayState.sceneLoadFlag"
+kCsState = "CutsceneContext.state"
+kCsEndFrame = "CutsceneContext.endFrame"
+kCsFrames = "CutsceneContext.frames"
+kGameInfoData = "GameInfo.data"
+
+[defines]
+kRegsPerGroup = "REG_PER_GROUP"

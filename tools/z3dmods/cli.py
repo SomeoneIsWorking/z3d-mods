@@ -40,12 +40,12 @@ def run_steps(args: argparse.Namespace) -> None:
     if args.harness:
         with harness.HarnessSession(cfg, game, args.game, out / "harness.log",
                                     dict(option.split("=", 1) for option in args.core_option)) as session:
-            steps.run(session, args.steps, out, games.LAYOUTS.get(args.game))
+            steps.run(session, args.steps, out, games.layout(cfg.repo, args.game))
             print(f"{session.frames()} frames")
         return
     settings = json.loads(args.settings) if args.settings else None
     with azahar.Session(cfg, cfg.rom(game.title_id), out / "gamescope.log", settings) as session:
-        steps.run(session, args.steps, out, games.LAYOUTS.get(args.game))
+        steps.run(session, args.steps, out, games.layout(cfg.repo, args.game))
     for name, lines in session.config_changes.items():
         print(f"restored {name}: Azahar changed {len(lines)} lines")
 

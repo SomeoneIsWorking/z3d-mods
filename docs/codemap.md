@@ -14,8 +14,12 @@
 - `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
 - `tools/z3dmods/play.py`: `z3dmods play`: the app in a window on the player's session, with its own saves.
 - `tools/z3dmods/shortcut.py`: per-machine desktop shortcuts that run `z3dmods play`.
-- `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene).
+- `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
+- `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld.
+- `decomp/oot3d/`: submodule, our fork of zeldaret/oot3d (CC0): OoT3D symbols, structs and RE docs.
+- `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT, private): MM3D 1.0-layout symbols, structs and RE docs.
+- `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
