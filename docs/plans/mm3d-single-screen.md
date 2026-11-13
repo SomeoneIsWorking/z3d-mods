@@ -23,5 +23,5 @@ Project Restoration's v1.0-layout `code.bin`, built from mm3d-decomp and PR's so
 only). It does not fork Azahar.
 
 ## OoT3D (fallback only)
-If The One Screen cannot be used, the same approach for OoT3D, built from the OoT3D Randomizer's
-loader (MIT) and zeldaret/oot3d (CC0), in the same `code.ips` as the skip and Quick Text.
+If The One Screen cannot be used, the same approach for OoT3D, built on zeldaret/oot3d (CC0), with
+the OoT3D Randomizer's loader as evidence only (no licence for its own code), in the same `code.ips` as the skip and Quick Text.

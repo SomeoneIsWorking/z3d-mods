@@ -3,8 +3,8 @@
 User: "Oh don't forget about the QoL mods"; on the CC BY-NC-ND mods: "I'd rather make MIT versions
 of those then".
 
-- **Quick Text**: text prints at once and can be advanced at once, ported from the OoT3D Randomizer
-  (MIT, attributed).
+- **Quick Text**: text prints at once and can be advanced at once, written by us; the OoT3D Randomizer's
+  version is evidence only (no licence for its own code, docs/mods.md).
 - **Autosave, optional**: after a scene transition, save through the game's own save routine, as
   the in-game save does. Off by default and written from scratch, not from the CC BY-NC-ND autosave mod.
 

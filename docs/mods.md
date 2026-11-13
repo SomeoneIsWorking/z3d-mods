@@ -112,7 +112,7 @@ only with Qt, which the player declined. Our MIT patch is planned in
 | Touchless Layout UI | OoT3D | GameBanana 567711 v3.1 | CC BY-NC-ND | textures | Fallback glyph pack (Vanilla build) |
 | OoT3D Autosave | OoT3D | GameBanana 686090 | CC BY-NC-ND | `code.ips` only | To bake into the base `code.bin` with The One Screen if their writes do not overlap; our MIT one later |
 | Door of Time Skip, Zora's River Waterfall Skip, Unfreeze Zora's Domain | OoT3D | GameBanana 713704, 711124, 710508 | CC BY-NC-ND | romfs only | Not used; Door of Time Skip can softlock adult Link |
-| OoT3D Randomizer | OoT3D | github.com/gamestabled/OoT3D_Randomizer v5.0 | MIT | `code.ips` + `exheader.bin` | Reference: loader, Quick Text, story-flag skips at save creation |
+| OoT3D Randomizer | OoT3D | github.com/gamestabled/OoT3D_Randomizer v5.0 | None for its own code: `LICENSE.md` only carries the MIT notice of the N64 OoT-Randomizer code it derives from | `code.ips` + `exheader.bin` | Evidence only: loader, Quick Text, the C-stick free camera (`code/src/camera.c`, by Nessy, HylianFreddy and Colin E, hooked at `Camera_Update`), story-flag skips at save creation |
 | zeldaret/oot3d | OoT3D | WIP decompilation of the USA `code.bin` | CC0 | | Our fork is `decomp/oot3d` |
 | DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Single screen is host code that needs the Qt frontend; the user declined Qt. Evidence for our own patch |
 | Omni Xbox UI | MM3D | as above | CC BY-NC-ND | textures | Installed until our own glyphs exist |
