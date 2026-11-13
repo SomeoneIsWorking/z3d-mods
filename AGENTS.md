@@ -27,9 +27,12 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   `hold:<button>,<s>`, `peek:<addr>,<size>`. `--settings '{"Layout":{"layout_option":1}}'` sets
   global settings for that run only. Output: `scratch/runs/<name>/`.
 - `... z3dmods run <game> <name> --harness <steps...>`: the same steps on the libretro harness
-  (frame-exact, savestates, watchpoints) on a copy of the player's data; see
-  [docs/harness.md](docs/harness.md) for the core pin and build. Harness build:
+  (the z3d app hidden: frame-exact, savestates, watchpoints) on a copy of the player's data; see
+  [docs/app.md](docs/app.md) for the core pin and build. App build:
   `cmake -S app -B build/app -G Ninja -DCMAKE_CXX_COMPILER=clang++ && ninja -C build/app`.
+- `... z3dmods play <game>`: the z3d app in a window with the installed set; its saves live in
+  `~/.local/share/z3d-mods/`, apart from standalone Azahar's. `... z3dmods shortcut` adds the
+  per-machine desktop shortcuts.
 
 The OoT3D save in slot 1 is the player's: load it, never save over it. Check
 `sdmc/.../title/00040000/00033500/data/00000001/` against the backup after a run.

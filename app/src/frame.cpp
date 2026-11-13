@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fstream>
 #include <string_view>
+#include <utility>
 
 namespace z3d::app {
 namespace {
@@ -43,15 +44,10 @@ void Frame::store(const void *data, FrameSize size, size_t pitch) {
   }
 }
 
-void Frame::storeBottomUp(const std::vector<uint32_t> &rows, FrameSize size) {
-  const auto [width, height] = size;
-  width_ = width;
-  height_ = height;
-  pixels_.resize(static_cast<size_t>(width) * height);
-  for (unsigned y = 0; y < height; ++y) {
-    std::memcpy(&pixels_[static_cast<size_t>(y) * width],
-                &rows[static_cast<size_t>(height - 1 - y) * width], width * sizeof(uint32_t));
-  }
+void Frame::storeRows(std::vector<uint32_t> rows, FrameSize size) {
+  width_ = size.width;
+  height_ = size.height;
+  pixels_ = std::move(rows);
 }
 
 bool Frame::writePng(const std::filesystem::path &path) const {

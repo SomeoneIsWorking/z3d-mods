@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,8 +19,13 @@ class Config:
     azahar_config: Path
     azahar_appimage: Path
     roms: dict[str, Path]
-    # The SomeoneIsWorking/azahar libretro core the harness loads (local.json "libretro_core").
+    # The SomeoneIsWorking/azahar libretro core the app loads (local.json "libretro_core").
     libretro_core: Path | None
+    # The z3d app (app/) and the data it plays from (saves, system files, a link to load/).
+    app_binary: Path
+    app_data: Path
+    # The desktop session's display variables, so a tool started outside it reaches it too.
+    session_env: dict[str, str]
 
     def rom(self, title_id: str) -> Path:
         if title_id not in self.roms:
@@ -31,6 +37,18 @@ class Config:
 
     def textures_dir(self, title_id: str) -> Path:
         return self.azahar_data / "load" / "textures" / title_id
+
+
+SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")
+
+
+def _session_env() -> dict[str, str]:
+    if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"):
+        return {key: os.environ[key] for key in SESSION_KEYS if key in os.environ}
+    shown = subprocess.run(["systemctl", "--user", "show-environment"], capture_output=True,
+                           text=True, check=True).stdout
+    found = dict(line.split("=", 1) for line in shown.splitlines() if "=" in line)
+    return {key: found[key] for key in SESSION_KEYS if key in found}
 
 
 def load() -> Config:
@@ -48,4 +66,7 @@ def load() -> Config:
         azahar_appimage=data_home / "opensu/emulators/azahar" / installed["file"],
         roms={tid: Path(path) for tid, path in local["roms"].items()},
         libretro_core=Path(local["libretro_core"]) if "libretro_core" in local else None,
+        app_binary=REPO / "build" / "app" / "z3d",
+        app_data=data_home / "z3d-mods",
+        session_env=_session_env(),
     )

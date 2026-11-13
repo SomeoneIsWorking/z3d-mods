@@ -1,5 +1,8 @@
 #include "libretro_core.hpp"
 
+#include "audio_output.hpp"
+#include "window.hpp"
+
 #include <lucent/log.h>
 
 #include <dlfcn.h>
@@ -25,7 +28,7 @@ template <typename Fn> void bind(void *library, const char *name, Fn &out) {
 
 } // namespace
 
-LibretroCore::LibretroCore(CoreConfig config) : config_(std::move(config)) {
+LibretroCore::LibretroCore(CoreConfig config, const Window &window) : config_(std::move(config)) {
   if (active_ != nullptr) {
     throw std::logic_error("one libretro core per process");
   }
@@ -56,17 +59,16 @@ LibretroCore::LibretroCore(CoreConfig config) : config_(std::move(config)) {
     throw std::runtime_error("core refused " + rom);
   }
   loaded_ = true;
-  if (gl_) {
-    hwRender_.context_reset();
-  }
-  lucent::info("core", "loaded {}", rom);
+  api_.getAvInfo(&avInfo_);
+  video_.start(window);
+  lucent::info("core", "loaded {}: {}x{} at {:.3f} fps, sound {} Hz", rom,
+               avInfo_.geometry.base_width, avInfo_.geometry.base_height, avInfo_.timing.fps,
+               avInfo_.timing.sample_rate);
 }
 
 LibretroCore::~LibretroCore() {
   if (loaded_) {
-    if (gl_ && hwRender_.context_destroy != nullptr) {
-      hwRender_.context_destroy();
-    }
+    video_.destroyContext();
     api_.unloadGame();
   }
   api_.deinit();
@@ -122,15 +124,22 @@ bool LibretroCore::onEnvironment(unsigned command, void *data) {
 void LibretroCore::onVideo(const void *data, unsigned width, unsigned height, size_t pitch) {
   LibretroCore &core = *active_;
   if (data == RETRO_HW_FRAME_BUFFER_VALID) {
-    core.gl_->read({width, height}, core.readback_);
-    core.frame_.storeBottomUp(core.readback_, {width, height});
+    core.video_.frameReady(width, height);
+    core.hardwareFrame_ = true;
     return;
+  }
+  if (data != nullptr) {
+    core.hardwareFrame_ = false;
   }
   core.frame_.store(data, {width, height}, pitch);
 }
 
-uintptr_t LibretroCore::onCurrentFramebuffer() {
-  return active_->gl_->framebuffer();
+const Frame &LibretroCore::capture() {
+  if (hardwareFrame_) {
+    const VkExtent2D size = video_.frame();
+    frame_.storeRows(video_.read(), {size.width, size.height});
+  }
+  return frame_;
 }
 
 void LibretroCore::onWriteHit(const azahar_write_hit *hit) {
@@ -151,28 +160,17 @@ std::vector<azahar_write_hit> LibretroCore::takeHits() {
   return std::exchange(hits_, {});
 }
 
-bool LibretroCore::setHwRender(retro_hw_render_callback &render) {
-  if (render.context_type != RETRO_HW_CONTEXT_OPENGL_CORE &&
-      render.context_type != RETRO_HW_CONTEXT_OPENGL) {
-    return false;
+void LibretroCore::onAudioSample(int16_t left, int16_t right) {
+  if (active_->audio_ != nullptr) {
+    const std::array<int16_t, 2> frame{left, right};
+    active_->audio_->push(frame.data(), 1);
   }
-  api_.getAvInfo(&avInfo_);
-  gl_ = std::make_unique<GlContext>(
-      GlContext::Request{render.version_major,
-                         render.version_minor,
-                         {avInfo_.geometry.max_width, avInfo_.geometry.max_height},
-                         render.depth,
-                         render.stencil});
-  render.get_current_framebuffer = &LibretroCore::onCurrentFramebuffer;
-  render.get_proc_address = reinterpret_cast<retro_hw_get_proc_address_t>(&GlContext::procAddress);
-  hwRender_ = render;
-  return true;
 }
 
-void LibretroCore::onAudioSample(int16_t, int16_t) {
-}
-
-size_t LibretroCore::onAudioBatch(const int16_t *, size_t frames) {
+size_t LibretroCore::onAudioBatch(const int16_t *data, size_t frames) {
+  if (active_->audio_ != nullptr) {
+    active_->audio_->push(data, frames);
+  }
   return frames;
 }
 
@@ -216,30 +214,57 @@ int16_t LibretroCore::inputState(const InputQuery &query) const {
   if (port != 0) {
     return 0;
   }
-  if (device == RETRO_DEVICE_JOYPAD) {
+  switch (device) {
+  case RETRO_DEVICE_JOYPAD:
     if (id == RETRO_DEVICE_ID_JOYPAD_MASK) {
-      return static_cast<int16_t>(buttons_);
+      return static_cast<int16_t>(pad_.buttons);
     }
-    return static_cast<int16_t>((buttons_ >> id) & 1U);
+    return static_cast<int16_t>((pad_.buttons >> id) & 1U);
+  case RETRO_DEVICE_ANALOG:
+    if (id >= 2) {
+      return 0;
+    }
+    if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT) {
+      return pad_.left[id];
+    }
+    return index == RETRO_DEVICE_INDEX_ANALOG_RIGHT ? pad_.right[id] : 0;
+  case RETRO_DEVICE_POINTER:
+    if (id == RETRO_DEVICE_ID_POINTER_X || id == RETRO_DEVICE_ID_POINTER_Y) {
+      return pad_.pointer[id == RETRO_DEVICE_ID_POINTER_Y ? 1 : 0];
+    }
+    return static_cast<int16_t>(id == RETRO_DEVICE_ID_POINTER_PRESSED && pad_.touching);
+  case RETRO_DEVICE_MOUSE:
+    return static_cast<int16_t>(id == RETRO_DEVICE_ID_MOUSE_LEFT && pad_.touching);
+  default:
+    return 0;
   }
-  if (device == RETRO_DEVICE_ANALOG && index == RETRO_DEVICE_INDEX_ANALOG_LEFT && id < 2) {
-    return stick_[id];
-  }
-  return 0;
 }
 
 bool LibretroCore::environment(unsigned command, void *data) {
-  switch (command & ~RETRO_ENVIRONMENT_EXPERIMENTAL) {
+  switch (command) {
   case AZAHAR_ENVIRONMENT_SET_DEBUG_INTERFACE:
     debug_ = static_cast<const azahar_debug_interface *>(data);
     debug_->set_write_hit(&LibretroCore::onWriteHit);
     memory_.useDebugInterface(debug_);
     return true;
   case RETRO_ENVIRONMENT_SET_HW_RENDER:
-    return setHwRender(*static_cast<retro_hw_render_callback *>(data));
+    return video_.setRender(*static_cast<const retro_hw_render_callback *>(data));
   case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
-    *static_cast<unsigned *>(data) = RETRO_HW_CONTEXT_OPENGL_CORE;
+    *static_cast<unsigned *>(data) = RETRO_HW_CONTEXT_VULKAN;
     return true;
+  case RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE:
+    return video_.setNegotiation(
+        *static_cast<const retro_hw_render_context_negotiation_interface *>(data));
+  case RETRO_ENVIRONMENT_GET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_SUPPORT: {
+    auto *query = static_cast<retro_hw_render_context_negotiation_interface *>(data);
+    query->interface_version =
+        query->interface_type == RETRO_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_VULKAN
+            ? RETRO_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_VULKAN_VERSION
+            : 0;
+    return true;
+  }
+  case RETRO_ENVIRONMENT_GET_HW_RENDER_INTERFACE:
+    return video_.renderInterface(static_cast<const retro_hw_render_interface **>(data));
   case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
   case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
     *static_cast<const char **>(data) = userDirText_.c_str();
@@ -271,7 +296,8 @@ bool LibretroCore::environment(unsigned command, void *data) {
     *static_cast<bool *>(data) = true;
     return true;
   case RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
-    *static_cast<int *>(data) = 1; // video only
+    // Bit 0 video, bit 1 audio.
+    *static_cast<int *>(data) = audio_ != nullptr ? 3 : 1;
     return true;
   case RETRO_ENVIRONMENT_SET_MESSAGE:
     lucent::info("core", "message: {}", static_cast<const retro_message *>(data)->msg);
@@ -294,7 +320,11 @@ bool LibretroCore::environment(unsigned command, void *data) {
   case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
   case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
   case RETRO_ENVIRONMENT_SET_GEOMETRY:
+    avInfo_.geometry = *static_cast<const retro_game_geometry *>(data);
+    return true;
   case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
+    avInfo_ = *static_cast<const retro_system_av_info *>(data);
+    return true;
   case RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL:
     return true;
   default:

@@ -1,8 +1,9 @@
 #pragma once
 
 #include "frame.hpp"
-#include "gl_context.hpp"
 #include "guest_memory.hpp"
+#include "input.hpp"
+#include "vulkan/core_video.hpp"
 
 #include <azahar_debug.h>
 #include <libretro.h>
@@ -18,6 +19,9 @@
 
 namespace z3d::app {
 
+class AudioOutput;
+class Window;
+
 struct CoreConfig {
   std::filesystem::path core;
   std::filesystem::path rom;
@@ -29,7 +33,8 @@ struct CoreConfig {
 // One libretro core loaded with dlopen and driven as its only frontend.
 class LibretroCore {
 public:
-  explicit LibretroCore(CoreConfig config);
+  // The core draws with Vulkan on `window`'s surface.
+  LibretroCore(CoreConfig config, const Window &window);
   ~LibretroCore();
   LibretroCore(const LibretroCore &) = delete;
   LibretroCore &operator=(const LibretroCore &) = delete;
@@ -37,11 +42,18 @@ public:
   void runFrames(unsigned count);
   // Held joypad buttons as a RETRO_DEVICE_ID_JOYPAD bitmask.
   void setButtons(uint16_t mask) {
-    buttons_ = mask;
+    pad_.buttons = mask;
   }
   // Left analog stick, libretro's signed 16-bit range.
   void setStick(int16_t x, int16_t y) {
-    stick_ = {x, y};
+    pad_.left = {x, y};
+  }
+  void setPad(const PadState &pad) {
+    pad_ = pad;
+  }
+  // Where the core's sound goes; none (the default) drops it.
+  void setAudio(AudioOutput *audio) {
+    audio_ = audio;
   }
 
   [[nodiscard]] std::optional<std::vector<uint8_t>> saveState();
@@ -50,8 +62,13 @@ public:
   [[nodiscard]] const GuestMemory &memory() const {
     return memory_;
   }
-  [[nodiscard]] const Frame &frame() const {
-    return frame_;
+  // The last presented frame, read back from the GPU for a hardware-rendered core.
+  [[nodiscard]] const Frame &capture();
+  [[nodiscard]] CoreVideo &video() {
+    return video_;
+  }
+  [[nodiscard]] const retro_system_av_info &avInfo() const {
+    return avInfo_;
   }
   [[nodiscard]] uint64_t framesRun() const {
     return framesRun_;
@@ -89,11 +106,9 @@ private:
   static void onInputPoll();
   static int16_t onInputState(unsigned port, unsigned device, unsigned index, unsigned id);
   static void onLog(retro_log_level level, const char *format, ...);
-  static uintptr_t onCurrentFramebuffer();
   static void onWriteHit(const azahar_write_hit *hit);
 
   bool environment(unsigned command, void *data);
-  bool setHwRender(retro_hw_render_callback &render);
   struct InputQuery {
     unsigned port;
     unsigned device;
@@ -112,15 +127,14 @@ private:
   void *library_ = nullptr;
   Api api_{};
   bool loaded_ = false;
-  uint16_t buttons_ = 0;
-  std::array<int16_t, 2> stick_{};
+  bool hardwareFrame_ = false;
+  PadState pad_;
+  AudioOutput *audio_ = nullptr;
   uint64_t framesRun_ = 0;
   GuestMemory memory_;
   Frame frame_;
-  std::vector<uint32_t> readback_;
   retro_system_av_info avInfo_{};
-  retro_hw_render_callback hwRender_{};
-  std::unique_ptr<GlContext> gl_;
+  CoreVideo video_;
   const azahar_debug_interface *debug_ = nullptr;
   std::vector<azahar_write_hit> hits_;
 };

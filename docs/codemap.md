@@ -9,16 +9,27 @@
 - `tools/z3dmods/azahar_config.py`: global `qt-config.ini` edits.
 - `tools/z3dmods/azahar.py`: the headless Azahar session (Gamescope, XTest keys, RPC RAM and frames, config restore).
 - `tools/z3dmods/steps.py`: the scripted step language for runs, over either backend.
-- `tools/z3dmods/harness.py`: the libretro harness backend: a copy of the player's data, frame-exact input, savestates, watchpoints.
+- `tools/z3dmods/app.py`: the z3d app's build and user folders (copies of the player's data, a link to `load/`) and launch arguments.
+- `tools/z3dmods/core_options.py`: the Azahar core's options for a set (Vulkan, layout, textures, render scale).
+- `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
+- `tools/z3dmods/play.py`: `z3dmods play`: the app in a window on the player's session, with its own saves.
+- `tools/z3dmods/shortcut.py`: per-machine desktop shortcuts that run `z3dmods play`.
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene).
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
-- `app/`: `z3d`, the libretro frontend for the Azahar core, driven by stdin lines.
-  - `libretro_core`: loads the core, answers its environment, owns input, frames and the GL context.
+- `app/`: `z3d`, the libretro frontend for the Azahar core: a window to play in, or hidden and driven by stdin lines.
+  - `libretro_core`: loads the core, answers its environment, owns the pad state, audio sink and frames.
   - `guest_memory`: guest virtual addresses to host pointers from the core's memory maps.
-  - `gl_context`: the windowless EGL OpenGL context and framebuffer the core renders into.
+  - `window`: the SDL3 window and its Vulkan surface (unmapped with `--hidden`).
+  - `vulkan/vulkan_device`: the Vulkan instance and device, negotiated with the core.
+  - `vulkan/core_video`: the core's Vulkan render interface (`retro_hw_render_interface_vulkan`).
+  - `vulkan/presenter`: the swapchain blit of the core's image and its readback for screenshots.
+  - `audio_output`: the SDL audio stream the core's samples go to.
+  - `input`: keyboard (the player's Azahar keys), gamepads and mouse to the libretro pad.
+  - `player`: the windowed loop, paced by the audio queue.
   - `frame`: the last presented frame and its PNG encoding.
   - `repl`: the stdin command language.
+  - `icon/z3d.svg`: the app's icon.
 - `sets/`: per-game mod set manifests.

@@ -1,17 +1,18 @@
-"""Drive the z3d app (app/, build/app/z3d) headless as the frame-exact harness, on a copy of the player's data.
+"""Drive the z3d app headless as the frame-exact harness.
 
-The core's user dir is scratch/harness/<game>/Azahar: each run copies in the player's nand, sdmc and
-sysdata, and links the installed load/ folder (mods and textures, which the core only reads), so the
-player's own data is only read.
+Each run gets a fresh user folder, scratch/harness/<name> (app.seed_user), so the player's own data
+is only read.
 """
 
 from __future__ import annotations
 
-import shutil
+import os
 import subprocess
 from pathlib import Path
 
+from z3dmods import app, core_options
 from z3dmods.config import Config
+from z3dmods.install import GameSet
 
 FPS = 60
 # RETRO_DEVICE_ID_JOYPAD bits; the Azahar core maps face buttons by position, so libretro A (east)
@@ -21,42 +22,30 @@ BUTTONS = {
     "a": 8, "x": 9, "l": 10, "r": 11, "zl": 12, "zr": 13,
 }
 PRESS_FRAMES = 6
-USER_DATA = ("nand", "sdmc", "sysdata")
-READ_ONLY_DATA = ("load",)
-OPTIONS = {
-    "citra_graphics_api": "OpenGL",
-    "citra_use_libretro_save_path": "LibRetro Default",
-}
+# The tools render at the 3DS's own size: frame-exact runs, small screenshots.
+RESOLUTION = 1
 
 
 class HarnessSession:
-    def __init__(self, cfg: Config, rom: Path, game: str, screen_layout: str, custom_textures: bool,
-                 log: Path, core_options: dict[str, str] | None = None) -> None:
-        if cfg.libretro_core is None:
-            raise RuntimeError('set "libretro_core" in env-assets/local.json to the built azahar_libretro.so')
+    def __init__(self, cfg: Config, game: GameSet, name: str, log: Path,
+                 extra_options: dict[str, str] | None = None) -> None:
         self._cfg = cfg
-        self._rom = rom
-        self._user = cfg.repo / "scratch" / "harness" / game
-        self._states = cfg.repo / "scratch" / "harness" / "states" / game
+        self._rom = cfg.rom(game.title_id)
+        self._user = cfg.repo / "scratch" / "harness" / name
+        self._states = cfg.repo / "scratch" / "harness" / "states" / name
         self._log_path = log
-        self._options = dict(OPTIONS, citra_layout_option=screen_layout,
-                             citra_custom_textures="enabled" if custom_textures else "disabled")
-        self._options.update(core_options or {})
+        self._options = core_options.for_set(game, RESOLUTION, extra_options)
         self._process: subprocess.Popen | None = None
         self._held = 0
 
     def __enter__(self) -> HarnessSession:
-        self._copy_player_data()
-        binary = self._cfg.repo / "build" / "app" / "z3d"
-        if not binary.exists():
-            raise RuntimeError(f"{binary} missing: cmake -S app -B build/app -G Ninja && ninja -C build/app")
-        args = [str(binary), "--core", str(self._cfg.libretro_core), "--rom", str(self._rom), "--user", str(self._user)]
-        for key, value in self._options.items():
-            args += ["--option", f"{key}={value}"]
+        app.seed_user(self._cfg, self._user, fresh=True)
+        args = app.launch_args(self._cfg, self._rom, self._user, self._options) + ["--hidden"]
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log = self._log_path.open("wb")
+        env = dict(os.environ, **self._cfg.session_env)
         self._process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                         stderr=self._log, text=True, bufsize=1)
+                                         stderr=self._log, text=True, bufsize=1, env=env)
         ready = self._process.stdout.readline().strip()
         if ready != "ready":
             raise RuntimeError(f"harness did not start ({ready!r}); see {self._log_path}")
@@ -74,20 +63,6 @@ class HarnessSession:
                 self._process.kill()
                 self._process.wait()
         self._log.close()
-
-    def _copy_player_data(self) -> None:
-        target = self._user / "Azahar"
-        if target.exists():
-            shutil.rmtree(target)
-        target.mkdir(parents=True)
-        for name in USER_DATA:
-            source = self._cfg.azahar_data / name
-            if source.exists():
-                shutil.copytree(source, target / name, symlinks=True)
-        for name in READ_ONLY_DATA:
-            source = self._cfg.azahar_data / name
-            if source.exists():
-                (target / name).symlink_to(source, target_is_directory=True)
 
     def _send(self, line: str) -> str:
         assert self._process and self._process.stdin and self._process.stdout

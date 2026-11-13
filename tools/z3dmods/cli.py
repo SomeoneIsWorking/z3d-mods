@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, install, steps
+from z3dmods import azahar, config, ctr, games, harness, install, play, shortcut, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -38,8 +38,7 @@ def run_steps(args: argparse.Namespace) -> None:
     game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
     out = cfg.repo / "scratch" / "runs" / args.name
     if args.harness:
-        with harness.HarnessSession(cfg, cfg.rom(game.title_id), args.game, game.screen_layout,
-                                    game.textures is not None, out / "harness.log",
+        with harness.HarnessSession(cfg, game, args.game, out / "harness.log",
                                     dict(option.split("=", 1) for option in args.core_option)) as session:
             steps.run(session, args.steps, out, games.LAYOUTS.get(args.game))
             print(f"{session.frames()} frames")
@@ -51,6 +50,17 @@ def run_steps(args: argparse.Namespace) -> None:
         print(f"restored {name}: Azahar changed {len(lines)} lines")
 
 
+def play_game(args: argparse.Namespace) -> None:
+    cfg = config.load()
+    game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
+    raise SystemExit(play.play(cfg, args.game, game))
+
+
+def install_shortcuts(_: argparse.Namespace) -> None:
+    for path in shortcut.install(config.load()):
+        print(path)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="z3dmods")
     commands = parser.add_subparsers(required=True)
@@ -60,15 +70,20 @@ def main() -> None:
     inst = commands.add_parser("install", help="install a game's mod set into Azahar")
     inst.add_argument("games", nargs="+", choices=["oot3d", "mm3d"])
     inst.set_defaults(run=install_set)
-    play = commands.add_parser("run", help="run the player's Azahar headless through scripted steps")
-    play.add_argument("game", choices=["oot3d", "mm3d"])
-    play.add_argument("name", help="run folder under scratch/runs/")
-    play.add_argument("steps", nargs="+")
-    play.add_argument("--settings", help="global Azahar settings for this run only, as JSON")
-    play.add_argument("--harness", action="store_true",
-                      help="run on the libretro harness (frame-exact, savestates) instead of the player's Azahar")
-    play.add_argument("--core-option", action="append", default=[], metavar="KEY=VALUE",
-                      help="harness only: a libretro core option for this run, e.g. citra_custom_textures=disabled")
-    play.set_defaults(run=run_steps)
+    run = commands.add_parser("run", help="run the player's Azahar headless through scripted steps")
+    run.add_argument("game", choices=["oot3d", "mm3d"])
+    run.add_argument("name", help="run folder under scratch/runs/")
+    run.add_argument("steps", nargs="+")
+    run.add_argument("--settings", help="global Azahar settings for this run only, as JSON")
+    run.add_argument("--harness", action="store_true",
+                     help="run on the libretro harness (frame-exact, savestates) instead of the player's Azahar")
+    run.add_argument("--core-option", action="append", default=[], metavar="KEY=VALUE",
+                     help="harness only: a libretro core option for this run, e.g. citra_custom_textures=disabled")
+    run.set_defaults(run=run_steps)
+    app = commands.add_parser("play", help="play a game in the z3d app with its installed mods")
+    app.add_argument("game", choices=["oot3d", "mm3d"])
+    app.set_defaults(run=play_game)
+    links = commands.add_parser("shortcut", help="add desktop shortcuts that play each game in the app")
+    links.set_defaults(run=install_shortcuts)
     args = parser.parse_args()
     args.run(args)

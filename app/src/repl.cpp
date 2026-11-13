@@ -122,11 +122,11 @@ std::string Repl::execute(const std::string &line) {
   if (command == "shot") {
     std::string path;
     args >> path;
-    if (!core_.frame().writePng(path)) {
+    const Frame &frame = core_.capture();
+    if (!frame.writePng(path)) {
       return "err no frame or cannot write " + path;
     }
-    return "ok " + std::to_string(core_.frame().width()) + "x" +
-           std::to_string(core_.frame().height());
+    return "ok " + std::to_string(frame.width()) + "x" + std::to_string(frame.height());
   }
   if (command == "watch") {
     uint32_t address = 0;

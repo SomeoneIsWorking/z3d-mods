@@ -16,8 +16,8 @@ struct FrameSize {
 class Frame {
 public:
   void store(const void *data, FrameSize size, size_t pitch);
-  // Tightly packed XRGB8888 rows, bottom row first (an OpenGL read).
-  void storeBottomUp(const std::vector<uint32_t> &rows, FrameSize size);
+  // Tightly packed XRGB8888 rows, top row first.
+  void storeRows(std::vector<uint32_t> rows, FrameSize size);
 
   [[nodiscard]] unsigned width() const {
     return width_;
