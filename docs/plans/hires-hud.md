@@ -32,5 +32,22 @@ the HUD ones are four atlases, all at 3DS resolution:
   pack cannot cover them.
 The rest are scene textures the pack leaves alone (water, sky, glows).
 
-## When
-Next, after the title picker lands.
+## Built (2026-11-13)
+- Azahar names pack files by CityHash64 over the decoded texture, rows bottom-up
+  (`pica_texture.py`); reproduced exactly for RGBA4444, ETC1 and ETC1A4, so the pack's copy of any
+  vanilla texture is found by name.
+- The One Screen edits nine vanilla CTXB menu textures; each edited copy hashes differently, so
+  the pack stopped covering it. `z3dmods install oot3d` (`"hud"` in `sets/oot3d.json`) builds a
+  replacement for each from the pack's vanilla copy with the edits in
+  `sets/hud/the-one-screen-891b60e.json` redone at the pack's scale (16x, 8x for name entry), and
+  installs them under `load/textures/<title>/z3dmods-hud/`, named after The One Screen's textures.
+  Re-lettered words and buttons keep the pack's vanilla lettering; moved art (swapped X/Y, the
+  circled B) is copied from the pack; new labels (LB, RB, LT, RT, ITEMS, GEAR, digits, Navi, which
+  the pack's copy lacks) are drawn in port-assets' key font; the A circle without its letter and
+  the D-pad cross are rebuilt. An edit the table does not cover stops the install.
+- Shown in game (`hud-hires`, on the Ally): file select, the Kakariko HUD and the item menu draw
+  the 4K art with the labels crisp, where the One Screen's own textures were 3DS resolution.
+
+## Still open
+- MM3D: the same for Project Restoration's and DekUI's edits.
+- The glyphs are lettering; drawn Xbox button glyphs belong to [xbox-glyphs.md](xbox-glyphs.md).

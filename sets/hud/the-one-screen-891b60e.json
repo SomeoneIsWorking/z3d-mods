@@ -1,0 +1,63 @@
+{
+  "about": "What The One Screen 891b60e changed in each vanilla menu texture, in vanilla pixels [x0, y0, x1, y1]. keep: re-lettered in its own font, the pack's vanilla stays. copy: vanilla art moved from `from`. clear: erased. label: new lettering (Navi too, which the pack's copy lacks). relabel: a letter on vanilla art swapped. shell: the A button circle without its letter. dpad: an outlined cross.",
+  "menu/01_US_ENGLISH/hud_all00.ctxb": [
+    {"keep": [0, 92, 194, 256]},
+    {"label": "Navi", "box": [77, 112, 114, 128], "style": "white"},
+    {"label": "0", "box": [118, 184, 130, 198], "style": "white"},
+    {"label": "1", "box": [130, 184, 142, 198], "style": "white"},
+    {"label": "2", "box": [142, 184, 154, 198], "style": "white"},
+    {"label": "3", "box": [154, 184, 166, 198], "style": "white"},
+    {"label": "4", "box": [166, 184, 178, 198], "style": "white"},
+    {"label": "5", "box": [118, 198, 130, 212], "style": "white"},
+    {"label": "6", "box": [130, 198, 142, 212], "style": "white"},
+    {"label": "7", "box": [142, 198, 154, 212], "style": "white"},
+    {"label": "8", "box": [154, 198, 166, 212], "style": "white"},
+    {"label": "9", "box": [166, 198, 178, 212], "style": "white"},
+    {"label": "ITEMS", "box": [118, 212, 160, 226], "style": "white"},
+    {"label": "X", "box": [160, 212, 172, 226], "style": "white"},
+    {"label": "Y", "box": [172, 212, 184, 226], "style": "white"},
+    {"label": "GEAR", "box": [118, 226, 148, 240], "style": "white"},
+    {"label": "LT", "box": [148, 226, 162, 240], "style": "white"},
+    {"label": "RT", "box": [162, 226, 176, 240], "style": "white"},
+    {"label": "LB", "box": [118, 240, 137, 254], "style": "white"},
+    {"label": "RB", "box": [137, 240, 156, 254], "style": "white"},
+    {"label": "T", "box": [156, 240, 167, 254], "style": "white"},
+    {"label": "B", "box": [167, 240, 178, 254], "style": "white"},
+    {"label": "A", "box": [178, 240, 190, 254], "style": "white"}
+  ],
+  "menu/01_US_ENGLISH/menu_cursor00.ctxb": [
+    {"label": "LB", "box": [66, 33, 80, 48], "style": "yellow"},
+    {"label": "RB", "box": [81, 33, 96, 48], "style": "yellow"},
+    {"copy": [65, 55, 80, 64], "from": [81, 55]},
+    {"copy": [81, 55, 96, 64], "from": [65, 55]}
+  ],
+  "menu/01_US_ENGLISH/menu_top_parts00.ctxb": [
+    {"label": "LB", "box": [156, 125, 175, 142], "style": "yellow"},
+    {"copy": [156, 142, 175, 158], "from": [156, 158]},
+    {"copy": [156, 158, 175, 174], "from": [156, 142]},
+    {"keep": [156, 174, 175, 190]},
+    {"label": "RB", "box": [156, 190, 175, 207], "style": "yellow"},
+    {"shell": [384, 184, 422, 222], "from": ["menu/01_US_ENGLISH/hud_all00.ctxb", 64, 0]},
+    {"dpad": [424, 189, 452, 217]}
+  ],
+  "message/parts.ctxb": [
+    {"relabel": "LT", "box": [2, 49, 15, 63]},
+    {"relabel": "RT", "box": [18, 49, 31, 63]},
+    {"copy": [66, 49, 77, 62], "from": [146, 33]}
+  ],
+  "menu/01_US_ENGLISH/menu_okarina_parts00.ctxb": [
+    {"relabel": "LT", "box": [208, 160, 224, 175]},
+    {"relabel": "RT", "box": [224, 160, 241, 175]},
+    {"copy": [144, 160, 158, 174], "from": [160, 160]},
+    {"relabel": "A", "box": [80, 166, 88, 174]},
+    {"clear": [392, 231, 411, 255]},
+    {"clear": [415, 231, 436, 255]},
+    {"clear": [439, 231, 461, 255]},
+    {"clear": [463, 231, 485, 255]},
+    {"clear": [486, 231, 509, 255]}
+  ],
+  "menu/01_US_ENGLISH/menu_file_select_parts00.ctxb": [{"keep": [0, 0, 512, 256]}],
+  "menu/01_US_ENGLISH/menu_file_select_parts01.ctxb": [{"keep": [0, 0, 512, 256]}],
+  "menu/01_US_ENGLISH/name_entry00_parts00.ctxb": [{"keep": [0, 0, 512, 512]}],
+  "menu/01_US_ENGLISH/name_entry00_parts01.ctxb": [{"keep": [0, 0, 512, 512]}]
+}

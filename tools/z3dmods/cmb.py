@@ -114,7 +114,7 @@ class Cmb:
             raise ValueError(f"CMB version {version}, not OoT3D's {OCARINA}")
         name = data[0x10:0x20].split(b"\0")[0].decode("ascii")
         _skl, mats, tex, sklm, _luts, vatr, indices = struct.unpack_from("<7I", data, 0x24)
-        return cls(data, name, _textures(data, tex), _materials(data, mats), *_sklm(data, sklm),
+        return cls(data, name, texture_table(data, tex), _materials(data, mats), *_sklm(data, sklm),
                    _vatr(data, vatr), indices)
 
     def texture_data(self, texture: Texture) -> bytes:
@@ -282,7 +282,7 @@ def _encode(values: list[tuple[float, ...]], attribute: Attribute, code: str) ->
     return struct.pack(f"<{len(flat)}{code}", *flat)
 
 
-def _textures(data: bytes, offset: int) -> list[Texture]:
+def texture_table(data: bytes, offset: int) -> list[Texture]:
     count = struct.unpack_from("<I", data, offset + 0x08)[0]
     textures = []
     for i in range(count):

@@ -29,6 +29,8 @@ class Config:
     app_data: Path
     # The desktop session's display variables, so a tool started outside it reaches it too.
     session_env: dict[str, str]
+    # The shared port-assets checkout ($PORT_ASSETS_DIR, else shared/port-assets beside this repo's parent).
+    port_assets: Path
 
     def rom(self, title_id: str) -> Path:
         if title_id not in self.roms:
@@ -52,6 +54,14 @@ class Config:
             raise RuntimeError(f"fontconfig has no outline font for {UI_FONT!r}: sudo dnf install "
                                "google-noto-sans-fonts (Fedora), sudo apt install fonts-noto-core (Debian/Ubuntu)")
         return Path(found)
+
+    def key_font(self) -> Path:
+        """port-assets' key-label typeface, which new HUD lettering uses."""
+        font = self.port_assets / "fonts" / "NotoSans-Bold-keys.ttf"
+        if not font.exists():
+            raise RuntimeError(f"no port-assets checkout at {self.port_assets}: clone "
+                               "github.com/SomeoneIsWorking/port-assets there or set PORT_ASSETS_DIR")
+        return font
 
 
 UI_FONT = "Noto Sans:bold"
@@ -88,4 +98,5 @@ def load() -> Config:
         app_binary=REPO / "build" / "app" / "z3d",
         app_data=Path(os.environ.get(APP_DATA_ENV) or data_home / "z3d-mods"),
         session_env=_session_env(),
+        port_assets=Path(os.environ.get("PORT_ASSETS_DIR") or REPO.parent.parent / "shared" / "port-assets"),
     )

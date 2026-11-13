@@ -9,13 +9,14 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, ips, patch_build, stairs
+from z3dmods import azahar_config, bps, ctr, hud, ips, patch_build, stairs
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
 RECORD = "z3dmods-install.json"
 PAGE = 0x1000
 EXHEADER_BSS_SIZE = 0x3C
+HUD_FOLDER = "z3dmods-hud"
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ class GameSet:
     screen_layout: str
     # Fold the game's stair ramps into steps (OoT3D rooms).
     stairs: bool
+    # The base mod's menu-texture edit table (sets/hud/), redone on the texture pack's copies.
+    hud: str | None
 
 
     @classmethod
@@ -38,7 +41,7 @@ class GameSet:
         raw = json.loads((repo / "sets" / f"{name}.json").read_text())
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
                    raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"),
-                   raw.get("stairs", False))
+                   raw.get("stairs", False), raw.get("hud"))
 
 
 def _sha(path: Path) -> str:
@@ -127,6 +130,8 @@ def install(cfg: Config, game: GameSet) -> Path:
     base_romfs = root / game.base["romfs"] if "romfs" in game.base else None
     pack = TexturePack(cfg.env_assets / game.textures["root"]) if game.textures else None
     rooms = _stepped_rooms(rom, base_romfs, pack) if game.stairs else {}
+    menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font())
+             if game.hud and pack and base_romfs else {})
 
     mods = cfg.mods_dir(game.title_id)
     _remove_recorded(mods)
@@ -151,7 +156,11 @@ def install(cfg: Config, game: GameSet) -> Path:
         _remove_recorded(textures)
         textures.mkdir(parents=True, exist_ok=True)
         _copy_tree(cfg.env_assets / game.textures["root"], textures)
-        _write_record(textures, {"textures": game.textures["name"]})
+        for name, png in menus.items():
+            target = textures / HUD_FOLDER / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(png)
+        _write_record(textures, {"textures": game.textures["name"], "hud": game.hud or ""})
     if game.azahar_global:
         azahar_config.set_global(cfg.azahar_config, game.azahar_global)
     return mods

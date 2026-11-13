@@ -9,6 +9,8 @@
 - `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, ETC1, ETC1A4) and Azahar's custom-texture hash and file name.
 - `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
 - `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by its hash.
+- `tools/z3dmods/ctxb.py`: CTXB menu texture bundles.
+- `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies (edit tables in `sets/hud/`).
 - `tools/z3dmods/stairs.py`: folds stair-textured ramps in OoT3D rooms into risers and treads.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
 - `tools/z3dmods/bps.py`: BPS info and apply, with source and target CRC checks.

@@ -1,0 +1,221 @@
+"""High-resolution replacements for a base mod's edited menu textures.
+
+A base mod that edits a vanilla texture changes its Azahar hash, so the texture pack's high-resolution
+copy of the vanilla texture no longer applies. Each replacement starts from that copy and redoes the
+mod's edits at the pack's scale, as an edit table lists them (sets/hud/*.json): re-lettered areas keep
+the pack's vanilla art, moved art is copied, new lettering is drawn in port-assets' key font. The
+result is named after the mod's texture, so the pack covers the mod's version too.
+"""
+
+from __future__ import annotations
+
+import io
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+
+from z3dmods import ctr, ctxb, pica_texture
+from z3dmods.texture_pack import TexturePack
+
+# A premultiplied channel difference above this is an edit, not the mod's re-encoding.
+EDIT_THRESHOLD = 24
+STYLES = {"white": (255, 255, 255), "yellow": (255, 255, 0)}
+OUTLINE = (0, 0, 0)
+SUPERSAMPLE = 4
+
+
+@dataclass(frozen=True)
+class Texture:
+    """A menu texture: the vanilla one, the mod's edit of it, and the pack's copy of the vanilla."""
+
+    vanilla: Image.Image
+    modded: Image.Image
+    gl_format: int
+    hires: Image.Image
+
+    @property
+    def scale(self) -> int:
+        return self.hires.width // self.vanilla.width
+
+
+def _premultiplied(image: Image.Image) -> Image.Image:
+    alpha = image.getchannel("A")
+    channels = [ImageChops.multiply(image.getchannel(c), alpha) for c in "RGB"]
+    return Image.merge("RGBA", (*channels, alpha))
+
+
+def _edited(texture: Texture) -> Image.Image:
+    """Where the mod changed the vanilla texture, as a mask."""
+    diff = ImageChops.difference(_premultiplied(texture.modded), _premultiplied(texture.vanilla))
+    channels = [diff.getchannel(c).point(lambda v: 255 if v > EDIT_THRESHOLD else 0) for c in "RGBA"]
+    mask = channels[0]
+    for channel in channels[1:]:
+        mask = ImageChops.lighter(mask, channel)
+    return mask
+
+
+def _scaled(box: list[int], scale: int) -> tuple[int, int, int, int]:
+    return tuple(v * scale for v in box)
+
+
+def _fill(image: Image.Image, unknown: Image.Image) -> Image.Image:
+    """`image` with the `unknown` pixels filled smoothly from the known ones around them."""
+
+    def pull(values: Image.Image) -> Image.Image:
+        weighted = values.copy()
+        weighted.putalpha(ImageChops.invert(unknown))
+        levels = [weighted]
+        while min(levels[-1].size) > 1:
+            last = levels[-1]
+            levels.append(last.convert("RGBa").resize(((last.width + 1) // 2, (last.height + 1) // 2),
+                                                      Image.BOX).convert("RGBA"))
+        filled = levels[-1]
+        for level in reversed(levels[:-1]):
+            filled = Image.alpha_composite(filled.resize(level.size, Image.BILINEAR), level)
+        return filled
+
+    colour = pull(image.convert("RGB"))
+    alpha = pull(Image.merge("RGB", [image.getchannel("A")] * 3)).getchannel("R")
+    colour.putalpha(alpha)
+    out = image.copy()
+    out.paste(colour, mask=unknown)
+    return out
+
+
+def _lettering(size: tuple[int, int], text: str, font: Path, fill: tuple[int, int, int],
+               stroke: int) -> Image.Image:
+    """`text` as large as fits `size`, centred, with an outline of `stroke` pixels."""
+    width, height = (v * SUPERSAMPLE for v in size)
+    stroke *= SUPERSAMPLE
+    trial = ImageFont.truetype(str(font), 100)
+    left, top, right, bottom = trial.getbbox(text, stroke_width=stroke * 100 // max(1, height))
+    points = int(100 * min(width / (right - left), height / (bottom - top)))
+    face = ImageFont.truetype(str(font), max(1, points))
+    left, top, right, bottom = face.getbbox(text, stroke_width=stroke)
+    layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).text(((width - (right - left)) / 2 - left, (height - (bottom - top)) / 2 - top),
+                               text, font=face, fill=(*fill, 255), stroke_width=stroke,
+                               stroke_fill=(*OUTLINE, 255))
+    return layer.resize(size, Image.LANCZOS)
+
+
+def _letter_mask(region: Image.Image) -> Image.Image:
+    """The pixels of the letter painted on a plain face: those far from the face's own tone."""
+    gray = region.convert("L")
+    face = sorted(gray.getdata())[len(gray.getdata()) * 3 // 4]
+    return gray.point(lambda v: 255 if abs(v - face) > 48 else 0)
+
+
+def _yellow_mask(region: Image.Image) -> Image.Image:
+    r, g, b, a = region.split()
+    hue, saturation, _ = Image.merge("RGB", (r, g, b)).convert("HSV").split()
+    yellow = ImageChops.multiply(hue.point(lambda h: 255 if 25 <= h <= 50 else 0),
+                                 saturation.point(lambda s: 255 if s > 90 else 0))
+    return ImageChops.multiply(yellow, a.point(lambda v: 255 if v > 32 else 0))
+
+
+def _grown(mask: Image.Image, pixels: int) -> Image.Image:
+    return mask.filter(ImageFilter.MaxFilter(2 * pixels + 1))
+
+
+def _dpad(size: tuple[int, int], colour: tuple[int, int, int, int], scale: int) -> Image.Image:
+    width, height = (v * SUPERSAMPLE for v in size)
+    inset = scale * SUPERSAMPLE
+    arm = width * 2 // 7
+    left, right = (width - arm) // 2, (width + arm) // 2
+    top, bottom = (height - arm) // 2, (height + arm) // 2
+    cross = [(left, inset), (right, inset), (right, top), (width - inset, top), (width - inset, bottom),
+             (right, bottom), (right, height - inset), (left, height - inset), (left, bottom),
+             (inset, bottom), (inset, top), (left, top)]
+    layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).polygon(cross, outline=colour, width=scale * SUPERSAMPLE)
+    return layer.resize(size, Image.LANCZOS)
+
+
+def _dominant(image: Image.Image) -> tuple[int, int, int, int]:
+    opaque = [p for p in image.getdata() if p[3] > 128]
+    return tuple(sorted(opaque)[len(opaque) // 2]) if opaque else (255, 255, 255, 255)
+
+
+def _darkest(image: Image.Image, mask: Image.Image) -> tuple[int, int, int]:
+    """The letter's ink: its darkest opaque pixel."""
+    pixels = [p for p, m in zip(image.getdata(), mask.getdata()) if m and p[3] > 128]
+    return min(pixels, key=lambda p: p[0] + p[1] + p[2])[:3] if pixels else OUTLINE
+
+
+def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], font: Path) -> Image.Image:
+    """The pack's vanilla copy with the mod's edits redone at its scale."""
+    scale = texture.scale
+    out = texture.hires.copy()
+    covered = Image.new("L", texture.vanilla.size, 0)
+    draw = ImageDraw.Draw(covered)
+    clear = (0, 0, 0, 0)
+    for edit in edits:
+        kind = next(k for k in ("keep", "copy", "clear", "label", "relabel", "shell", "dpad") if k in edit)
+        box = edit["box"] if "box" in edit else edit[kind]
+        draw.rectangle((box[0], box[1], box[2] - 1, box[3] - 1), fill=255)
+        x0, y0, x1, y1 = _scaled(box, scale)
+        size = (x1 - x0, y1 - y0)
+        if kind == "keep":
+            continue
+        if kind == "copy":
+            sx, sy = (v * scale for v in edit["from"])
+            out.paste(texture.hires.crop((sx, sy, sx + size[0], sy + size[1])), (x0, y0))
+        elif kind == "clear":
+            out.paste(clear, (x0, y0, x1, y1))
+        elif kind == "label":
+            out.paste(clear, (x0, y0, x1, y1))
+            out.alpha_composite(_lettering(size, edit["label"], font, STYLES[edit["style"]], scale), (x0, y0))
+        elif kind == "relabel":
+            region = texture.hires.crop((x0, y0, x1, y1))
+            letter = _letter_mask(region)
+            ink = _darkest(region, letter)
+            blank = _fill(region, _grown(letter, scale // 4))
+            # The new lettering is as tall as the old letter and fits the box's width.
+            _, top, _, bottom = letter.getbbox() or (0, 0, 0, size[1])
+            text = _lettering((size[0] - scale, bottom - top), edit["relabel"], font, ink, 0)
+            blank.alpha_composite(text, (scale // 2, top))
+            out.paste(blank, (x0, y0))
+        elif kind == "shell":
+            name, sx, sy = edit["from"]
+            source = others[name]
+            factor = source.scale
+            region = source.hires.crop((sx * factor, sy * factor, sx * factor + (box[2] - box[0]) * factor,
+                                        sy * factor + (box[3] - box[1]) * factor)).resize(size, Image.LANCZOS)
+            # The letter's outline is about one vanilla pixel wide.
+            out.paste(_fill(region, _grown(_yellow_mask(region), scale)), (x0, y0))
+        elif kind == "dpad":
+            colour = _dominant(texture.modded.crop(tuple(box)))
+            out.paste(clear, (x0, y0, x1, y1))
+            out.alpha_composite(_dpad(size, colour, scale), (x0, y0))
+    stray = ImageChops.subtract(_edited(texture), covered).getbbox()
+    if stray:
+        raise ValueError(f"the base mod edited {stray} of this texture, which its edit table does not cover")
+    return out
+
+
+def build(romfs: ctr.Romfs, base_romfs: Path, pack: TexturePack, table: Path, font: Path) -> dict[str, bytes]:
+    """Pack file name -> PNG for every texture in the edit table the pack covers."""
+    edits = {k: v for k, v in json.loads(table.read_text()).items() if k != "about"}
+    textures = {}
+    for path in edits:
+        vanilla, gl_format = ctxb.image(romfs.read(path))
+        modded, modded_format = ctxb.image((base_romfs / path).read_bytes())
+        if modded_format != gl_format or modded.size != vanilla.size:
+            raise ValueError(f"{path}: the base mod changed the texture's format or size")
+        hires = pack.replacement(vanilla, gl_format)
+        if hires is None:
+            raise ValueError(f"{path}: the texture pack has no copy of the vanilla texture")
+        textures[path] = Texture(vanilla, modded, gl_format, hires)
+    out = {}
+    for path, texture in textures.items():
+        try:
+            image = compose(texture, edits[path], textures, font)
+        except ValueError as error:
+            raise ValueError(f"{path}: {error}") from error
+        buffer = io.BytesIO()
+        image.save(buffer, "PNG")
+        out[pica_texture.pack_name(texture.modded, texture.gl_format)] = buffer.getvalue()
+    return out
