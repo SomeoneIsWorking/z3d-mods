@@ -1,12 +1,13 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes>, warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
+poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state), warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
-keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y up),
+keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y down),
+cstick:<x>,<y>,<s> (the New 3DS C-stick, the same way),
 record:<name> (every frame from here into <name>.mp4), stoprecord.
 """
 
@@ -35,6 +36,13 @@ class Session(Protocol):
 
 def _play(session: Session, layout: Layout) -> int:
     return session.u32(layout.play_pointer)
+
+
+def _address(session: Session, layout: Layout, text: str) -> int:
+    """An absolute address, or play+<offset> from the current play state."""
+    if text.startswith("play+"):
+        return _play(session, layout) + int(text[5:], 0)
+    return int(text, 0)
 
 
 def _cutscene(session: Session, layout: Layout) -> tuple[int, int]:
@@ -108,12 +116,14 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             session.hold(button, float(seconds))
             log(f"hold {arg}")
         elif kind == "peek":
-            address, size = (int(part, 0) for part in arg.split(","))
-            log(f"peek 0x{address:08X} {session.read(address, size).hex()}")
+            where, size = arg.split(",")
+            address = _address(session, layout, where)
+            log(f"peek 0x{address:08X} {session.read(address, int(size, 0)).hex()}")
         elif kind == "poke":
-            address, data = arg.split(",")
-            session.write(int(address, 0), bytes.fromhex(data))
-            log(f"poke 0x{int(address, 0):08X} {data}")
+            where, data = arg.split(",")
+            address = _address(session, layout, where)
+            session.write(address, bytes.fromhex(data))
+            log(f"poke 0x{address:08X} {data}")
         elif kind == "warp":
             play = _play(session, layout)
             session.write(play + layout.next_entrance, struct.pack("<h", int(arg, 0)))
@@ -151,7 +161,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
-        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick",
+        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick", "cstick",
                       "record", "stoprecord"):
             extra = getattr(session, kind, None)
             if extra is None:

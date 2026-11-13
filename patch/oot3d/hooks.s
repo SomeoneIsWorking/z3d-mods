@@ -20,6 +20,20 @@
     .word kMessageLayoutText + 0xAEC
 .section .expect.instant_off, "", %progbits
     .word 0x002E06C8
+@ Gameplay_Draw and Play_Update: the active camera's update.
+.section .patch.draw_camera, "ax", %progbits
+    bl _ZN7z3dmods5oot3d18redrawActiveCameraEPvS1_
+.section .expect.draw_camera, "", %progbits
+    .word 0xEBFFD5B1 @ bl 0x2D84C4
+.section .patch.update_camera, "ax", %progbits
+    bl _ZN7z3dmods5oot3d18updateActiveCameraEPvS1_
+.section .expect.update_camera, "", %progbits
+    .word 0xEBFFD047 @ bl 0x2D84C4
+@ Gameplay_Update's tail call: The One Screen's orbit camera hook, back to the retail branch.
+.section .patch.base_camera, "ax", %progbits
+    b kGameplayDraw
+.section .expect.base_camera, "", %progbits
+    .word 0xEA070C77 @ b tos_after
 .text
 quick_text_element:
     push {r0-r3, r12, lr}

@@ -145,9 +145,16 @@ class HarnessSession:
 
     def stick(self, x: str, y: str, seconds: str) -> str:
         """Holds the circle pad at (x, y), each -32767..32767 with y up, for `seconds`."""
-        self._send(f"stick {int(x)} {int(y)}")
+        return self._hold_analog("stick", x, y, seconds)
+
+    def cstick(self, x: str, y: str, seconds: str) -> str:
+        """Holds the New 3DS C-stick at (x, y), as `stick` holds the circle pad."""
+        return self._hold_analog("cstick", x, y, seconds)
+
+    def _hold_analog(self, command: str, x: str, y: str, seconds: str) -> str:
+        self._send(f"{command} {int(x)} {int(y)}")
         self.run_frames(max(1, round(float(seconds) * FPS)))
-        return self._send("stick 0 0")
+        return self._send(f"{command} 0 0")
 
     def press(self, button: str) -> None:
         self.hold(button, PRESS_FRAMES / FPS)

@@ -71,14 +71,14 @@ std::string Repl::execute(const std::string &line) {
     pad_.setButtons(mask);
     return "ok";
   }
-  if (command == "stick") {
+  if (command == "stick" || command == "cstick") {
     int x = 0;
     int y = 0;
     if (!(args >> x >> y) || x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX) {
-      return "err stick <x> <y>";
+      return "err " + command + " <x> <y>";
     }
-    pad_.setStick(Settings::NativeAnalog::CirclePad, static_cast<float>(x) / kStickFull,
-                  -static_cast<float>(y) / kStickFull);
+    const auto analog = command == "stick" ? Settings::NativeAnalog::CirclePad : Settings::NativeAnalog::CStick;
+    pad_.setStick(analog, static_cast<float>(x) / kStickFull, -static_cast<float>(y) / kStickFull);
     return "ok";
   }
   if (command == "r") {

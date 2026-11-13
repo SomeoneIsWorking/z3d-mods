@@ -50,6 +50,7 @@ only those (refusing a folder with files it did not write, or a file changed sin
 | Source | github.com/toadalle/The-One-Screen, commit `891b60e364cc660b2d1edfd7916ec01e3bb0cadf` (alpha 1.1.12); GameBanana 724248 |
 | Licence | MIT for its own code and tools; game-derived assets and inherited headers excluded (`THIRD_PARTY_NOTICES.md`). GameBanana asks for permission before modifying: our changes stay in our own patch, not in its files |
 | Gives | Single screen (HUD, items, gear, map, Ocarina, file select on the top screen), Xbox-style button labels, LB/RB items, X/Y slot swap, D-pad shortcuts (Up Items, Down Gear, Right Ocarina, hold Left View), Start pause, Select map |
+| Not used | Its C-stick orbit camera (`source/camera/camera.c`, not in its README; it runs from the hook at 0x452434, after `Play_Update`). Our patch puts the retail branch back there and runs our own free camera, which has the options: two orbits would fight over the same eye |
 | Layout | `exefs/code.ips` (installed as `code.ips`), `exheader.bin` (text rounded to 0x3CA000, `.bss` 0x6C3E8 → 0xF1000; payload at 0x610000–0x64B8B1), `romfs/menu/01_US_ENGLISH/*.ctxb`, `romfs/message/parts.ctxb` |
 | Download | `env-assets/downloads/the-one-screen-891b60e…/` tarball sha256 `93c9ff9ab9f8c1080c37a9f2395bda336802227d76b3bc3699348ff088e68a79`; `code.ips` `10cf910a…a8026`, `exheader.bin` `81d21ba8…08740` |
 
@@ -130,6 +131,11 @@ Each ships as the `code.ips` that rides on the set's baked `code.bin`.
 
 - Press-Start cutscene skip, both games: [plans/cutscene-skip.md](plans/cutscene-skip.md).
 - Quick Text and optional autosave for OoT3D: [plans/oot3d-qol.md](plans/oot3d-qol.md).
+- Right-stick free camera and chord item buttons: [plans/pad-features.md](plans/pad-features.md).
+- Options: each patch keeps its switches in one block at the start of its payload
+  (`patch/oot3d/options.hpp`; 0x64C000 on the installed OoT3D set, the page after the base mod's
+  `.bss`), holding the defaults. The app's per-game options menu writes that block; nothing else
+  in a patch decides whether a feature runs.
 - Our own Xbox glyph textures for both games: [plans/xbox-glyphs.md](plans/xbox-glyphs.md).
 - MM3D single screen: [plans/mm3d-single-screen.md](plans/mm3d-single-screen.md).
 - Fallback if The One Screen cannot be used: our own OoT3D single screen in the same patch, built from

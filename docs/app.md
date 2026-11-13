@@ -20,7 +20,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | Command | Does |
 |---|---|
 | `run <frames>` | runs frames with the held pad and keeps the last one for `shot` |
-| `input <hex>` / `stick <x> <y>` | held buttons (bits in `Settings::NativeButton` order), circle pad (signed 16-bit, y down) |
+| `input <hex>` / `stick <x> <y>` / `cstick <x> <y>` | held buttons (bits in `Settings::NativeButton` order), circle pad and C-stick (signed 16-bit, y down) |
 | `r <va> <size>` / `w <va> <hex>` | guest memory of the running process: code, `.data`, `.bss`, heap |
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
