@@ -48,6 +48,8 @@ void applyCoreSettings(const AppConfig &config) {
   values.dump_textures = config.dumpTextures;
   values.frame_limit = config.hidden ? 0.0 : kRealTime;
   values.use_vsync = !config.hidden;
+  // A tool run outpaces asynchronous texture loading; each frame waits for its textures instead.
+  values.async_custom_loading = !config.hidden;
   values.output_type = config.hidden ? AudioCore::SinkType::Null : AudioCore::SinkType::Auto;
   values.enable_audio_stretching = false;
   values.current_input_profile = PadInput::profile();

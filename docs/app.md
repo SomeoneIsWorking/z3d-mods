@@ -13,7 +13,8 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
   game's icon and title read from the player's own dump (its SMDH), chosen with left/right and A
   or Start on the pad or keyboard, or a click. Escape or the gamepad's guide button in a game shuts
   it down and returns to the picker; closing the window quits.
-- `--hidden` (the tools): the window is never mapped, there is no sound and no pacing; the game
+- `--hidden` (the tools): the window is never mapped, there is no sound and no pacing, and custom
+  textures load before the frame that needs them (asynchronous loading falls behind an unpaced run); the game
   runs frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
 
 | Command | Does |
