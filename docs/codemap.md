@@ -23,6 +23,7 @@
 - `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad; the picker scenario runs the installed shortcut.
 - `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.
 - `tools/z3dmods/shortcut.py`: the per-machine desktop shortcut that runs `z3dmods play`.
+- `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the app, its sets and saves in another machine's `~/Games/z3d`, with its shortcuts.
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld.

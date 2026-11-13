@@ -101,10 +101,19 @@ objects. Rebuild the app: `ninja -C build/app`.
 runs `z3dmods play` and so builds `build/app` only when no build exists. The window's app id
 (`--app-id z3d`) is the shortcut's name, which is how the desktop finds its icon.
 
+`z3dmods shortcut --host ally` installs the player build on that machine instead
+(`tools/z3dmods/host_install.py`): `~/Games/z3d/` holds the newest app build, `lib/libazahar_core.so`,
+the UI font and `user/` (a copy of the installed `load/` sets, `library.json` naming the ROMs in
+the host's `~/ROM/3DS/` under this machine's names, and the app's saves, copied only when the host
+has none). Its menu and Desktop entries run the binary directly with `LD_LIBRARY_PATH` on `lib/`;
+the host's own SDL3 and SDL3_ttf serve the rest. Re-run it after a build or an install.
+
 - Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the
   dumps; the A key boots OoT3D to its title, Escape returns; the pad's stick selects MM3D and its A
   boots it, the guide button returns; a click on the OoT3D tile boots it again.
+- Ally install, 2026-11-13: the installed entry's Exec line in a hidden headless Gamescope there
+  shows the picker with both games; the A key boots OoT3D to its 4K title screen.
 
 - Verified 2026-11-13 on the core linked directly (Vulkan, RADV): hidden, the MM3D intro and its
   bottom screen read back at 400x480, a 20 MB savestate saved and loaded, 1260 frames for 21 s of

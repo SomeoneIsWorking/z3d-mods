@@ -24,13 +24,19 @@ def exec_line(cfg: Config) -> str:
     return f'"{uv}" --directory "{cfg.repo}" run --frozen z3dmods play'
 
 
+def desktop_entry(exec_: str, folder: Path | None = None) -> str:
+    """The entry that opens the title picker; `folder` is its working directory."""
+    return ("[Desktop Entry]\nType=Application\nName=z3d\n"
+            "Comment=Ocarina of Time 3D and Majora's Mask 3D with their mods\n"
+            f"Exec={exec_}\n" + (f"Path={folder}\n" if folder else "") +
+            "Icon=z3d\nTerminal=false\nCategories=Game;\n")
+
+
 def install(cfg: Config) -> list[Path]:
     icons = Path.home() / ".local/share/icons/hicolor/scalable/apps"
     icons.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(cfg.repo / "app" / "icon" / "z3d.svg", icons / "z3d.svg")
-    entry = ("[Desktop Entry]\nType=Application\nName=z3d\n"
-             "Comment=Ocarina of Time 3D and Majora's Mask 3D with their mods\n"
-             f"Exec={exec_line(cfg)}\nIcon=z3d\nTerminal=false\nCategories=Game;\n")
+    entry = desktop_entry(exec_line(cfg))
     written = []
     folders()[0].mkdir(parents=True, exist_ok=True)
     for folder in folders():

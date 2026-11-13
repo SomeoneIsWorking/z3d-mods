@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, input_test, install, play, shortcut, steps
+from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, play, shortcut, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -59,8 +59,10 @@ def input_check(args: argparse.Namespace) -> None:
     print(input_test.run(config.load(), args.scenario))
 
 
-def install_shortcuts(_: argparse.Namespace) -> None:
-    for path in shortcut.install(config.load()):
+def install_shortcuts(args: argparse.Namespace) -> None:
+    cfg = config.load()
+    paths = host_install.install(cfg, args.host) if args.host else shortcut.install(cfg)
+    for path in paths:
         print(path)
 
 
@@ -94,6 +96,7 @@ def main() -> None:
     probe.add_argument("scenario", choices=sorted(input_test.SCENARIOS))
     probe.set_defaults(run=input_check)
     links = commands.add_parser("shortcut", help="add the desktop shortcut that opens the app's title picker")
+    links.add_argument("--host", help="install the app, the sets and its saves on this ssh host instead, in ~/Games/z3d")
     links.set_defaults(run=install_shortcuts)
     args = parser.parse_args()
     args.run(args)

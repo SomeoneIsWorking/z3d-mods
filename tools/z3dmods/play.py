@@ -22,23 +22,30 @@ TITLES = {"oot3d": "Ocarina of Time 3D", "mm3d": "Majora's Mask 3D"}
 DESKTOP_ID = "z3d"
 
 
-def write_library(cfg: Config, user: Path) -> Path:
-    """The picker's games (app/src/game_library.hpp), beside the saves in `user`."""
+def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> Path:
+    """The picker's games (app/src/game_library.hpp) as `folder`/library.json; `rom_folder` puts the
+    ROMs, under their own names, in another machine's ROM folder."""
     entries = []
     for name in TITLES:
         game = GameSet.named(cfg.repo, name)
-        entries.append({"rom": str(cfg.rom(game.title_id)), "layout": game.screen_layout,
-                        "textures": app.uses_textures(game)})
-    path = user / "library.json"
+        rom = cfg.rom(game.title_id)
+        if rom_folder is not None:
+            rom = rom_folder / rom.name
+        entries.append({"rom": str(rom), "layout": game.screen_layout, "textures": app.uses_textures(game)})
+    path = folder / "library.json"
     path.write_text(json.dumps(entries, indent=2) + "\n")
     return path
+
+
+def picker_args(binary: Path, library: Path, font: Path, user: Path) -> list[str]:
+    return [str(binary), "--library", str(library), "--font", str(font), "--user", str(user),
+            "--resolution", str(RESOLUTION), "--app-id", DESKTOP_ID]
 
 
 def launch_args(cfg: Config, name: str | None, user: Path) -> list[str]:
     """The windowed app as the player runs it on the user folder `user`: game `name`, or the picker."""
     if name is None:
-        return [str(app.binary(cfg)), "--library", str(write_library(cfg, user)), "--font", str(cfg.ui_font()),
-                "--user", str(user), "--resolution", str(RESOLUTION), "--app-id", DESKTOP_ID]
+        return picker_args(app.binary(cfg), write_library(cfg, user), cfg.ui_font(), user)
     return app.launch_args(cfg, GameSet.named(cfg.repo, name), user, RESOLUTION) + [
         "--title", TITLES[name], "--app-id", DESKTOP_ID]
 
