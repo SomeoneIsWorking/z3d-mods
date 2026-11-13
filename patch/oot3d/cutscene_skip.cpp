@@ -1,4 +1,5 @@
 // OoT3D's layout for the Start cutscene skip.
+#include "cutscene_script.hpp"
 #include "game.hpp"
 #include "../common/cutscene_skip.hpp"
 #include "../common/guest.hpp"
@@ -53,6 +54,10 @@ struct Game {
       return false;
     }
     return !transitionStarted(play);
+  }
+
+  static bool textIsChoice(const void *script, uint16_t frame) {
+    return CutsceneScript(script).textIsChoiceAt(frame);
   }
 
   static bool messageIsChoice(const void * /*play*/) {

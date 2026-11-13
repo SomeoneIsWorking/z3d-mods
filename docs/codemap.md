@@ -30,7 +30,7 @@
 - `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT, private): MM3D 1.0-layout symbols, structs and RE docs.
 - `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
-- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, hook sites and link script.
+- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).

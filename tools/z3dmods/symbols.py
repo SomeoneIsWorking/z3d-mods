@@ -38,7 +38,7 @@ class Source:
 SOURCES = {
     "oot3d": Source("decomp/oot3d", ("data/oot3d.ld",),
                     ("include/z3D.hpp", "include/z3Dactor.hpp", "include/z3Dcamera.hpp", "include/z3Dsave.hpp",
-                     "include/variables.hpp", "include/regs.hpp")),
+                     "include/variables.hpp", "include/regs.hpp", "include/z3Dcutscene.hpp")),
     "mm3d": Source("decomp/mm3d", ("symbols/functions.csv",), ("include/z3D.h",)),
 }
 
@@ -58,6 +58,8 @@ class Decomp:
                 return node.value
             if isinstance(node, ast.Name) and node.id in self.defines:
                 return self.define(node.id)
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+                return -value(node.operand)
             if isinstance(node, ast.BinOp) and type(node.op) in _OPERATORS:
                 return _OPERATORS[type(node.op)](value(node.left), value(node.right))
             raise ValueError(f"#define {name}: not an integer expression")
@@ -151,6 +153,7 @@ def generate(repo: Path, game: str, out: Path) -> Generated:
     addresses = {ours: function(decomp, theirs) for ours, theirs in manifest.get("functions", {}).items()}
     addresses |= {ours: global_(decomp, theirs) for ours, theirs in manifest.get("globals", {}).items()}
     offsets = {ours: offset(decomp, theirs) for ours, theirs in manifest.get("offsets", {}).items()}
+    offsets |= {ours: size(decomp, theirs) for ours, theirs in manifest.get("sizes", {}).items()}
     values = {ours: decomp.define(theirs) for ours, theirs in manifest.get("defines", {}).items()}
 
     root = repo / SOURCES[game].path
@@ -161,7 +164,7 @@ def generate(repo: Path, game: str, out: Path) -> Generated:
              "#include <stdint.h>", "", f"namespace z3dmods::{game} {{", ""]
     lines += [f"inline constexpr uintptr_t {k} = 0x{v:08X};" for k, v in addresses.items()]
     lines += [f"inline constexpr uint32_t {k} = 0x{v:X};" for k, v in offsets.items()]
-    lines += [f"inline constexpr uint32_t {k} = {v};" for k, v in values.items()]
+    lines += [f"inline constexpr int32_t {k} = {v};" for k, v in values.items()]
     lines += ["", f"}} // namespace z3dmods::{game}", ""]
     out.mkdir(parents=True, exist_ok=True)
     header = out / "symbols.hpp"

@@ -1,7 +1,8 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes>, warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), waitcs:<s> (wait for a cutscene to start, then end), csframe:<n> (wait until a running cutscene
+poke:<addr>,<hex bytes>, warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
+pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
@@ -49,7 +50,7 @@ def _cutscene(session: Session, layout: Layout) -> tuple[int, int]:
 POLL = 0.1
 
 
-def _wait_cutscene(session: Session, layout: Layout, timeout: float, log) -> None:
+def _wait_cutscene(session: Session, layout: Layout, timeout: float, button: str, log) -> None:
     seen = False
     last = (0, 0)
     for _ in range(round(timeout / POLL)):
@@ -61,6 +62,8 @@ def _wait_cutscene(session: Session, layout: Layout, timeout: float, log) -> Non
             log(f"cutscene ended after frame {last[1]}")
             return
         last = (state, frames)
+        if button:
+            session.press(button)
         session.wait(POLL)
     raise RuntimeError(f"cutscene did not {'end' if seen else 'start'} within {timeout}s (last {last})")
 
@@ -130,7 +133,8 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             script, _, button = arg.partition(",")
             log(f"script {script} at {_wait_script(session, layout, int(script, 0), button)}")
         elif kind == "waitcs":
-            _wait_cutscene(session, layout, float(arg), log)
+            seconds, _, button = arg.partition(",")
+            _wait_cutscene(session, layout, float(seconds), button, log)
         elif kind == "cs":
             play = _play(session, layout)
             if play == 0:

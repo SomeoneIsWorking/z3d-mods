@@ -22,8 +22,10 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   It sets no flags of its own. User: "don't fast forward please, skip entirely".
 - Text: a text command holds its end frame while the textbox is open. On a hold the skip closes
   the box once, stops stepping for that game frame, and resumes once the game has finished closing
-  it; closing again every frame stalls the cutscene. A choice is never closed: the skip waits there
-  for the player.
+  it; closing again every frame stalls the cutscene. A choice is never closed: the skip
+  waits there for the player, then closes the answer's own text. A choice box only reports itself
+  once it has printed, so the skip reads the held text entry's type from the script
+  (`patch/oot3d/cutscene_script.hpp`).
 - Transitions: the skip refuses to start, and stops stepping, while a scene transition is requested.
 - `patch/common/cutscene_skip.hpp` is the skip; each game's `cutscene_skip.cpp` supplies only its
   layout as a `Game` trait. The functions, globals and offsets it uses are generated from the game's
@@ -55,7 +57,11 @@ to the end (flags, items, time of day, entrance, music), with no other change.
 - MM3D on standalone Azahar in real time (File 1 copied from a harness run into the player's save
   folder for the run, then removed): Start at frame 107 of the narration runs it to its end (780)
   and the transition within a second; Start in the woods at 118 goes straight to `losthorse.jdb`.
-- Still to prove: a cutscene with a choice.
+- OoT3D Deku Tree after Gohma (`poke:0x588EF8,f1ff warp:0xEE`, script end 4500): Start at frame
+  60 runs to the choice at 499 and waits there; Yes or No (D-pad) lands in the next script in scene
+  71 as watching does. At its frame 100 the save context differs from watching only in +0x15B4.
+- MM3D: a choice inside a skipped cutscene is likely closed unanswered, untested
+  (`docs/issues/mm3d-skip-closes-choice.md`).
 
 ## Proof
 On real cutscenes in each game, reached through a warp from a copy of the save: one run watches to

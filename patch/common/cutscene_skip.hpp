@@ -6,7 +6,7 @@
 namespace z3dmods {
 
 // Game is the title's layout: interpret, running, frame, setFrame, endFrame, startPressed,
-// transitionStarted, messageIsChoice and closeMessage, all static.
+// transitionStarted, textIsChoice, messageIsChoice and closeMessage, all static.
 template <typename Game> class CutsceneSkip {
 public:
   void step(void *play, void *cutscene, const void *script) {
@@ -14,6 +14,7 @@ public:
     if (!Game::running(cutscene)) {
       latched_ = false;
       closedFrame_ = 0;
+      choiceFrame_ = 0;
       return;
     }
     if (!latched_ && Game::startPressed(play, cutscene)) {
@@ -30,7 +31,8 @@ private:
 
   // Steps frames as the game's own update does. A text command holds its end frame until the
   // message has closed; the skip closes it once and resumes when the game's message update has
-  // finished closing. A choice is left open for the player.
+  // finished closing. A choice is left open until the player has answered it; the answer's own
+  // text is then closed like any other.
   void runToEnd(void *play, void *cutscene, const void *script) {
     for (uint32_t steps = 0; steps < kMaxSteps; ++steps) {
       if (!Game::running(cutscene) || Game::transitionStarted(play)) {
@@ -45,7 +47,10 @@ private:
       if (Game::frame(cutscene) == frame) {
         continue;
       }
-      if (closedFrame_ != frame && !Game::messageIsChoice(play)) {
+      if (Game::textIsChoice(script, frame) && !choiceAnswered(play, frame)) {
+        return;
+      }
+      if (closedFrame_ != frame) {
         Game::closeMessage(play);
         closedFrame_ = frame;
       }
@@ -53,7 +58,22 @@ private:
     }
   }
 
+  // A choice box prints before it asks, so its question is answered once it has asked and stopped.
+  bool choiceAnswered(void *play, uint16_t frame) {
+    if (choiceFrame_ != frame) {
+      choiceFrame_ = frame;
+      choiceAsked_ = false;
+    }
+    if (Game::messageIsChoice(play)) {
+      choiceAsked_ = true;
+      return false;
+    }
+    return choiceAsked_;
+  }
+
   bool latched_ = false;
+  bool choiceAsked_ = false;
+  uint16_t choiceFrame_ = 0;
   uint16_t closedFrame_ = 0;
 };
 

@@ -50,6 +50,12 @@ struct Game {
     return !transitionStarted(play);
   }
 
+  // STOPGAP: read the held text's type from the .jdb script because its layout is not yet known;
+  // until then a choice is only seen once it asks, after the skip has closed its box.
+  static bool textIsChoice(const void * /*script*/, uint16_t /*frame*/) {
+    return false;
+  }
+
   static bool messageIsChoice(void *play) {
     auto *messages = static_cast<uint8_t *>(play) + kPlayMessageContext;
     return guest::function<MessageStateFn>(kMessageGetState)(messages) == kMessageStateChoice;
