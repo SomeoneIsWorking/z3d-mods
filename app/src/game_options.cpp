@@ -17,8 +17,8 @@ namespace {
 constexpr const char *kLayoutId = "layout";
 constexpr const char *kTexturesId = "textures";
 // In ScreenLayout's order.
-constexpr std::array<const char *, 4> kLayoutNames{"Both screens", "Single screen", "Large top screen",
-                                                   "Side by side"};
+constexpr std::array<const char *, 5> kLayoutNames{"Both screens", "Top screen only", "Large top screen",
+                                                   "Side by side", "Single screen"};
 
 std::vector<std::string> switchChoices() {
   return {"Off", "On"};

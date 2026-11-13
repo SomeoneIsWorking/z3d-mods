@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -43,6 +44,10 @@ public:
   // Runs until the renderer has ended `count` more frames; `capture` keeps the last one in frame().
   void runFrames(uint64_t count, bool capture);
   [[nodiscard]] uint64_t framesRun() const;
+  // Called as runFrames goes, at least once a frame; one observer, replaced by the next call.
+  void onFrame(std::function<void()> observer) {
+    frameObserver_ = std::move(observer);
+  }
 
   // False when any page of the range is unmapped in the running process.
   [[nodiscard]] bool read(uint32_t address, std::span<uint8_t> out) const;
@@ -71,6 +76,7 @@ private:
   Frame frame_;
   std::vector<uint32_t> captureRows_;
   std::unique_ptr<WriteWatches> watches_;
+  std::function<void()> frameObserver_;
 };
 
 } // namespace z3d::app

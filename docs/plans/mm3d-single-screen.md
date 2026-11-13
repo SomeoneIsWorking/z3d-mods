@@ -16,6 +16,18 @@ User, 2026-11-13: "this needs to be an app using Azahar libretro underneath": si
 to the packed app (docs/plans/packed-app.md), drawn by the app. The code-patch route below is the
 fallback for plain Azahar.
 
+Status (2026-11-14): the app's `overlay` layout is MM3D's set default (docs/app.md, "Overlay
+layout"): the game's own touch screen drawn over the top screen, small in play and large in a
+menu, placed from `gUiScreenContext.activeScreen` (mm3d-decomp `docs/ui.md`). It is the game's
+touch screen composited, not a redrawn HUD. Left:
+- The pad cannot press the touch-only buttons (items I and II, View, the map tabs' touch targets,
+  the ocarina and Pictograph buttons); the mouse can. Chord item buttons (pad-features.md) cover
+  I and II.
+- Only Main and Items are checked in the screen table; the Bombers' Notebook, the Ocarina screen
+  and the Song of Soaring map have not been looked at in this layout.
+- A redrawn HUD (hearts, rupees and buttons as their own elements on the top screen) needs the
+  game's layouts drawn by the app or moved by a patch.
+
 Fallback: an MIT code patch that moves the bottom-screen UI (items, masks, map, notebook, Ocarina,
 file select) onto the top screen in the game's own code, in the same `code.ips` as the skip, on
 Project Restoration's v1.0-layout `code.bin`, built from mm3d-decomp and PR's source (GPL, evidence

@@ -17,6 +17,7 @@ constexpr std::array kLayouts{
     std::pair{std::string_view("single_screen"), ScreenLayout::SingleScreen},
     std::pair{std::string_view("large_screen"), ScreenLayout::LargeScreen},
     std::pair{std::string_view("side_by_side"), ScreenLayout::SideBySide},
+    std::pair{std::string_view("overlay"), ScreenLayout::Overlay},
 };
 
 constexpr uint32_t kMaxResolution = 10;

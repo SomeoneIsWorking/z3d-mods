@@ -1,6 +1,7 @@
 #include "game_window.hpp"
 
 #include "pad_input.hpp"
+#include "screen_overlay.hpp"
 
 #include "common/settings.h"
 #include "core/frontend/framebuffer_layout.h"
@@ -90,7 +91,13 @@ std::vector<SDL_FPoint> GameWindow::pollMenu() {
   return std::exchange(clicks_, {});
 }
 
+void GameWindow::placeOverlay(OverlayPlacement placement) {
+  overlay_ = placement;
+  updateLayout();
+}
+
 void GameWindow::boot(const std::string &title) {
+  overlay_ = OverlayPlacement::Split;
   SDL_SetWindowTitle(window_, title.c_str());
   if (!hidden_) {
     fitToDisplay();
@@ -167,6 +174,10 @@ void GameWindow::updateLayout() {
   int width = 0;
   int height = 0;
   SDL_GetWindowSizeInPixels(window_, &width, &height);
+  if (Settings::values.layout_option.GetValue() == Settings::LayoutOption::CustomLayout) {
+    app::placeOverlay(static_cast<unsigned>(std::max(width, 1)), static_cast<unsigned>(std::max(height, 1)),
+                      overlay_);
+  }
   UpdateCurrentFramebufferLayout(static_cast<unsigned>(std::max(width, 1)),
                                  static_cast<unsigned>(std::max(height, 1)));
 }

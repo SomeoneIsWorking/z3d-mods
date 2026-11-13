@@ -29,6 +29,9 @@ KEYS = {
 }
 PAD_BUTTONS = {"a": ecodes.BTN_EAST, "b": ecodes.BTN_SOUTH, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
                "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE}
+# File select's second slot on MM3D's touch screen, which the overlay layout puts beside the top
+# screen there: the right two fifths of the window, half its height, centred.
+MM3D_SLOT_2 = (0.6 + 0.4 * 0.51, 0.25 + 0.5 * 0.54)
 AXIS = AbsInfo(value=0, min=-32768, max=32767, fuzz=16, flat=128, resolution=0)
 
 
@@ -172,7 +175,7 @@ def _oot3d(session: Session, pad: Gamepad) -> None:
 
 
 def _mm3d(session: Session, pad: Gamepad) -> None:
-    """Both screens: keys reach file select, a tap on slot 2 makes a file, Start skips the opening."""
+    """The overlay layout: keys reach file select, a tap on slot 2 makes a file, Start skips the opening."""
     session.wait(30)
     session.key("start")
     session.wait(12)
@@ -180,7 +183,7 @@ def _mm3d(session: Session, pad: Gamepad) -> None:
     session.key("a")
     session.wait(5)
     session.shot("files")
-    session.click(0.51, 0.77)
+    session.click(*MM3D_SLOT_2)
     session.wait(4)
     session.shot("tapped-slot-2")
     session.key("a")
@@ -237,7 +240,7 @@ def _options(session: Session, pad: Gamepad) -> None:
     session.wait(12)
     session.key("a")
     session.wait(5)
-    session.click(0.51, 0.77)
+    session.click(*MM3D_SLOT_2)
     session.wait(4)
     session.key("a")
     session.wait(6)

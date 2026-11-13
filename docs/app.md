@@ -28,7 +28,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
 
 Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
-(`default|single_screen|large_screen|side_by_side`), `--textures` and `--options <json>`, or `--library <json>` and
+(`default|single_screen|large_screen|side_by_side|overlay`), `--textures` and `--options <json>`, or `--library <json>` and
 `--font <ttf>` for the picker (never `--hidden`); `--title`, `--app-id`, `--resolution`, `--hidden`,
 `--dump-textures` (the core writes every texture without a replacement as PNG under
 `<user>/Azahar/dump/textures/<title id>/`; `z3dmods run ... --harness --dump-textures`).
@@ -64,6 +64,28 @@ a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
 
 Adding a switch: an `[[option]]` in `patch/<game>/options.toml`, then read `options().<field>` from
 the generated `options.hpp` in the feature; the menu, the manifest and the stored file follow.
+
+## Overlay layout
+`overlay` is the app's own single screen for a game that keeps its HUD and menus on the touch
+screen (MM3D's set uses it; `screen_overlay`). The window has the top screen's shape and the core
+draws both screens into it through its custom layout, which the app rewrites whenever the game
+changes what the touch screen shows:
+
+- in play (the game's main touch screen is up) the top screen fills the window and the touch screen
+  sits in its top left corner at 40% of the height, 85% opaque: hearts, rupees, the item buttons
+  and the map tabs;
+- with one of play's other touch screens up (Items, Masks, Gear, Map) the touch screen is drawn
+  large and opaque under the menu's title bar;
+- while the game blanks the touch screen or a cutscene runs (it dims the main screen then) only
+  the top screen is drawn;
+- anywhere else (boot, title, file select) the two screens sit side by side.
+
+The game says which it is: the install writes `"screens"` into `z3d-options.json` (the address of
+the game's pointer to the touch screen that is up, the table of play's screens with the main and
+blank ones' indices, and the play state's cutscene byte, from the decomp through
+`tools/z3dmods/games.py`), and `ScreenOverlay` reads them after every frame. Touch follows the layout, so the mouse works on the touch screen
+wherever it is drawn. A tool screenshot of the side-by-side placement is cut to the screens'
+extent (800x384 at scale 2).
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`

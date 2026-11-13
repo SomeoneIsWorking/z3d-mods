@@ -26,6 +26,7 @@ add_executable(z3d
   src/emulator.cpp
   src/frame.cpp
   src/repl.cpp
+  src/screen_overlay.cpp
   src/player.cpp)
 target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)

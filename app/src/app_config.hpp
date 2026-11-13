@@ -9,7 +9,8 @@
 
 namespace z3d::app {
 
-enum class ScreenLayout : uint8_t { Default, SingleScreen, LargeScreen, SideBySide };
+// Overlay is the app's own single screen (screen_overlay.hpp).
+enum class ScreenLayout : uint8_t { Default, SingleScreen, LargeScreen, SideBySide, Overlay };
 
 [[nodiscard]] ScreenLayout parseLayout(std::string_view name);
 

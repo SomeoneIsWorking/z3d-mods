@@ -10,6 +10,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from z3dmods import games
+
 # The manifest's name inside a game's installed mod folder.
 MANIFEST = "z3d-options.json"
 
@@ -46,6 +48,14 @@ def generate(repo: Path, game: str, out: Path) -> Path:
 
 
 def manifest(repo: Path, game: str, address: int) -> str:
-    """`address` is the block's guest address: the payload's start."""
+    """`address` is the block's guest address: the payload's start. "screens" tells the app's
+    overlay layout (app/src/screen_overlay.hpp) which touch screen is up."""
     items = [{"id": o.id, "label": o.label, "default": o.default} for o in load(repo, game)]
-    return json.dumps({"address": address, "options": items}, indent=2) + "\n"
+    document: dict[str, object] = {"address": address, "options": items}
+    layout = games.layout(repo, game)
+    if layout.active_screen is not None:
+        document["screens"] = {"active": layout.active_screen, "table": layout.screens,
+                               "count": layout.screen_count, "main": layout.main_screen,
+                               "black": layout.black_screen, "play": layout.play_pointer,
+                               "cutscene": layout.cutscene_state}
+    return json.dumps(document, indent=2) + "\n"

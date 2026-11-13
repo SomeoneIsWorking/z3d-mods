@@ -11,6 +11,7 @@
 #include "pad_input.hpp"
 #include "player.hpp"
 #include "repl.hpp"
+#include "screen_overlay.hpp"
 #include "title_picker.hpp"
 
 #include <lucent/log.h>
@@ -41,6 +42,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   GameWindow window(config, pad);
   Emulator emulator(config, game.rom, window);
   options.apply(emulator);
+  const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
   if (config.hidden) {
     Repl repl(emulator, pad, options);
     std::cout << "ready\n" << std::flush;
@@ -74,6 +76,8 @@ int picker(const AppConfig &config, PadInput &pad) {
     {
       Emulator emulator(config, game.setup.rom, window);
       options[*chosen].apply(emulator);
+      const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
+                                  config.userDir / game.setup.options);
       Player(emulator, window).run();
     }
     if (window.closeRequested()) {

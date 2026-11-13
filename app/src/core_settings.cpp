@@ -1,10 +1,12 @@
 #include "core_settings.hpp"
 
 #include "pad_input.hpp"
+#include "screen_overlay.hpp"
 
 #include "audio_core/sink_details.h"
 #include "common/file_util.h"
 #include "common/settings.h"
+#include "core/3ds.h"
 #include "core/hle/service/service.h"
 
 #include <stdexcept>
@@ -34,6 +36,8 @@ Settings::LayoutOption layoutOption(ScreenLayout layout) {
     return Settings::LayoutOption::LargeScreen;
   case ScreenLayout::SideBySide:
     return Settings::LayoutOption::SideScreen;
+  case ScreenLayout::Overlay:
+    return Settings::LayoutOption::CustomLayout;
   }
   throw std::invalid_argument("unknown screen layout");
 }
@@ -61,6 +65,13 @@ void applyCoreSettings(const AppConfig &config) {
 
 void applyGameSettings(const GameSetup &game) {
   Settings::values.layout_option = layoutOption(game.layout);
+  if (game.layout == ScreenLayout::Overlay) {
+    // The window takes its shape from this: the top screen's (the inset lies inside it), at the
+    // render scale.
+    const uint32_t scale = Settings::values.resolution_factor.GetValue();
+    placeOverlay(Core::kScreenTopWidth * scale, Core::kScreenTopHeight * scale,
+                 OverlayPlacement::Inset);
+  }
   Settings::values.custom_textures = game.customTextures;
 }
 

@@ -151,6 +151,9 @@ void Emulator::runFrames(uint64_t count, bool capture) {
       capture = false;
     }
     step();
+    if (frameObserver_) {
+      frameObserver_();
+    }
   }
 }
 

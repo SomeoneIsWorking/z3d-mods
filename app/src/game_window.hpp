@@ -4,6 +4,7 @@
 #pragma once
 
 #include "app_config.hpp"
+#include "screen_overlay.hpp"
 
 #include "core/frontend/emu_window.h"
 
@@ -36,6 +37,9 @@ public:
   // A game's title on the window and the window in its layout's shape (core_settings.hpp).
   void boot(const std::string &title);
 
+  // Where the overlay layout puts the touch screen from now on.
+  void placeOverlay(OverlayPlacement placement);
+
   [[nodiscard]] SDL_Window *sdlWindow() const {
     return window_;
   }
@@ -65,6 +69,7 @@ private:
   bool closeRequested_ = false;
   bool menuRequested_ = false;
   bool touching_ = false;
+  OverlayPlacement overlay_ = OverlayPlacement::Split;
   std::vector<SDL_FPoint> clicks_;
 };
 

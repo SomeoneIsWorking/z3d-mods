@@ -29,6 +29,13 @@ class Layout:
     actor_home: int | None = None
     camera_at: int | None = None
     camera_eye: int | None = None
+    # MM3D only: where the game keeps the touch screen that is up, the table of play's screens,
+    # and the main and blank ones' indices in it.
+    active_screen: int | None = None
+    screens: int | None = None
+    screen_count: int | None = None
+    main_screen: int | None = None
+    black_screen: int | None = None
 
 
 # ACTORCAT_PLAYER, the player's actor list.
@@ -70,6 +77,11 @@ def _mm3d(d: symbols.Decomp) -> Layout:
         cutscene_frames=cutscene + symbols.offset(d, "CutsceneContext.frames"),
         cutscene_script=cutscene + symbols.offset(d, "CutsceneContext.script"),
         scene=symbols.offset(d, "PlayState.sceneNum"),
+        active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
+        screens=symbols.global_(d, "gUiScreens"),
+        screen_count=d.define("UI_SCREEN_COUNT"),
+        main_screen=d.define("UI_SCREEN_MAIN"),
+        black_screen=d.define("UI_SCREEN_BLACK"),
     )
 
 

@@ -8,6 +8,7 @@
     "exheader": "exheader.bin"
   },
   "patch": "mm3d",
+  "screen_layout": "overlay",
   "textures": {
     "name": "Omni Xbox UI for PR 1.3 (HardDanX, CC BY-NC-ND 4.0)",
     "root": "downloads/omni-ui-1.3/x/omni_ui_for_project_restoration_13/Omni Xbox UI for PR"
