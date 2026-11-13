@@ -5,6 +5,8 @@ kCutsceneRunScript = "CutsceneHandler_RunScript"
 kCutsceneInterpreter = "Cutscene_ProcessCommands"
 kMessageCloseTextbox = "Message_CloseTextbox"
 kMessageGetState = "Message_GetState"
+kMessageLayoutText = "Message_LayoutText"
+kTextParseNext = "Text_ParseNextCharacter_maybe"
 
 [globals]
 kSaveContext = "gSaveContext"
@@ -22,6 +24,7 @@ kCsScriptCommandCount = "CutsceneScriptHeader.cmdCount"
 kCsTextStart = "CsCmdText.startFrame"
 kCsTextEnd = "CsCmdText.endFrame"
 kCsTextType = "CsCmdText.type"
+kTextInstantOnSlot = "MessageTextVtbl.instantOn"
 kGameInfoData = "GameInfo.data"
 
 [defines]
@@ -51,6 +54,8 @@ kCsCmdUnk96Count = "CS_CMD_UNK_96_COUNT"
 kCsCmdUnk96EntrySize = "CS_CMD_UNK_96_ENTRY_SIZE"
 kCsCmdCamSplineHeadSize = "CS_CMD_CAM_SPLINE_HEAD_SIZE"
 kCsTextChoice = "CS_TEXT_CHOICE"
+kTextCtrlPrefix = "TEXT_CTRL_PREFIX"
+kTextCtrlWaitForInput = "TEXT_CTRL_WAIT_FOR_INPUT"
 
 [sizes]
 kCsScriptHeaderSize = "CutsceneScriptHeader"

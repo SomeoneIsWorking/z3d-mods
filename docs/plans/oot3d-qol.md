@@ -13,3 +13,11 @@ Autosave (CC BY-NC-ND, `code.ips` only) is baked into the base `code.bin` beside
 when their writes do not overlap.
 
 Both go into the same MIT `code.ips` as the cutscene skip ([cutscene-skip.md](cutscene-skip.md)).
+
+## Status
+- Quick Text, built (`patch/oot3d/quick_text.cpp`): at the start of every message and after every
+  box break the patch calls the text object's own instant-on method (what control code 0x04 does),
+  and code 0x05 (instant off) is skipped. Delay codes still pause, so timed narration keeps its
+  pacing. RE: `decomp/oot3d/docs/message.md`. Seen 2026-11-13 in the Deku Tree's scene after Gohma
+  (every box whole on its first visible frame, the choice too) and in the opening narration.
+- Not yet: an option to turn it off (the per-game options menu), and the MIT autosave.
