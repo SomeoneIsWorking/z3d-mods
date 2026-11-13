@@ -6,7 +6,9 @@
 - `tools/z3dmods/zsi.py`: OoT3D room files: header commands, their CMB models, replacing a model and moving what follows.
 - `tools/z3dmods/cmb.py`: OoT3D CMB models: textures, materials, meshes, vertices; rewriting one shape's geometry.
 - `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
-- `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by its look.
+- `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, ETC1, ETC1A4) and Azahar's custom-texture hash and file name.
+- `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
+- `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by its hash.
 - `tools/z3dmods/stairs.py`: folds stair-textured ramps in OoT3D rooms into risers and treads.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
 - `tools/z3dmods/bps.py`: BPS info and apply, with source and target CRC checks.

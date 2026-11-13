@@ -289,7 +289,7 @@ def _textures(data: bytes, offset: int) -> list[Texture]:
         entry = offset + 0x0C + i * 0x24
         size, _, width, height, gl_format, data_offset = struct.unpack_from("<IIHHII", data, entry)
         name = data[entry + 0x14: entry + 0x24].split(b"\0")[0].decode("ascii")
-        textures.append(Texture(name, width, height, gl_format & 0xFFFF, data_offset, size))
+        textures.append(Texture(name, width, height, gl_format, data_offset, size))
     return textures
 
 

@@ -18,8 +18,8 @@ from dataclasses import dataclass
 
 from PIL import Image
 
-from z3dmods import cmb, etc1, zsi
-from z3dmods.texture_pack import TexturePack, decoded
+from z3dmods import cmb, pica_texture, zsi
+from z3dmods.texture_pack import TexturePack
 
 STAIR_TEXTURE = "kaidan"
 # Faces flatter than this are landings, steeper ones are walls or modelled risers; both keep
@@ -331,10 +331,8 @@ def _flat(triangles, extras: list[str]) -> tuple[dict[str, list[tuple[float, ...
 
 def texture_image(model: cmb.Cmb, texture: cmb.Texture, pack: TexturePack | None) -> Image.Image:
     """The texture as the player sees it: the pack's replacement when it has one."""
-    if texture.format not in (etc1.ETC1, etc1.ETC1A4):
-        raise ValueError(f"{texture.name}: format 0x{texture.format:04X} is not ETC1")
-    image = decoded(etc1.decode(model.texture_data(texture), texture.width, texture.height,
-                                texture.format == etc1.ETC1A4))
+    image = pica_texture.decode(model.texture_data(texture), texture.width, texture.height,
+                                texture.format)
     found = pack.replacement(image, texture.format) if pack else None
     return found or image
 
