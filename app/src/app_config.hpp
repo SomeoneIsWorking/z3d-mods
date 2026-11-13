@@ -6,6 +6,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace z3d::app {
 
@@ -21,11 +23,15 @@ struct GameSetup {
   bool customTextures = false;
   // The installed patch's z3d-options.json (game_options.hpp), relative to the user folder.
   std::filesystem::path options;
+  // Folders beside the game's mods romfs/ that are layered over it (the core's romfs_layers).
+  std::vector<std::string> romfsLayers;
 };
 
 struct AppConfig {
   // A direct launch; without it the window opens the title picker over `library`.
   std::optional<GameSetup> game;
+  // A direct launch's option choices, set before the game boots: --option <id>=<value>.
+  std::vector<std::pair<std::string, uint8_t>> options;
   // The tools' list of games (game_library.hpp) and the picker's outline font.
   std::filesystem::path library;
   std::filesystem::path font;
@@ -41,7 +47,7 @@ struct AppConfig {
   // Every texture the game uploads, as PNG under <user>/Azahar/dump/textures/.
   bool dumpTextures = false;
 
-  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] | --library <json> --font <ttf>)
+  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... | --library <json> --font <ttf>)
   //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
 };

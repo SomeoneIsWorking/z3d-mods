@@ -28,8 +28,14 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine
   rooms (Kakariko, Zora's Domain 0/1, Desert Colossus, Gerudo Valley, Hyrule Castle grounds, Death
   Mountain Trail, two Ganon's Castle rooms). No code hook is needed: `z3dmods install oot3d` writes
-  stepped copies of those rooms into the romfs mod (`"stairs": true` in `sets/oot3d.json`),
-  generated from the player's ROM and never committed.
+  stepped copies of those rooms and their scenes into `load/mods/<title id>/romfs_stairs/`
+  (`"stairs": true` in `sets/oot3d.json`), generated from the player's ROM and never committed.
+- The switch is "Stepped stairs" in the game's options menu, on by default: a layer option
+  (`layer = "romfs_stairs"` in `patch/oot3d/options.toml`, docs/app.md "Options"). While it is on
+  the app has the core put that folder over the mod's `romfs/`; off, the game loads the ramps.
+  Seen 2026-11-14 on Kakariko's well flight (x 484 to 502 in steps of 3, z 590): on, Link lands
+  at 57, 57, 57, 65, 65, 65, 65 (`oot-so3-1`); with `--option stairs=0` at 60, 61.5, 63, 64.5,
+  66, 67.5, 69 (`oot-so3-0`). The row shows in the options menu (`inputtest options-oot3d`).
 - `tools/z3dmods/stairs.py` reads where the texture paints its steps (row period, nose edge, crease)
   from the texture the player sees: the set's 4K pack replacement when it has one
   (`texture_pack.py` finds it by Azahar's texture hash), else the ROM's. The ramp is the pitch line through the
@@ -71,9 +77,6 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
 - Our own stair texture: the steps use the game's (or the pack's) painted texture. The eight
   stair textures differ by place (wood, dark rock, sandstone, moss); one drawn texture would
   replace all of them, so this waits for the player's word.
-- The per-game options toggle: the steps are files the install writes, not code, so a switch
-  means installing with or without them (`"stairs"` in `sets/oot3d.json`), or the app choosing
-  between two romfs folders.
 
 ## Majora's Mask 3D
 Rev 1 room files (`scenes/*_<n>_info.zsi`, all uncompressed) name these stair textures:

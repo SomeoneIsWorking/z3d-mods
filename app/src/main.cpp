@@ -20,6 +20,7 @@
 #include <iostream>
 #include <filesystem>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace z3d::app {
@@ -38,6 +39,11 @@ GameOptions loadOptions(const AppConfig &config, const GameSetup &game) {
 
 int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   GameOptions options = loadOptions(config, game);
+  for (const auto &[id, value] : config.options) {
+    if (!options.set(id, value)) {
+      throw std::invalid_argument("--option " + id + ": no such option or value");
+    }
+  }
   applyGameSettings(options.setup());
   GameWindow window(config, pad);
   Emulator emulator(config, game.rom, window);

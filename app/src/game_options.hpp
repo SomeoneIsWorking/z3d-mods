@@ -24,6 +24,8 @@ struct Option {
   uint8_t value = 0;
   // An app switch on the pad (cstick_invert_x, cstick_invert_y); empty for the others.
   std::string pad;
+  // A folder of replacement game files the app layers in while the switch is on; empty for the others.
+  std::string layer;
 };
 
 class GameOptions {

@@ -42,3 +42,9 @@ id = "autosave"
 field = "autosave"
 label = "Autosave after each scene change"
 default = false
+
+[[option]]
+id = "stairs"
+label = "Stepped stairs"
+default = true
+layer = "romfs_stairs"

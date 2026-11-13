@@ -17,6 +17,8 @@ RECORD = "z3dmods-install.json"
 PAGE = 0x1000
 EXHEADER_BSS_SIZE = 0x3C
 HUD_FOLDER = "z3dmods-hud"
+# The layer switch in the patch's options.toml that turns the stepped stairs on.
+STAIRS_OPTION = "stairs"
 
 
 @dataclass(frozen=True)
@@ -29,7 +31,8 @@ class GameSet:
     patch: str | None
     # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
     screen_layout: str
-    # Fold the game's stair ramps into steps (OoT3D rooms).
+    # Fold the game's stair ramps into steps (OoT3D rooms), in the folder of the patch's "stairs"
+    # layer switch.
     stairs: bool
     # The menu-texture edit table (sets/hud/): the base mod's edits redone on the texture pack's
     # copies, and the pad glyphs drawn over the game's button prompts.
@@ -88,7 +91,7 @@ def _apply(patch_name: str, patch: bytes, code: bytes) -> bytes:
 
 
 def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_exheader: bytes,
-           mods: Path) -> None:
+           mods: Path, layers: set[str]) -> None:
     """Bake the base patch into code.bin and put our patch on top as code.ips."""
     code = _apply(game.base["code_patch"], base_patch, vanilla)
     exheader = ctr.Exheader.parse(base_exheader)
@@ -104,7 +107,7 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
     (mods / "code.bin").write_bytes(code)
     (mods / "code.ips").write_bytes(ips.build(ours.records))
     (mods / "exheader.bin").write_bytes(bytes(grown))
-    (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start))
+    (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start, layers))
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, pack: TexturePack | None) -> dict[str, bytes]:
@@ -143,6 +146,9 @@ def install(cfg: Config, game: GameSet) -> Path:
 
     base_romfs = root / game.base["romfs"] if "romfs" in game.base else None
     pack = TexturePack(cfg.env_assets / game.textures["root"]) if game.textures else None
+    if game.stairs and not game.patch:
+        raise RuntimeError(f"{game.title_id}: stairs want the patch whose options.toml switches them")
+    stairs_layer = options.layer(cfg.repo, game.patch, STAIRS_OPTION) if game.stairs else None
     rooms = _stepped_rooms(rom, base_romfs, pack) if game.stairs else {}
     menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
                       cfg.glyph_set())
@@ -153,14 +159,14 @@ def install(cfg: Config, game: GameSet) -> Path:
     mods.mkdir(parents=True, exist_ok=True)
     if game.patch:
         _layer(cfg, game, vanilla, code_patch.read_bytes(), (root / game.base["exheader"]).read_bytes(),
-               mods)
+               mods, {stairs_layer} if stairs_layer else set())
     else:
         shutil.copyfile(code_patch, mods / Path(game.base["code_patch"]).name)
         shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
     if base_romfs:
         _copy_tree(base_romfs, mods / "romfs")
     for path, data in rooms.items():
-        target = mods / "romfs" / path
+        target = mods / stairs_layer / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
     _write_record(mods, {"base": game.base["name"], "patch": game.patch or "",

@@ -28,8 +28,10 @@ RESOLUTION = 1
 class HarnessSession:
     def __init__(self, cfg: Config, game: GameSet, name: str, log: Path,
                  textures: bool | None = None, dump_textures: bool = False,
-                 resolution: int = RESOLUTION) -> None:
+                 resolution: int = RESOLUTION, options: list[str] | None = None) -> None:
         self._cfg = cfg
+        # <id>=<value> choices the game boots with (docs/app.md "Options").
+        self._options = options or []
         self._resolution = resolution
         self._game = game
         self._textures = textures
@@ -47,6 +49,8 @@ class HarnessSession:
         args = app.launch_args(self._cfg, self._game, self._user, self._resolution, self._textures) + ["--hidden"]
         if self._dump_textures:
             args.append("--dump-textures")
+        for option in self._options:
+            args += ["--option", option]
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log = self._log_path.open("wb")
         env = dict(os.environ, **self._cfg.session_env)

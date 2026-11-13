@@ -57,10 +57,17 @@ a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
 - An `[[option]]` with `pad` instead of `field` is the app's: `cstick_invert_x` and
   `cstick_invert_y` turn the C-stick around on its way to the game (MM3D's camera stick, which the
   game reads itself). The picker and menus read the stick as held.
+- An `[[option]]` with `layer` names a folder of replacement game files beside the set's `romfs/`
+  (`load/mods/<title id>/<layer>/`, written by the install): on, the app lists it in the core's
+  `Settings::values.romfs_layers` and the core stacks it over `romfs/` when the game loads
+  (OoT3D's stepped stairs). The manifest leaves the switch out when the install wrote no such
+  folder. Standalone Azahar never loads a layer.
 - The app's own rows follow: the screen layout, and the texture pack when the set has one.
 - Choices are kept per game in `<user>/options/<rom name>.json`. The tools (`--hidden`) keep none
   and run every game on its defaults; a run changes one with the `option` command
-  (`option:<id>,<value>` step).
+  (`option:<id>,<value>` step), or before boot with `--option <id>=<value>`
+  (`z3dmods run ... --harness --option stairs=0`), which is the only way for one that takes
+  effect at boot (a layer, the layout, the textures).
 - At boot the app applies layout and textures through `applyGameSettings` and writes the block once
   the game is loaded; `loadstate` writes it again, since a state carries the block of the run that
   made it.
@@ -172,6 +179,10 @@ the host's own SDL3 and SDL3_ttf serve the rest. Re-run it after a build or an i
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the
   dumps; the A key boots OoT3D to its title, Escape returns; the pad's stick selects MM3D and its A
   boots it, the guide button returns; a click on the OoT3D tile boots it again.
+- Options, 2026-11-14, `z3dmods inputtest options-oot3d` (the shortcut's picker, real keys): X on
+  the OoT3D tile opens its options with every row of the manifest; Down and A set Quick Text to
+  Off; in File 1 the text of Link's bed then comes up as an empty box before its letters, which
+  Quick Text never shows. The shots are a second apart, so no half-typed line is caught.
 - Ally install, 2026-11-13: the installed entry's Exec line in a hidden headless Gamescope there
   shows the picker with both games; the A key boots OoT3D to its 4K title screen.
 

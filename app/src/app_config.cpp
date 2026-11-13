@@ -9,7 +9,8 @@ namespace {
 
 constexpr std::string_view kUsage =
     "usage: z3d --user <dir> (--rom <3ds> [--layout default|single_screen|large_screen|"
-    "side_by_side] [--textures] | --library <json> --font <ttf>) [--title <text>] "
+    "side_by_side|overlay] [--textures] [--options <json>] [--option <id>=<value>]... | "
+    "--library <json> --font <ttf>) [--title <text>] "
     "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures]";
 
 constexpr std::array kLayouts{
@@ -21,6 +22,14 @@ constexpr std::array kLayouts{
 };
 
 constexpr uint32_t kMaxResolution = 10;
+
+std::pair<std::string, uint8_t> parseOption(const std::string &text) {
+  const size_t equals = text.find('=');
+  if (equals == std::string::npos) {
+    throw std::invalid_argument("--option wants <id>=<value>");
+  }
+  return {text.substr(0, equals), static_cast<uint8_t>(std::stoul(text.substr(equals + 1)))};
+}
 
 uint32_t parseResolution(const std::string &text) {
   const unsigned long value = std::stoul(text);
@@ -66,6 +75,8 @@ AppConfig AppConfig::parse(int argc, char **argv) {
       game.rom = value;
     } else if (flag == "--options") {
       game.options = value;
+    } else if (flag == "--option") {
+      config.options.push_back(parseOption(value));
     } else if (flag == "--library") {
       config.library = value;
     } else if (flag == "--font") {

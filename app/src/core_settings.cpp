@@ -73,6 +73,7 @@ void applyGameSettings(const GameSetup &game) {
                  OverlayPlacement::Inset);
   }
   Settings::values.custom_textures = game.customTextures;
+  Settings::values.romfs_layers = game.romfsLayers;
 }
 
 } // namespace z3d::app

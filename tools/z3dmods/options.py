@@ -1,6 +1,8 @@
 """A game's switches (patch/<game>/options.toml). Those with a `field` are the patch's: one byte
 each, in file order, in a block at the start of the patch's payload. Those with a `pad` are the
-app's, applied to the pad it feeds the game (app/src/pad_input.hpp). Generates the patch's `options.hpp` and the manifest the app's options
+app's, applied to the pad it feeds the game (app/src/pad_input.hpp). Those with a `layer` name a
+folder of replacement game files beside the installed `romfs/`, which the app layers in while the
+switch is on. Generates the patch's `options.hpp` and the manifest the app's options
 menu reads and writes guest memory from (docs/app.md, "Options").
 """
 
@@ -26,16 +28,27 @@ class Option:
     field: str | None
     # What the app does to the pad for it: cstick_invert_x or cstick_invert_y.
     pad: str | None
+    # The folder in the installed mod that holds the game files it switches.
+    layer: str | None
 
 
 def load(repo: Path, game: str) -> list[Option]:
     path = repo / "patch" / game / "options.toml"
     entries = tomllib.loads(path.read_text())["option"]
-    options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad")) for e in entries]
+    options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad"), e.get("layer"))
+               for e in entries]
     for option in options:
-        if (option.field is None) == (option.pad is None):
-            raise ValueError(f"{path}: {option.id} wants either field or pad")
+        if sum(kind is not None for kind in (option.field, option.pad, option.layer)) != 1:
+            raise ValueError(f"{path}: {option.id} wants one of field, pad and layer")
     return options
+
+
+def layer(repo: Path, game: str, option_id: str) -> str:
+    """The folder the layer switch `option_id` turns on."""
+    for option in load(repo, game):
+        if option.id == option_id and option.layer is not None:
+            return option.layer
+    raise ValueError(f"patch/{game}/options.toml has no layer option {option_id}")
 
 
 def generate(repo: Path, game: str, out: Path) -> Path:
@@ -55,11 +68,13 @@ def generate(repo: Path, game: str, out: Path) -> Path:
     return header
 
 
-def manifest(repo: Path, game: str, address: int) -> str:
-    """`address` is the block's guest address: the payload's start. "screens" tells the app's
+def manifest(repo: Path, game: str, address: int, layers: set[str]) -> str:
+    """`address` is the block's guest address: the payload's start. `layers` are the layer folders
+    this install wrote; a layer switch without its folder is left out. "screens" tells the app's
     overlay layout (app/src/screen_overlay.hpp) which touch screen is up."""
     items = [{"id": o.id, "label": o.label, "default": o.default} | ({"pad": o.pad} if o.pad else {})
-             for o in load(repo, game)]
+             | ({"layer": o.layer} if o.layer else {})
+             for o in load(repo, game) if o.layer is None or o.layer in layers]
     document: dict[str, object] = {"address": address, "options": items}
     layout = games.layout(repo, game)
     if layout.active_screen is not None:

@@ -63,21 +63,25 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
         throw std::runtime_error(manifest.string() + ": an option wants id, label and default");
       }
       const lucent::json::Value *pad = entry.find("pad");
+      const lucent::json::Value *layer = entry.find("layer");
       const bool onPad = pad != nullptr && pad->string() != nullptr;
-      if (!onPad && blockCount_ != items_.size()) {
-        throw std::runtime_error(manifest.string() + ": the patch's options come before the pad's");
+      const bool isLayer = layer != nullptr && layer->string() != nullptr;
+      const bool inBlock = !onPad && !isLayer;
+      if (inBlock && blockCount_ != items_.size()) {
+        throw std::runtime_error(manifest.string() + ": the patch's options come before the app's");
       }
       items_.push_back({*id->string(), *label->string(), switchChoices(),
                         static_cast<uint8_t>(*fallback->boolean() ? 1 : 0),
-                        onPad ? *pad->string() : std::string()});
-      blockCount_ += onPad ? 0 : 1;
+                        onPad ? *pad->string() : std::string(),
+                        isLayer ? *layer->string() : std::string()});
+      blockCount_ += inBlock ? 1 : 0;
     }
   }
   items_.push_back({kLayoutId, "Screen layout",
                     std::vector<std::string>(kLayoutNames.begin(), kLayoutNames.end()),
-                    static_cast<uint8_t>(setup_.layout), {}});
+                    static_cast<uint8_t>(setup_.layout), {}, {}});
   if (setup_.customTextures) {
-    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}});
+    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}, {}});
   }
   if (stored_.empty()) {
     return;
@@ -118,6 +122,8 @@ GameSetup GameOptions::setup() const {
       result.layout = static_cast<ScreenLayout>(item.value);
     } else if (item.id == kTexturesId) {
       result.customTextures = item.value != 0;
+    } else if (!item.layer.empty() && item.value != 0) {
+      result.romfsLayers.push_back(item.layer);
     }
   }
   return result;
