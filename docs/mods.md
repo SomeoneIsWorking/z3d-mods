@@ -92,10 +92,9 @@ Global keys in `qt-config.ini`, written by `z3dmods install` from each set's `az
 | Shown | Harness, new game to the Lost Woods, same state with textures on and off: the bottom screen's button labels become RB, a yellow Y, a blue X and LB+RB hints (stock: I, X, Y, II) |
 | Needs | Azahar's custom textures, which the set turns on globally (`[Utility] custom_textures=true`). Its readme also suggests swapping A/B and the bumpers with the triggers in Azahar's input mapping. That is the player's controller setup, so it is documented here and not changed |
 
-MM3D single screen is not installed yet: every existing one (DekUI, Majora ReMasked) is a GPL-2 fork
-of Azahar, not a mod for the player's Azahar 2126.2, and accepts only the USA 1.1 dump
-(`supported-rom.json`: remaster v2, a fixed main-partition hash). The player's Rev 1 dump is that
-dump, so DekUI takes it unchanged; the MM3D set moves to it (Project Restoration's v110 build). An MIT variant is planned in
+MM3D single screen is not installed yet. DekUI and Majora ReMasked are GPL-2 forks of Azahar, not
+mods for the player's Azahar 2126.2; DekUI draws its single-screen menus in the emulator and builds
+only with Qt, which the player declined. Our MIT patch is planned in
 [plans/mm3d-single-screen.md](plans/mm3d-single-screen.md).
 
 ## Everything else considered
@@ -111,7 +110,7 @@ dump, so DekUI takes it unchanged; the MM3D set moves to it (Project Restoration
 | Door of Time Skip, Zora's River Waterfall Skip, Unfreeze Zora's Domain | OoT3D | GameBanana 713704, 711124, 710508 | CC BY-NC-ND | romfs only | Not used; Door of Time Skip can softlock adult Link |
 | OoT3D Randomizer | OoT3D | github.com/gamestabled/OoT3D_Randomizer v5.0 | MIT | `code.ips` + `exheader.bin` | Reference: loader, Quick Text, story-flag skips at save creation |
 | zeldaret/oot3d | OoT3D | WIP decompilation of the USA `code.bin` | CC0 | | Reference |
-| DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Accepts the player's Rev 1 dump; next for MM3D single screen |
+| DekUI / Majora ReMasked | MM3D | github.com/tgacquin/mm3d-dekui v1.1.0; github.com/OTPR26/DekUI-Fork v0.4.3 | GPL-2.0 | Azahar forks | Single screen is host code that needs the Qt frontend; the user declined Qt. Evidence for our own patch |
 | Omni Xbox UI | MM3D | as above | CC BY-NC-ND | textures | Installed until our own glyphs exist |
 | MM3D Randomizer base patch | MM3D | Z3DR/mm3dr | MIT (with permission for its PR code) | | Reference |
 | Zeldocto/MM3D-PC | MM3D | v0.1.9 | GPL-3.0 | native PC port | Not an Azahar mod |
