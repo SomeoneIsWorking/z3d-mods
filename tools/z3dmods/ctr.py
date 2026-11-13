@@ -78,6 +78,59 @@ class Ncch:
         code = self.exefs_files()[".code"]
         return lz_decompress(code) if self.exheader.compressed_code else code
 
+    def romfs(self) -> Romfs:
+        return Romfs.open(self)
+
+
+NO_ENTRY = 0xFFFFFFFF
+
+
+@dataclass(frozen=True)
+class Romfs:
+    """The RomFS file tree (IVFC level 3): every file's path and its offset in the image."""
+
+    ncch: Ncch
+    data_offset: int
+    files: dict[str, tuple[int, int]]
+
+    @classmethod
+    def open(cls, ncch: Ncch) -> Romfs:
+        ivfc = ncch.read(ncch.romfs_offset, 0x60)
+        if ivfc[0:4] != b"IVFC":
+            raise ValueError(f"{ncch.image}: RomFS is encrypted or missing")
+        master_hash_size = struct.unpack_from("<I", ivfc, 0x08)[0]
+        block = 1 << struct.unpack_from("<I", ivfc, 0x4C)[0]
+        level3 = ncch.romfs_offset + _align(0x60 + master_hash_size, block)
+        header = struct.unpack_from("<10I", ncch.read(level3, 0x28))
+        dir_meta = ncch.read(level3 + header[3], header[4])
+        file_meta = ncch.read(level3 + header[7], header[8])
+        files: dict[str, tuple[int, int]] = {}
+
+        def walk(dir_offset: int, prefix: str) -> None:
+            _, _, child, first_file, _, name_size = struct.unpack_from("<6I", dir_meta, dir_offset)
+            name = dir_meta[dir_offset + 0x18: dir_offset + 0x18 + name_size].decode("utf-16-le")
+            path = f"{prefix}{name}/" if dir_offset else ""
+            entry = first_file
+            while entry != NO_ENTRY:
+                _, sibling, data, size, _, fname_size = struct.unpack_from("<IIQQII", file_meta, entry)
+                fname = file_meta[entry + 0x20: entry + 0x20 + fname_size].decode("utf-16-le")
+                files[path + fname] = (data, size)
+                entry = sibling
+            while child != NO_ENTRY:
+                walk(child, path)
+                child = struct.unpack_from("<I", dir_meta, child + 4)[0]
+
+        walk(0, "")
+        return cls(ncch, level3 + header[9], files)
+
+    def read(self, path: str) -> bytes:
+        offset, size = self.files[path]
+        return self.ncch.read(self.data_offset + offset, size)
+
+
+def _align(value: int, alignment: int) -> int:
+    return (value + alignment - 1) // alignment * alignment
+
 
 def open_cci(path: Path) -> Ncch:
     with path.open("rb") as stream:

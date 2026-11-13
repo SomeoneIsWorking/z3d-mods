@@ -24,14 +24,35 @@ scenes.
 A target from the old project's screenshots: Kakariko Village's main staircase below the windmill,
 a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work).
 
-## Open questions for RE (decomp/oot3d first)
-- How OoT3D marks those ramps: the collision polygon's surface type (not decoded yet), the room
-  CMB's material (the stair texture), or neither (then a per-scene list of polygons found offline
-  from the collision and room files).
-- Whether OoT3D's own models already have real steps in places where N64 had ramps; those are left
-  alone.
-- Where the patch hooks: a room mesh draw (and, for the optional climb, the collision line test),
-  through generated constants.
+## Built (2026-11-13)
+- The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine
+  rooms (Kakariko, Zora's Domain 0/1, Desert Colossus, Gerudo Valley, Hyrule Castle grounds, Death
+  Mountain Trail, two Ganon's Castle rooms). No code hook is needed: `z3dmods install oot3d` writes
+  stepped copies of those rooms into the romfs mod (`"stairs": true` in `sets/oot3d.json`),
+  generated from the player's ROM and never committed.
+- `tools/z3dmods/stairs.py` reads where the texture paints its steps (row period, nose edge, crease)
+  from the texture the player sees: the set's 4K pack replacement when it has one
+  (`texture_pack.py` matches it by look), else the ROM's. Faces between 10 and 60 degrees are cut
+  at each painted crease and nose and folded into vertical risers and flat treads that straddle
+  the ramp by half a step; skirts close the open edges. The painted shading lands on the matching
+  face because the cuts follow the texture's own v.
+- Shown in game: Kakariko's intro cutscene, frame 140 (`warp:0xDB csframe:140`), the flight by
+  the well has a stepped silhouette where vanilla has a straight ramp edge, with the 4K pack on.
+- A stepped shape stays under 32767 indices per primitive (Kakariko's is 30606); more crashes the
+  game (decomp/oot3d `scene_collision.md`). `cmb.py` refuses to write more.
 
-## When
-After the title picker, then the coordinator's free camera, chord items and glyphs.
+## Still open
+- Collision is the ramp's: Link walks the slope through the steps by up to half a step.
+- Our own stair texture: the steps use the game's (or the pack's) painted texture.
+- The per-game options toggle.
+- Kakariko is near the index limit; splitting a shape into several primitives would lift it.
+
+## Majora's Mask 3D
+Rev 1 room files (`scenes/*_<n>_info.zsi`, all uncompressed) name these stair textures:
+`kindan2_kaidan`, `kindan2_kaidanw` (z2_kindan2 room 1), `dkh_step_01`, `dkh_step_suna_0`
+(z2_danpei rooms 5, 6, 8), `Z2mitu_step_00`/`_01` and `e1StEpc` (z2_miturin rooms 3, 10),
+`hak_r02_step_01` (z2_hakashita 2), `om_step_01` (z2_omoya 1), `tenmon_step_01`/`_02`
+(z2_tenmon_dai 0, 1), `yado_step_01` (z2_yadoya 0). Whether each is a painted ramp or modelled
+steps needs the geometry check; MM3D's CMB is version 10 (an extra `qtrs` chunk, a tangent slice)
+and keeps textures in `.ctxb` bundles, so `cmb.py` needs that layout first.
+

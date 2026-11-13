@@ -2,7 +2,12 @@
 
 - `tools/z3dmods/cli.py`: the `z3dmods` commands; composes the modules below.
 - `tools/z3dmods/config.py`: the one reader of the environment and `env-assets/local.json`.
-- `tools/z3dmods/ctr.py`: decrypted CCI/NCCH/exheader/ExeFS reading and `.code` LZ decompression.
+- `tools/z3dmods/ctr.py`: decrypted CCI/NCCH/exheader/ExeFS/RomFS reading and `.code` LZ decompression.
+- `tools/z3dmods/zsi.py`: OoT3D room files: header commands, their CMB models, replacing a model and moving what follows.
+- `tools/z3dmods/cmb.py`: OoT3D CMB models: textures, materials, meshes, vertices; rewriting one shape's geometry.
+- `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
+- `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by its look.
+- `tools/z3dmods/stairs.py`: folds stair-textured ramps in OoT3D rooms into risers and treads.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
 - `tools/z3dmods/bps.py`: BPS info and apply, with source and target CRC checks.
 - `tools/z3dmods/install.py`: installs a `sets/<game>.json` set into Azahar's `load/`, with an install record.

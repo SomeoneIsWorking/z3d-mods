@@ -9,8 +9,9 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, ips, patch_build
+from z3dmods import azahar_config, bps, ctr, ips, patch_build, stairs
 from z3dmods.config import Config
+from z3dmods.texture_pack import TexturePack
 
 RECORD = "z3dmods-install.json"
 PAGE = 0x1000
@@ -27,6 +28,8 @@ class GameSet:
     patch: str | None
     # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
     screen_layout: str
+    # Fold the game's stair ramps into steps (OoT3D rooms).
+    stairs: bool
 
 
     @classmethod
@@ -34,7 +37,8 @@ class GameSet:
         """A game's set, sets/<name>.json."""
         raw = json.loads((repo / "sets" / f"{name}.json").read_text())
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
-                   raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"))
+                   raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"),
+                   raw.get("stairs", False))
 
 
 def _sha(path: Path) -> str:
@@ -98,12 +102,31 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
     (mods / "exheader.bin").write_bytes(bytes(grown))
 
 
+def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, pack: TexturePack | None) -> dict[str, bytes]:
+    """Every room with stair ramps, stepped; a room the base mod replaces is stepped from its copy."""
+    files = rom.romfs()
+    out = {}
+    for path in files.files:
+        if not stairs.is_room(path):
+            continue
+        base = base_romfs / path if base_romfs else None
+        data, stepped = stairs.room(base.read_bytes() if base and base.exists() else files.read(path), pack)
+        if stepped:
+            out[path] = data
+    return out
+
+
 def install(cfg: Config, game: GameSet) -> Path:
     root = cfg.env_assets / game.base["root"]
     code_patch = root / game.base["code_patch"]
-    vanilla = ctr.open_cci(cfg.rom(game.title_id)).code()
+    rom = ctr.open_cci(cfg.rom(game.title_id))
+    vanilla = rom.code()
     if ctr.sha256(vanilla) != game.code_sha256:
         raise RuntimeError(f"{game.title_id}: ROM code.bin is not the revision this set targets")
+
+    base_romfs = root / game.base["romfs"] if "romfs" in game.base else None
+    pack = TexturePack(cfg.env_assets / game.textures["root"]) if game.textures else None
+    rooms = _stepped_rooms(rom, base_romfs, pack) if game.stairs else {}
 
     mods = cfg.mods_dir(game.title_id)
     _remove_recorded(mods)
@@ -114,9 +137,14 @@ def install(cfg: Config, game: GameSet) -> Path:
     else:
         shutil.copyfile(code_patch, mods / Path(game.base["code_patch"]).name)
         shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
-    if "romfs" in game.base:
-        _copy_tree(root / game.base["romfs"], mods / "romfs")
-    _write_record(mods, {"base": game.base["name"], "patch": game.patch or ""})
+    if base_romfs:
+        _copy_tree(base_romfs, mods / "romfs")
+    for path, data in rooms.items():
+        target = mods / "romfs" / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    _write_record(mods, {"base": game.base["name"], "patch": game.patch or "",
+                         "stairs": "yes" if game.stairs else "no"})
 
     if game.textures:
         textures = cfg.textures_dir(game.title_id)

@@ -10,6 +10,7 @@
   },
   "patch": "oot3d",
   "screen_layout": "single_screen",
+  "stairs": true,
   "textures": {
     "name": "Henriko Magnifico OoT3D 4K 5.0a, 1080p variant (free, no licence stated)",
     "root": "downloads/henriko-oot3d-5.0a-1080p/x/OOT3D 4K 5.0a (1080p)/user/load/textures/0004000000033500"
