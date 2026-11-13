@@ -131,7 +131,8 @@ def install(cfg: Config, game: GameSet) -> Path:
     base_romfs = root / game.base["romfs"] if "romfs" in game.base else None
     pack = TexturePack(cfg.env_assets / game.textures["root"]) if game.textures else None
     rooms = _stepped_rooms(rom, base_romfs, pack) if game.stairs else {}
-    menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font())
+    menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
+                      cfg.glyph_set())
              if game.hud and pack and base_romfs else {})
 
     mods = cfg.mods_dir(game.title_id)

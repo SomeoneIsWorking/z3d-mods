@@ -63,6 +63,14 @@ class Config:
                                "github.com/SomeoneIsWorking/port-assets there or set PORT_ASSETS_DIR")
         return font
 
+    def glyph_set(self) -> Path:
+        """port-assets' Xbox pad glyphs (SVG), which the HUD's button prompts are drawn from."""
+        glyphs = self.port_assets / "sets" / "gamepad-xbox360"
+        if not glyphs.is_dir():
+            raise RuntimeError(f"no port-assets checkout at {self.port_assets}: clone "
+                               "github.com/SomeoneIsWorking/port-assets there or set PORT_ASSETS_DIR")
+        return glyphs
+
 
 UI_FONT = "Noto Sans:bold"
 # Moves the app's data (saves included) for a test run of the installed shortcut (input_test.py).

@@ -50,4 +50,4 @@ The rest are scene textures the pack leaves alone (water, sky, glows).
 
 ## Still open
 - MM3D: the same for Project Restoration's and DekUI's edits.
-- The glyphs are lettering; drawn Xbox button glyphs belong to [xbox-glyphs.md](xbox-glyphs.md).
+- The HUD's own labels are lettering; the text prompts' drawn Xbox glyphs are in [xbox-glyphs.md](xbox-glyphs.md).

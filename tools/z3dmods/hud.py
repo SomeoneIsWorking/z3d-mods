@@ -3,14 +3,17 @@
 A base mod that edits a vanilla texture changes its Azahar hash, so the texture pack's high-resolution
 copy of the vanilla texture no longer applies. Each replacement starts from that copy and redoes the
 mod's edits at the pack's scale, as an edit table lists them (sets/hud/*.json): re-lettered areas keep
-the pack's vanilla art, moved art is copied, new lettering is drawn in port-assets' key font. The
-result is named after the mod's texture, so the pack covers the mod's version too.
+the pack's vanilla art, moved art is copied, new lettering is drawn in port-assets' key font, and
+the 3DS button prompts the mod leaves become port-assets' Xbox pad glyphs. The result is named after
+the mod's texture, so the pack covers the mod's version too.
 """
 
 from __future__ import annotations
 
 import io
 import json
+import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -134,6 +137,30 @@ def _dpad(size: tuple[int, int], colour: tuple[int, int, int, int], scale: int) 
     return layer.resize(size, Image.LANCZOS)
 
 
+# A dimmed prompt (a button that cannot be used now) keeps this share of its brightness.
+DIMMED = 0.45
+
+
+def _glyph(size: tuple[int, int], svg: Path, dimmed: bool) -> Image.Image:
+    """A port-assets glyph as large as fits `size`, centred."""
+    if not svg.exists():
+        raise ValueError(f"port-assets has no glyph {svg.stem}")
+    magick = shutil.which("magick")
+    if magick is None:
+        raise RuntimeError("magick is missing: sudo dnf install ImageMagick (Fedora), "
+                           "sudo apt install imagemagick (Debian/Ubuntu)")
+    side = min(size) * SUPERSAMPLE
+    png = subprocess.run([magick, "-background", "none", "-density", "1200", str(svg), "-resize", f"{side}x{side}",
+                          "png:-"], capture_output=True, check=True).stdout
+    glyph = Image.open(io.BytesIO(png)).convert("RGBA").resize((min(size), min(size)), Image.LANCZOS)
+    if dimmed:
+        r, g, b, a = glyph.split()
+        glyph = Image.merge("RGBA", (*(c.point(lambda v: int(v * DIMMED)) for c in (r, g, b)), a))
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    layer.alpha_composite(glyph, ((size[0] - glyph.width) // 2, (size[1] - glyph.height) // 2))
+    return layer
+
+
 def _dominant(image: Image.Image) -> tuple[int, int, int, int]:
     opaque = [p for p in image.getdata() if p[3] > 128]
     return tuple(sorted(opaque)[len(opaque) // 2]) if opaque else (255, 255, 255, 255)
@@ -145,7 +172,8 @@ def _darkest(image: Image.Image, mask: Image.Image) -> tuple[int, int, int]:
     return min(pixels, key=lambda p: p[0] + p[1] + p[2])[:3] if pixels else OUTLINE
 
 
-def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], font: Path) -> Image.Image:
+def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], font: Path,
+            glyphs: Path) -> Image.Image:
     """The pack's vanilla copy with the mod's edits redone at its scale."""
     scale = texture.scale
     out = texture.hires.copy()
@@ -153,7 +181,8 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
     draw = ImageDraw.Draw(covered)
     clear = (0, 0, 0, 0)
     for edit in edits:
-        kind = next(k for k in ("keep", "copy", "clear", "label", "relabel", "shell", "dpad") if k in edit)
+        kind = next(k for k in ("keep", "copy", "clear", "label", "relabel", "shell", "dpad", "glyph")
+                    if k in edit)
         box = edit["box"] if "box" in edit else edit[kind]
         draw.rectangle((box[0], box[1], box[2] - 1, box[3] - 1), fill=255)
         x0, y0, x1, y1 = _scaled(box, scale)
@@ -186,6 +215,9 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
                                         sy * factor + (box[3] - box[1]) * factor)).resize(size, Image.LANCZOS)
             # The letter's outline is about one vanilla pixel wide.
             out.paste(_fill(region, _grown(_yellow_mask(region), scale)), (x0, y0))
+        elif kind == "glyph":
+            out.paste(clear, (x0, y0, x1, y1))
+            out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)), (x0, y0))
         elif kind == "dpad":
             colour = _dominant(texture.modded.crop(tuple(box)))
             out.paste(clear, (x0, y0, x1, y1))
@@ -196,7 +228,8 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
     return out
 
 
-def build(romfs: ctr.Romfs, base_romfs: Path, pack: TexturePack, table: Path, font: Path) -> dict[str, bytes]:
+def build(romfs: ctr.Romfs, base_romfs: Path, pack: TexturePack, table: Path, font: Path,
+          glyphs: Path) -> dict[str, bytes]:
     """Pack file name -> PNG for every texture in the edit table the pack covers."""
     edits = {k: v for k, v in json.loads(table.read_text()).items() if k != "about"}
     textures = {}
@@ -212,7 +245,7 @@ def build(romfs: ctr.Romfs, base_romfs: Path, pack: TexturePack, table: Path, fo
     out = {}
     for path, texture in textures.items():
         try:
-            image = compose(texture, edits[path], textures, font)
+            image = compose(texture, edits[path], textures, font, glyphs)
         except ValueError as error:
             raise ValueError(f"{path}: {error}") from error
         buffer = io.BytesIO()
