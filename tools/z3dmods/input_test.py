@@ -216,9 +216,40 @@ def _picker(session: Session, pad: Gamepad) -> None:
     session.shot("oot3d-from-click")
 
 
+def _options(session: Session, pad: Gamepad) -> None:
+    """The picker's options: X on MM3D opens them, A turns the cutscene skip off, and Start then
+    leaves the opening narration running."""
+    session.wait(8)
+    session.key("stick_right", 0.3)
+    session.wait(1)
+    session.key("x")
+    session.wait(1)
+    session.shot("options")
+    session.key("a")
+    session.wait(1)
+    session.shot("skip-off")
+    session.key("b")
+    session.wait(1)
+    session.shot("picker")
+    session.key("a")
+    session.wait(30)
+    session.key("start")
+    session.wait(12)
+    session.key("a")
+    session.wait(5)
+    session.click(0.51, 0.77)
+    session.wait(4)
+    session.key("a")
+    session.wait(6)
+    session.shot("narration")
+    session.key("start")
+    session.wait(5)
+    session.shot("narration-after-start")
+
+
 # Direct launches of one game, and the installed shortcut's picker.
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d}
-SCENARIOS = {**DIRECT, "picker": _picker}
+SCENARIOS = {**DIRECT, "picker": _picker, "options": _options}
 
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:

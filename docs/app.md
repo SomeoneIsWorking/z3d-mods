@@ -11,7 +11,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 - Windowed (`z3dmods play [game]`): an SDL3 window on the player's session, sound, keyboard,
   gamepads and the mouse as the touch screen. Without a game it opens the title picker: each
   game's icon and title read from the player's own dump (its SMDH), chosen with left/right and A
-  or Start on the pad or keyboard, or a click. Escape or the gamepad's guide button in a game shuts
+  or Start on the pad or keyboard, or a click; X opens the selected game's options. Escape or the gamepad's guide button in a game shuts
   it down and returns to the picker; closing the window quits.
 - `--hidden` (the tools): the window is never mapped, there is no sound and no pacing, and custom
   textures load before the frame that needs them (asynchronous loading falls behind an unpaced run); the game
@@ -25,20 +25,45 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
+| `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
 
 Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
-(`default|single_screen|large_screen|side_by_side`) and `--textures`, or `--library <json>` and
+(`default|single_screen|large_screen|side_by_side`), `--textures` and `--options <json>`, or `--library <json>` and
 `--font <ttf>` for the picker (never `--hidden`); `--title`, `--app-id`, `--resolution`, `--hidden`,
 `--dump-textures` (the core writes every texture without a replacement as PNG under
 `<user>/Azahar/dump/textures/<title id>/`; `z3dmods run ... --harness --dump-textures`).
 `tools/z3dmods/app.py` derives a game's from its set: its `screen_layout`, textures when it has a
 pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
-`<user>/library.json`, an array of `{"rom", "layout", "textures"}` per set, and takes the font from
+`<user>/library.json`, an array of `{"rom", "layout", "textures", "options"}` per set, and takes the font from
 fontconfig (`Noto Sans:bold`).
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by position (east A, south B),
-right stick the C-stick; the left mouse button on the bottom screen is the stylus.
+right stick the C-stick; the left mouse button on the bottom screen is the stylus. The left stick's
+click and the 3 key hold pad bit 12 (the core's Debug button), which no 3DS button sets: our patches
+read it as the chord button (plans/pad-features.md).
+
+## Options
+Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick
+a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
+
+- The patch's switches come from the manifest the install writes beside the set,
+  `load/mods/<title id>/z3d-options.json` (`tools/z3dmods/options.py`, from
+  `patch/<game>/options.toml`): the guest address of the patch's options block and each switch's
+  id, label and default, one byte each in order. `--options` and the library's `"options"` name it
+  relative to the user folder.
+- The app's own rows follow: the screen layout, and the texture pack when the set has one.
+- Choices are kept per game in `<user>/options/<rom name>.json`. The tools (`--hidden`) keep none
+  and run every game on its defaults; a run changes one with the `option` command
+  (`option:<id>,<value>` step).
+- At boot the app applies layout and textures through `applyGameSettings` and writes the block once
+  the game is loaded; `loadstate` writes it again, since a state carries the block of the run that
+  made it.
+- The menu lives on the picker because the core's renderer owns the window while a game runs: a
+  change takes effect the next time the game boots.
+
+Adding a switch: an `[[option]]` in `patch/<game>/options.toml`, then read `options().<field>` from
+the generated `options.hpp` in the feature; the menu, the manifest and the stored file follow.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`
@@ -63,8 +88,9 @@ objects. Rebuild the app: `ninja -C build/app`.
 - `main` composes: `applyCoreSettings` (settings and user path, before anything reads them),
   `CoreLog`, `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
   `EmuWindow`), `Emulator` (load, frames, memory, states, watches), then `Player` or
-  `Repl`. With the picker: `GameLibrary`, then per game `TitlePicker`, `applyGameSettings`,
-  `GameWindow::boot` (title and the layout's window shape), a new `Emulator` and `Player`.
+  `Repl`. With the picker: `GameLibrary` and a `GameOptions` per game, then per game `TitlePicker`
+  (and its `OptionsMenu`), `applyGameSettings`, `GameWindow::boot` (title and the layout's window
+  shape), a new `Emulator`, `GameOptions::apply` and `Player`.
 - The picker draws with an SDL renderer (Vulkan driver) and SDL3_ttf text on the game window, and
   destroys it before the core's renderer takes the window; the core shuts down
   (`System::Shutdown`) before the picker opens again.

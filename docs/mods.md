@@ -132,10 +132,11 @@ Each ships as the `code.ips` that rides on the set's baked `code.bin`.
 - Press-Start cutscene skip, both games: [plans/cutscene-skip.md](plans/cutscene-skip.md).
 - Quick Text and optional autosave for OoT3D: [plans/oot3d-qol.md](plans/oot3d-qol.md).
 - Right-stick free camera and chord item buttons: [plans/pad-features.md](plans/pad-features.md).
-- Options: each patch keeps its switches in one block at the start of its payload
-  (`patch/oot3d/options.hpp`; 0x64C000 on the installed OoT3D set, the page after the base mod's
-  `.bss`), holding the defaults. The app's per-game options menu writes that block; nothing else
-  in a patch decides whether a feature runs.
+- Options: each patch lists its switches in `patch/<game>/options.toml` and keeps them, one byte
+  each, in one block at the start of its payload (0x64C000 on the installed OoT3D set, 0x8F7000 on
+  MM3D: the page after the base mod's `.bss`), holding the defaults. The app's per-game options
+  menu writes that block (app.md, "Options"); nothing else in a patch decides whether a feature
+  runs.
 - Our own Xbox glyph textures for both games: [plans/xbox-glyphs.md](plans/xbox-glyphs.md).
 - MM3D single screen: [plans/mm3d-single-screen.md](plans/mm3d-single-screen.md).
 - Fallback if The One Screen cannot be used: our own OoT3D single screen in the same patch, built from

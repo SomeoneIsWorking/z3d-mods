@@ -1,6 +1,7 @@
 #include "repl.hpp"
 
 #include "emulator.hpp"
+#include "game_options.hpp"
 #include "pad_input.hpp"
 
 #include <lucent/log.h>
@@ -123,7 +124,21 @@ std::string Repl::execute(const std::string &line) {
     if (state.empty()) {
       return "err cannot read " + path;
     }
-    return emulator_.loadState(std::move(state)) ? "ok" : "err core refused the state";
+    if (!emulator_.loadState(std::move(state))) {
+      return "err core refused the state";
+    }
+    // The state carries the options block of the run that made it.
+    options_.apply(emulator_);
+    return "ok";
+  }
+  if (command == "option") {
+    std::string id;
+    unsigned value = 0;
+    if (!(args >> id >> value) || value > UINT8_MAX || !options_.set(id, static_cast<uint8_t>(value))) {
+      return "err option <id> <value>";
+    }
+    options_.apply(emulator_);
+    return "ok";
   }
   if (command == "shot") {
     std::string path;

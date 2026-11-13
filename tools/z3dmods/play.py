@@ -31,7 +31,8 @@ def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> 
         rom = cfg.rom(game.title_id)
         if rom_folder is not None:
             rom = rom_folder / rom.name
-        entries.append({"rom": str(rom), "layout": game.screen_layout, "textures": app.uses_textures(game)})
+        entries.append({"rom": str(rom), "layout": game.screen_layout, "textures": app.uses_textures(game),
+                        "options": str(app.options_manifest(game))})
     path = folder / "library.json"
     path.write_text(json.dumps(entries, indent=2) + "\n")
     return path

@@ -18,6 +18,8 @@ add_executable(z3d
   src/core_settings.cpp
   src/core_log.cpp
   src/game_library.cpp
+  src/game_options.cpp
+  src/options_menu.cpp
   src/title_picker.cpp
   src/game_window.cpp
   src/pad_input.cpp

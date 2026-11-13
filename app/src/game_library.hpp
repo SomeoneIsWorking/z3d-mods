@@ -22,7 +22,7 @@ struct Game {
 
 class GameLibrary {
 public:
-  // `path` is a JSON array of {"rom", "layout", "textures"} objects (tools/z3dmods/play.py).
+  // `path` is a JSON array of {"rom", "layout", "textures", "options"} objects (tools/z3dmods/play.py).
   static GameLibrary load(const std::filesystem::path &path);
 
   [[nodiscard]] const std::vector<Game> &games() const {

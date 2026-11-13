@@ -63,6 +63,8 @@ AppConfig AppConfig::parse(int argc, char **argv) {
     const std::string value = argv[++i];
     if (flag == "--rom") {
       game.rom = value;
+    } else if (flag == "--options") {
+      game.options = value;
     } else if (flag == "--library") {
       config.library = value;
     } else if (flag == "--font") {

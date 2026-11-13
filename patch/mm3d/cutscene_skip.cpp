@@ -1,6 +1,7 @@
 // MM3D's layout for the Start cutscene skip.
 #include "cutscene_script.hpp"
 #include "game.hpp"
+#include "options.hpp"
 #include "../common/cutscene_skip.hpp"
 #include "../common/guest.hpp"
 
@@ -14,6 +15,10 @@ using CloseTextboxFn = void (*)();
 using MessageStateFn = int32_t (*)(void *messageContext);
 
 struct Game {
+  static bool enabled() {
+    return options().cutsceneSkip != 0;
+  }
+
   static void interpret(void *play, void *cutscene, const void *script) {
     guest::function<InterpreterFn>(kCutsceneInterpreter)(play, cutscene, script);
   }

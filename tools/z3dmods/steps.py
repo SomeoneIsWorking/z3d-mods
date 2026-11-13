@@ -8,7 +8,8 @@ cs (print the cutscene context and script header).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
 keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y down),
 cstick:<x>,<y>,<s> (the New 3DS C-stick, the same way),
-record:<name> (every frame from here into <name>.mp4), stoprecord.
+record:<name> (every frame from here into <name>.mp4), stoprecord,
+option:<id>,<value> (a game option, docs/app.md "Options").
 """
 
 from __future__ import annotations
@@ -162,7 +163,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
         elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick", "cstick",
-                      "record", "stoprecord"):
+                      "record", "stoprecord", "option"):
             extra = getattr(session, kind, None)
             if extra is None:
                 raise RuntimeError(f"{kind} is not available on this backend")

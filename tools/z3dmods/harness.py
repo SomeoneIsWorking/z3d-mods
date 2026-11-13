@@ -166,6 +166,10 @@ class HarnessSession:
     def loadstate(self, name: str) -> str:
         return self._send(f"loadstate {self._states / name}.state")
 
+    def option(self, name: str, value: str) -> str:
+        """Sets a game option (app/src/game_options.hpp) in the running game."""
+        return self._send(f"option {name} {value}")
+
     def watch(self, address: str, size: str) -> str:
         return self._send(f"watch {int(address, 0):x} {int(size, 0):x}")
 

@@ -5,7 +5,7 @@
 
 namespace z3dmods {
 
-// Game is the title's layout: interpret, running, frame, setFrame, endFrame, startPressed,
+// Game is the title's layout: enabled, interpret, running, frame, setFrame, endFrame, startPressed,
 // transitionStarted, textIsChoice, messageIsChoice and closeMessage, all static.
 template <typename Game> class CutsceneSkip {
 public:
@@ -17,7 +17,7 @@ public:
       choiceFrame_ = 0;
       return;
     }
-    if (!latched_ && Game::startPressed(play, cutscene)) {
+    if (!latched_ && Game::enabled() && Game::startPressed(play, cutscene)) {
       latched_ = true;
     }
     if (latched_) {

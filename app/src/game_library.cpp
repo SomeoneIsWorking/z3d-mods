@@ -69,6 +69,9 @@ GameLibrary GameLibrary::load(const std::filesystem::path &path) {
     const lucent::json::Value *textures = entry.find("textures");
     game.setup.customTextures =
         textures != nullptr && textures->boolean() != nullptr && *textures->boolean();
+    if (const lucent::json::Value *options = entry.find("options"); options != nullptr && options->string() != nullptr) {
+      game.setup.options = *options->string();
+    }
     readSmdh(game);
     library.games_.push_back(std::move(game));
   }

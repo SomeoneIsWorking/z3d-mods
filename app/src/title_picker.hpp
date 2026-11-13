@@ -1,9 +1,10 @@
 // The in-window title picker: each game's icon and title from the player's dump, chosen with the
-// pad (left and right, A or Start) or a click. It owns an SDL renderer on the game window only
+// pad (left and right, A or Start) or a click; X opens the selected game's options. It owns an SDL renderer on the game window only
 // while it runs; the core's Vulkan renderer takes the window after it is gone.
 #pragma once
 
 #include "game_library.hpp"
+#include "game_options.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -24,8 +25,9 @@ class PadInput;
 
 class TitlePicker {
 public:
+  // `options` holds one entry per game of the library, in its order.
   TitlePicker(GameWindow &window, const PadInput &pad, const GameLibrary &library,
-              const std::filesystem::path &font);
+              std::vector<GameOptions> &options, const std::filesystem::path &font);
   ~TitlePicker();
   TitlePicker(const TitlePicker &) = delete;
   TitlePicker &operator=(const TitlePicker &) = delete;
@@ -45,6 +47,7 @@ private:
   GameWindow &window_;
   const PadInput &pad_;
   const GameLibrary &library_;
+  std::vector<GameOptions> &options_;
   SDL_Renderer *renderer_ = nullptr;
   TTF_TextEngine *engine_ = nullptr;
   TTF_Font *font_ = nullptr;

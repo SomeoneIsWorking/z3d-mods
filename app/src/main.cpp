@@ -6,6 +6,7 @@
 #include "core_settings.hpp"
 #include "emulator.hpp"
 #include "game_library.hpp"
+#include "game_options.hpp"
 #include "game_window.hpp"
 #include "pad_input.hpp"
 #include "player.hpp"
@@ -16,17 +17,32 @@
 
 #include <exception>
 #include <iostream>
+#include <filesystem>
 #include <optional>
+#include <vector>
 
 namespace z3d::app {
 namespace {
 
+// The player's choices for a game, kept in the user folder under the dump's name.
+std::filesystem::path storedOptions(const AppConfig &config, const GameSetup &game) {
+  return config.userDir / "options" / game.rom.stem().concat(".json");
+}
+
+GameOptions loadOptions(const AppConfig &config, const GameSetup &game) {
+  // The tools run every game on its defaults.
+  return {game, config.userDir / game.options,
+          config.hidden ? std::filesystem::path() : storedOptions(config, game)};
+}
+
 int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
-  applyGameSettings(game);
+  GameOptions options = loadOptions(config, game);
+  applyGameSettings(options.setup());
   GameWindow window(config, pad);
   Emulator emulator(config, game.rom, window);
+  options.apply(emulator);
   if (config.hidden) {
-    Repl repl(emulator, pad);
+    Repl repl(emulator, pad, options);
     std::cout << "ready\n" << std::flush;
     repl.serve(std::cin, std::cout);
     return 0;
@@ -37,11 +53,15 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
 
 int picker(const AppConfig &config, PadInput &pad) {
   const GameLibrary library = GameLibrary::load(config.library);
+  std::vector<GameOptions> options;
+  for (const Game &game : library.games()) {
+    options.push_back(loadOptions(config, game.setup));
+  }
   GameWindow window(config, pad);
   while (true) {
     std::optional<size_t> chosen;
     {
-      TitlePicker picker(window, pad, library, config.font);
+      TitlePicker picker(window, pad, library, options, config.font);
       chosen = picker.run();
     }
     if (!chosen) {
@@ -49,10 +69,11 @@ int picker(const AppConfig &config, PadInput &pad) {
     }
     const Game &game = library.games()[*chosen];
     lucent::info("z3d", "booting {}", game.title);
-    applyGameSettings(game.setup);
+    applyGameSettings(options[*chosen].setup());
     window.boot(game.title);
     {
       Emulator emulator(config, game.setup.rom, window);
+      options[*chosen].apply(emulator);
       Player(emulator, window).run();
     }
     if (window.closeRequested()) {

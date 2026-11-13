@@ -9,7 +9,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, hud, ips, patch_build, stairs
+from z3dmods import azahar_config, bps, ctr, hud, ips, options, patch_build, stairs
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -103,6 +103,7 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
     (mods / "code.bin").write_bytes(code)
     (mods / "code.ips").write_bytes(ips.build(ours.records))
     (mods / "exheader.bin").write_bytes(bytes(grown))
+    (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start))
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, pack: TexturePack | None) -> dict[str, bytes]:

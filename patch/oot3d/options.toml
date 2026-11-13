@@ -1,0 +1,26 @@
+# The patch's switches, one byte each in this order (tools/z3dmods/options.py). The app's options
+# menu lists them by label; a feature reads its own through options() from the generated options.hpp.
+
+[[option]]
+id = "cutscene_skip"
+field = "cutsceneSkip"
+label = "Cutscene skip (Start)"
+default = true
+
+[[option]]
+id = "free_camera"
+field = "freeCamera"
+label = "Free camera (right stick)"
+default = true
+
+[[option]]
+id = "free_camera_invert_x"
+field = "freeCameraInvertX"
+label = "Free camera: invert X"
+default = false
+
+[[option]]
+id = "free_camera_invert_y"
+field = "freeCameraInvertY"
+label = "Free camera: invert Y"
+default = false

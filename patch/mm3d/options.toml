@@ -1,0 +1,8 @@
+# The patch's switches, one byte each in this order (tools/z3dmods/options.py). The app's options
+# menu lists them by label; a feature reads its own through options() from the generated options.hpp.
+
+[[option]]
+id = "cutscene_skip"
+field = "cutsceneSkip"
+label = "Cutscene skip (Start)"
+default = true

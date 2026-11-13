@@ -27,19 +27,22 @@
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld.
+- `tools/z3dmods/options.py`: a patch's switches (`patch/<game>/options.toml`): the generated `options.hpp` and the manifest the app's options menu reads.
 - `decomp/oot3d/`: submodule, our fork of zeldaret/oot3d (CC0): OoT3D symbols, structs and RE docs.
 - `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT, private): MM3D 1.0-layout symbols, structs and RE docs.
 - `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
   - `ctr.hpp`: 3DS kernel calls and service IPC from inside a title.
   - `cstick.hpp`: the New 3DS C-stick, read from `ir:rst`'s shared memory.
-- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), the options block every feature reads (`options.hpp`), hook sites and link script.
-- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), hook sites and link script.
+- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), its switches (`options.toml`), hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).
   - `core_settings`: the core's settings and user path from the config, applied first; a game's settings before it loads.
   - `core_log`: the core's log backend for the app's lifetime.
   - `game_library`: the picker's games from the tools' library file, titles and icons from each dump's SMDH.
+  - `game_options`: a game's options: the patch's switches from its manifest plus layout and textures, the player's stored choices, the write into the guest block.
+  - `options_menu`: the picker's options screen for one game.
   - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
   - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands.

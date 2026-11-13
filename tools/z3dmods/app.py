@@ -13,6 +13,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from z3dmods import options
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -94,7 +95,12 @@ def launch_args(cfg: Config, game: GameSet, user: Path, resolution: int,
             "--layout", game.screen_layout, "--resolution", str(resolution)]
     if uses_textures(game, textures):
         args.append("--textures")
-    return args
+    return args + ["--options", str(options_manifest(game))]
+
+
+def options_manifest(game: GameSet) -> Path:
+    """The installed patch's options manifest, relative to a user folder."""
+    return Path("Azahar/load/mods") / game.title_id / options.MANIFEST
 
 
 def uses_textures(game: GameSet, textures: bool | None = None) -> bool:

@@ -18,6 +18,8 @@ struct GameSetup {
   std::filesystem::path rom;
   ScreenLayout layout = ScreenLayout::Default;
   bool customTextures = false;
+  // The installed patch's z3d-options.json (game_options.hpp), relative to the user folder.
+  std::filesystem::path options;
 };
 
 struct AppConfig {
@@ -38,7 +40,7 @@ struct AppConfig {
   // Every texture the game uploads, as PNG under <user>/Azahar/dump/textures/.
   bool dumpTextures = false;
 
-  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] | --library <json> --font <ttf>)
+  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] | --library <json> --font <ttf>)
   //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
 };

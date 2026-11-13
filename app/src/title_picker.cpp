@@ -1,6 +1,7 @@
 #include "title_picker.hpp"
 
 #include "game_window.hpp"
+#include "options_menu.hpp"
 #include "pad_input.hpp"
 
 #include <SDL3/SDL.h>
@@ -18,7 +19,7 @@ std::runtime_error sdlError(const char *what) {
 }
 
 constexpr const char *kHeading = "z3d";
-constexpr const char *kHint = "A  Play     Esc or Guide in a game  Back here";
+constexpr const char *kHint = "A  Play    X  Options    Esc or Guide  Back";
 // Text size as a share of the window's height.
 constexpr float kTitleShare = 1.0F / 26.0F;
 constexpr float kHeadingShare = 1.0F / 14.0F;
@@ -65,12 +66,14 @@ struct Held {
   bool left = false;
   bool right = false;
   bool choose = false;
+  bool options = false;
 
   static Held from(const PadState &pad) {
     const auto &circle = pad.sticks[Settings::NativeAnalog::CirclePad];
     return {pad.buttons[Settings::NativeButton::Left] || circle[0] < -kStickPress,
             pad.buttons[Settings::NativeButton::Right] || circle[0] > kStickPress,
-            pad.buttons[Settings::NativeButton::A] || pad.buttons[Settings::NativeButton::Start]};
+            pad.buttons[Settings::NativeButton::A] || pad.buttons[Settings::NativeButton::Start],
+            static_cast<bool>(pad.buttons[Settings::NativeButton::X])};
   }
 };
 
@@ -84,8 +87,8 @@ struct TitlePicker::Layout {
 };
 
 TitlePicker::TitlePicker(GameWindow &window, const PadInput &pad, const GameLibrary &library,
-                         const std::filesystem::path &font)
-    : window_(window), pad_(pad), library_(library) {
+                         std::vector<GameOptions> &options, const std::filesystem::path &font)
+    : window_(window), pad_(pad), library_(library), options_(options) {
   renderer_ = SDL_CreateRenderer(window_.sdlWindow(), "vulkan");
   if (renderer_ == nullptr) {
     throw sdlError("SDL_CreateRenderer");
@@ -156,6 +159,15 @@ std::optional<size_t> TitlePicker::run() {
     }
     if (now.choose && !before.choose) {
       return selected_;
+    }
+    if (now.options && !before.options) {
+      OptionsMenu(renderer_, engine_, font_, window_, pad_, options_[selected_],
+                  library_.games()[selected_].title)
+          .run();
+      // The menu left the font at its own size.
+      textHeight_ = 0.0F;
+      before = Held::from(pad_.state());
+      continue;
     }
     before = now;
     draw(current);

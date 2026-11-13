@@ -17,7 +17,7 @@ The app feeds the host's right stick to the 3DS C-stick and the triggers to ZL/Z
   a jump), read from the game's own settings table: Z-targeting, first person and aimed items,
   talking, climbing, hanging, the horse, crawlspaces, cutscenes, scene changes and fixed or
   scripted camera settings hand the view back. L recenters behind Link because Z-targeting does.
-  Options: on/off, invert X, invert Y (`patch/oot3d/options.hpp`); a Master Quest file's mirrored
+  Options: on/off, invert X, invert Y (`patch/oot3d/options.toml`); a Master Quest file's mirrored
   world turns the stick's x around.
 - Hooks: both `bl Camera_Update` calls for the active camera (`Play_Update`, and `Gameplay_Draw`'s
   repeat). The One Screen ships an orbit camera of its own on a hook after `Play_Update`; our patch
