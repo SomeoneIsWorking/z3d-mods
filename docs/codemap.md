@@ -9,7 +9,7 @@
 - `tools/z3dmods/azahar_config.py`: global `qt-config.ini` edits.
 - `tools/z3dmods/azahar.py`: the headless Azahar session (Gamescope, XTest keys, RPC RAM and frames, config restore).
 - `tools/z3dmods/steps.py`: the scripted step language for runs, over either backend.
-- `tools/z3dmods/app.py`: the z3d app's build inside the pinned Azahar fork, its user folders (copies of the player's data, a link to `load/`) and its flags for a set.
+- `tools/z3dmods/app.py`: the z3d app's build: the pinned Azahar fork's core into a per-revision prefix, then the app against it; its user folders (copies of the player's data, a link to `load/`) and its flags for a set.
 - `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
 - `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad.
 - `tools/z3dmods/play.py`: `z3dmods play`: the app in a window on the player's session, with its own saves.
@@ -23,7 +23,7 @@
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
-- `app/`: `z3d`, a frontend linked to Azahar's core (built in the fork's tree): a window to play in, or hidden and driven by stdin lines.
+- `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line.
   - `core_settings`: the core's settings and user path from the config, applied first.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch.

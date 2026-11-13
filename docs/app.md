@@ -6,7 +6,7 @@ Azahar's core without qt".
 
 ## What it owns
 `app/` builds `z3d`, a frontend of Azahar's core linked in directly (no Qt, no libretro), Vulkan
-only. It is built inside the core's tree, so it is GPL-2.0-or-later as linked. Two modes:
+only. It links the core's shared library, so it is GPL-2.0-or-later as linked. Two modes:
 
 - Windowed (`z3dmods play <game>`): an SDL3 window on the player's session, sound, keyboard,
   gamepads and the mouse as the touch screen.
@@ -37,19 +37,18 @@ right stick the C-stick; the left mouse button on the bottom screen is the stylu
 
 1. `core`: a write observer on `MemorySystem`, called for writes that land on watchpoint pages (the
    pages the GDB stub already uses, which have no host pointer, so JIT writes reach the slow path).
-2. `cmake`: `AZAHAR_EXTRA_FRONTENDS`, a list of directories built as frontends against the core's
-   targets; `app/CMakeLists.txt` refuses to configure outside it.
+2. `cmake`: `AZAHAR_CORE_PACKAGE` (`src/core_package/`), which installs the core as one shared
+   library, `libazahar_core.so` (the four core libraries and their static externals, built
+   position-independent), its headers and those its public headers include, and a CMake package
+   with the core's compile definitions: `find_package(AzaharCore CONFIG)`.
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
-not at the pinned revision. Build (Clang, Ninja): `app.configure` runs
-
-    cmake -S <azahar_source> -B build/app -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DAZAHAR_EXTRA_FRONTENDS=<repo>/app \
-      -DENABLE_QT=OFF -DENABLE_SDL2=OFF -DENABLE_LIBRETRO=OFF ...   (AZAHAR_OPTIONS)
-    ninja -C build/app z3d    # build/app/z3d
-
-`build/app` holds the core's objects as well as the app's: the core has no install or export
-rules to build it once into a shared prefix.
+not at the pinned revision. `app.core` builds and installs the core once per revision and
+toolchain into `<dependencies>/azahar-core/<revision>-clang/prefix` (build tree beside it), with
+`AZAHAR_OPTIONS` (no Qt, SDL2, libretro, OpenGL, software renderer, OpenAL, tests or network
+services). `app.binary` then configures `app/` on its own into `build/app` with
+`-DCMAKE_PREFIX_PATH=<prefix>` (Clang, Ninja); `build/app` holds only the app's and Lucent's
+objects. Rebuild the app: `ninja -C build/app`.
 
 ## Data flow
 - `main` composes: `applyCoreSettings` (settings and user path, before anything reads them),

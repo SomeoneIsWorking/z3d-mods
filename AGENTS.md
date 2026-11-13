@@ -30,9 +30,9 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   global settings for that run only. Output: `scratch/runs/<name>/`.
 - `... z3dmods run <game> <name> --harness <steps...>`: the same steps on the harness (the z3d
   app hidden: frame-exact, savestates, watchpoints) on a copy of the player's data;
-  `--no-textures` turns the set's textures off. The app builds inside the pinned Azahar fork
-  (`"azahar_source"` in `env-assets/local.json`); see [docs/app.md](docs/app.md) for the pin and
-  build. Rebuild: `flock <heavy-run-lock> ninja -C build/app z3d`.
+  `--no-textures` turns the set's textures off. The app builds against the pinned Azahar fork's
+  core (`"azahar_source"` in `env-assets/local.json`), installed once per revision under
+  `<dependencies>/azahar-core/`; see [docs/app.md](docs/app.md). Rebuild the app: `ninja -C build/app`.
 - `... z3dmods play <game>`: the z3d app in a window with the installed set; its saves live in
   `~/.local/share/z3d-mods/`, apart from standalone Azahar's. `... z3dmods shortcut` adds the
   per-machine desktop shortcuts.
