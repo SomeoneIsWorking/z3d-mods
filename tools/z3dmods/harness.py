@@ -21,14 +21,16 @@ BUTTONS = {
     "l": 8, "r": 9, "start": 10, "select": 11, "zl": 14, "zr": 15, "home": 16,
 }
 PRESS_FRAMES = 6
-# The tools render at the 3DS's own size: frame-exact runs, small screenshots.
+# The tools render at the 3DS's own size unless a run asks for more: small screenshots.
 RESOLUTION = 1
 
 
 class HarnessSession:
     def __init__(self, cfg: Config, game: GameSet, name: str, log: Path,
-                 textures: bool | None = None, dump_textures: bool = False) -> None:
+                 textures: bool | None = None, dump_textures: bool = False,
+                 resolution: int = RESOLUTION) -> None:
         self._cfg = cfg
+        self._resolution = resolution
         self._game = game
         self._textures = textures
         self._dump_textures = dump_textures
@@ -40,7 +42,7 @@ class HarnessSession:
 
     def __enter__(self) -> HarnessSession:
         app.seed_user(self._cfg, self._user, fresh=True)
-        args = app.launch_args(self._cfg, self._game, self._user, RESOLUTION, self._textures) + ["--hidden"]
+        args = app.launch_args(self._cfg, self._game, self._user, self._resolution, self._textures) + ["--hidden"]
         if self._dump_textures:
             args.append("--dump-textures")
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,6 +116,12 @@ class HarnessSession:
     def keyup(self, button: str) -> str:
         self._held &= ~(1 << BUTTONS[button])
         return self._send(f"input {self._held:x}")
+
+    def stick(self, x: str, y: str, seconds: str) -> str:
+        """Holds the circle pad at (x, y), each -32767..32767 with y up, for `seconds`."""
+        self._send(f"stick {int(x)} {int(y)}")
+        self.run_frames(max(1, round(float(seconds) * FPS)))
+        return self._send("stick 0 0")
 
     def press(self, button: str) -> None:
         self.hold(button, PRESS_FRAMES / FPS)

@@ -5,7 +5,7 @@ poke:<addr>,<hex bytes>, warp:<entrance>, waitcs:<s> (wait for a cutscene to sta
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
-keyup:<button> (hold across other steps).
+keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y up).
 """
 
 from __future__ import annotations
@@ -138,7 +138,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
-        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type"):
+        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick"):
             extra = getattr(session, kind, None)
             if extra is None:
                 raise RuntimeError(f"{kind} is not available on this backend")

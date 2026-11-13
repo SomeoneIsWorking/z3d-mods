@@ -39,7 +39,7 @@ def run_steps(args: argparse.Namespace) -> None:
     out = cfg.repo / "scratch" / "runs" / args.name
     if args.harness:
         with harness.HarnessSession(cfg, game, args.game, out / "harness.log", args.textures,
-                                    args.dump_textures) as session:
+                                    args.dump_textures, args.resolution) as session:
             steps.run(session, args.steps, out, games.layout(cfg.repo, args.game))
             print(f"{session.frames()} frames")
         return
@@ -84,6 +84,8 @@ def main() -> None:
                      help="harness only: custom textures on or off for this run (default: the set's)")
     run.add_argument("--dump-textures", action="store_true",
                      help="harness only: every texture the game uploads, as PNG under scratch/harness/<game>/Azahar/dump/textures/")
+    run.add_argument("--resolution", type=int, default=harness.RESOLUTION,
+                     help="harness only: render scale, 1 is the 3DS's 400x240")
     run.set_defaults(run=run_steps)
     app = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
     app.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
