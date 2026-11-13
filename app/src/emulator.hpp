@@ -1,4 +1,4 @@
-// Azahar's core as the app runs it: settings from the app's config, the game loaded on the window,
+// Azahar's core as the app runs it (settings: core_settings.hpp): the game loaded on the window,
 // frames run on this thread, and the tools' reach into guest memory, savestates and frames.
 #pragma once
 

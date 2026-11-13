@@ -52,8 +52,9 @@ not at the pinned revision. Build (Clang, Ninja): `app.configure` runs
 rules to build it once into a shared prefix.
 
 ## Data flow
-- `main` composes: `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
-  `EmuWindow`), `Emulator` (settings, load, frames, memory, states, watches), then `Player` or
+- `main` composes: `applyCoreSettings` (settings and user path, before anything reads them),
+  `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
+  `EmuWindow`), `Emulator` (load, frames, memory, states, watches), then `Player` or
   `Repl`.
 - Rendering: the core's own Vulkan renderer presents to the window's native surface (Wayland or
   X11, from SDL3's window properties). A frame ends when the renderer calls
@@ -94,8 +95,13 @@ game (this machine only), which builds `build/app` only when no build exists. Th
   Windowed from `z3dmods play mm3d` on the KWin Wayland session: the intro at 3x in a window titled
   "Majora's Mask 3D" with the z3d icon, custom textures loading, a running PipeWire stream named
   `z3d`, and a clean exit on SIGTERM.
-- Not yet checked windowed: keyboard, gamepad and mouse input (no host events were injected into
-  the player's desktop).
+- Input, 2026-11-13, `z3dmods inputtest <game>` (the windowed app as `z3dmods play` runs it, in a
+  headless Gamescope on a fresh copy of the player's data; XTest keys and mouse on its X server, a
+  uinput gamepad): OoT3D, keys reach file select and File 1, the arrow keys and then the pad's left
+  stick each move Link on the single screen; MM3D, keys reach file select, a click on slot 2 of the
+  bottom screen makes a file there, and Start on the opening narration lands in the Lost Woods.
+  Shots in `scratch/input-test/<game>/`. The steps are timed in real time, so a slow boot can
+  leave a step on the wrong screen; read the shots.
 
 `uv run --frozen z3dmods run oot3d <name> --harness <steps...>` with the same steps as the standalone
 runs, plus `savestate:<name>`, `loadstate:<name>`, `watch:<addr>,<size>`, `hits` and

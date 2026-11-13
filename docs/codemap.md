@@ -11,6 +11,7 @@
 - `tools/z3dmods/steps.py`: the scripted step language for runs, over either backend.
 - `tools/z3dmods/app.py`: the z3d app's build inside the pinned Azahar fork, its user folders (copies of the player's data, a link to `load/`) and its flags for a set.
 - `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
+- `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad.
 - `tools/z3dmods/play.py`: `z3dmods play`: the app in a window on the player's session, with its own saves.
 - `tools/z3dmods/shortcut.py`: per-machine desktop shortcuts that run `z3dmods play`.
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
@@ -24,9 +25,10 @@
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (built in the fork's tree): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line.
+  - `core_settings`: the core's settings and user path from the config, applied first.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch.
   - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands.
-  - `emulator`: core settings, game load, frame stepping, guest memory, savestates, screenshots and write watches.
+  - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter.
   - `frame`: a captured frame and its PNG encoding.
   - `repl`: the stdin command language.

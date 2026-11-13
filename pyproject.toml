@@ -3,7 +3,9 @@ name = "z3d-mods"
 version = "0.1.0"
 description = "Mod setup and our own mods for OoT3D and MM3D on Azahar"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "evdev>=2.0.0",
+]
 
 [project.scripts]
 z3dmods = "z3dmods.cli:main"

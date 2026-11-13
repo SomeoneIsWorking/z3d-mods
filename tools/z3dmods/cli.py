@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, install, play, shortcut, steps
+from z3dmods import azahar, config, ctr, games, harness, input_test, install, play, shortcut, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -55,6 +55,12 @@ def play_game(args: argparse.Namespace) -> None:
     raise SystemExit(play.play(cfg, args.game, game))
 
 
+def input_check(args: argparse.Namespace) -> None:
+    cfg = config.load()
+    game = install.GameSet.load(cfg.repo / "sets" / f"{args.game}.json")
+    print(input_test.run(cfg, args.game, game))
+
+
 def install_shortcuts(_: argparse.Namespace) -> None:
     for path in shortcut.install(config.load()):
         print(path)
@@ -82,6 +88,9 @@ def main() -> None:
     app = commands.add_parser("play", help="play a game in the z3d app with its installed mods")
     app.add_argument("game", choices=["oot3d", "mm3d"])
     app.set_defaults(run=play_game)
+    probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key, mouse and pad events")
+    probe.add_argument("game", choices=["oot3d", "mm3d"])
+    probe.set_defaults(run=input_check)
     links = commands.add_parser("shortcut", help="add desktop shortcuts that play each game in the app")
     links.set_defaults(run=install_shortcuts)
     args = parser.parse_args()

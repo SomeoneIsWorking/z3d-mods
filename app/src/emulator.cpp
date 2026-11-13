@@ -1,10 +1,7 @@
 #include "emulator.hpp"
 
 #include "game_window.hpp"
-#include "pad_input.hpp"
 
-#include "audio_core/sink_details.h"
-#include "common/file_util.h"
 #include "common/logging/backend.h"
 #include "common/settings.h"
 #include "core/arm/arm_interface.h"
@@ -14,7 +11,6 @@
 #include "core/frontend/image_interface.h"
 #include "core/hle/kernel/kernel.h"
 #include "core/hle/kernel/process.h"
-#include "core/hle/service/service.h"
 #include "core/memory.h"
 #include "video_core/gpu.h"
 #include "video_core/renderer_base.h"
@@ -31,48 +27,6 @@ namespace {
 
 // The longest a savestate waits on the guest's file I/O before giving up.
 constexpr auto kAsyncDrainLimit = std::chrono::seconds(5);
-// Frames the interactive loop paces to, as a percentage of the 3DS's own rate.
-constexpr double kRealTime = 100.0;
-
-Settings::LayoutOption layoutOption(ScreenLayout layout) {
-  switch (layout) {
-  case ScreenLayout::Default:
-    return Settings::LayoutOption::Default;
-  case ScreenLayout::SingleScreen:
-    return Settings::LayoutOption::SingleScreen;
-  case ScreenLayout::LargeScreen:
-    return Settings::LayoutOption::LargeScreen;
-  case ScreenLayout::SideBySide:
-    return Settings::LayoutOption::SideScreen;
-  }
-  throw std::invalid_argument("unknown screen layout");
-}
-
-void applySettings(const AppConfig &config) {
-  auto &values = Settings::values;
-  values.graphics_api = Settings::GraphicsAPI::Vulkan;
-  values.layout_option = layoutOption(config.layout);
-  values.custom_textures = config.customTextures;
-  values.resolution_factor = config.resolution;
-  values.frame_limit = config.hidden ? 0.0 : kRealTime;
-  values.use_vsync = !config.hidden;
-  values.output_type = config.hidden ? AudioCore::SinkType::Null : AudioCore::SinkType::Auto;
-  values.enable_audio_stretching = false;
-  values.current_input_profile = PadInput::profile();
-  // Every system module is HLE; the core looks each one up by name.
-  for (const auto &module : Service::service_module_map) {
-    values.lle_modules[module.name] = false;
-  }
-}
-
-std::string userPath(const std::filesystem::path &userDir) {
-  std::string path = (userDir / "Azahar").string();
-  if (!path.ends_with('/')) {
-    path += '/';
-  }
-  return path;
-}
-
 std::shared_ptr<Kernel::Process> runningProcess(Core::System &system) {
   if (!system.IsPoweredOn()) {
     return nullptr;
@@ -158,10 +112,8 @@ private:
 
 Emulator::Emulator(const AppConfig &config, GameWindow &window)
     : system_(Core::System::GetInstance()), window_(window), resolution_(config.resolution) {
-  FileUtil::SetUserPath(userPath(config.userDir));
   Common::Log::Initialize("z3d_core.log");
   Common::Log::Start();
-  applySettings(config);
   Frontend::RegisterDefaultApplets(system_);
   system_.RegisterImageInterface(std::make_shared<Frontend::ImageInterface>());
   const Core::System::ResultStatus status = system_.Load(window_, config.rom.string());

@@ -36,6 +36,9 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
 - `... z3dmods play <game>`: the z3d app in a window with the installed set; its saves live in
   `~/.local/share/z3d-mods/`, apart from standalone Azahar's. `... z3dmods shortcut` adds the
   per-machine desktop shortcuts.
+- `flock <heavy-run-lock> uv run --frozen z3dmods inputtest <game>`: the windowed app's
+  input path with real key, mouse and pad events, off the player's desktop; shots in
+  `scratch/input-test/<game>/`.
 
 The OoT3D save in slot 1 is the player's: load it, never save over it. Check
 `sdmc/.../title/00040000/00033500/data/00000001/` against the backup after a run.

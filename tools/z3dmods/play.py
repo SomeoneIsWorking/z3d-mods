@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from pathlib import Path
 
 from z3dmods import app
 from z3dmods.config import Config
@@ -22,8 +23,12 @@ def desktop_id(name: str) -> str:
     return f"z3d-{name}"
 
 
+def launch_args(cfg: Config, name: str, game: GameSet, user: Path) -> list[str]:
+    """The windowed app as the player runs it, on the user folder `user`."""
+    return app.launch_args(cfg, game, user, RESOLUTION) + ["--title", TITLES[name], "--app-id", desktop_id(name)]
+
+
 def play(cfg: Config, name: str, game: GameSet) -> int:
     app.seed_user(cfg, cfg.app_data, fresh=False)
-    args = app.launch_args(cfg, game, cfg.app_data, RESOLUTION)
-    args += ["--title", TITLES[name], "--app-id", desktop_id(name)]
+    args = launch_args(cfg, name, game, cfg.app_data)
     return subprocess.run(args, env=dict(os.environ, **cfg.session_env), check=False).returncode

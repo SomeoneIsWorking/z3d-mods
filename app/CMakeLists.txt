@@ -11,6 +11,7 @@ find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3-shared)
 add_executable(z3d
   src/main.cpp
   src/app_config.cpp
+  src/core_settings.cpp
   src/game_window.cpp
   src/pad_input.cpp
   src/emulator.cpp
