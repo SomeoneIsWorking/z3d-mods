@@ -122,15 +122,17 @@ draw in the app only what that cannot reach.
   turns the aim. Both games already aim with the gyroscope, so the app feeds mouse motion to the
   3DS gyro input first; patch code only if that cannot give 1:1 aim. Outside aiming, the mouse may
   drive the free camera.
-- Built so far: the pad owner feeds the core a gyroscope (`PadState::gyro`, the `gyro:` step).
-  The mouse is not wired to it yet.
 - What the games read (decomp `docs/motion.md`, both games, the same code): the first-person look
   adds the SDK gyroscope reader's direction (the rate integrated) to the look base, times 2.1 in
-  yaw and 1.46 in pitch. A rate does turn the view (`gyro-mm2`, `gyro-oot1`); the earlier "no
-  answer" was the harness: the core scales the rate by the host's frame time, and the hidden
-  harness runs unthrottled. For exact aim the reader's dead zone, zero drift and accelerometer
-  revise (reader +0x854 to +0x856) must be off and its bias zeroed, the yaw fed around world up,
-  and the core's frame-time scaling skipped for our device.
+  yaw and 1.46 in pitch.
+- Built, 2026-11-14 (`app/src/mouse_aim`, docs/app.md "Mouse aim"): the mouse is captured while
+  the view is first person and follows the gyroscope, and released when it ends; a count is
+  0.05 degrees of view on both axes. The app's motion device gives the core every HID sample
+  itself (no frame-time scaling), the reader's dead zone, zero drift, averaging and
+  accelerometer revise are off for it with the bias 0, pitch turns the 3DS around its x and yaw
+  around world up, and the look's limits do not wind up. No patch code was needed.
+- Not built: the free camera on the mouse outside aiming, a sensitivity option, firing from a
+  mouse button.
 
 ## Status
 - Chord + ABXY: bindings built, not yet seen in a run with a real pad.
@@ -152,7 +154,9 @@ draw in the app only what that cannot reach.
   equipped through the item screen.
 - Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
   command, not with real keys in a window.
-- Mouse aim: the gyroscope feed exists and what the games read of it is known (above); the mouse
-  is not wired.
+- Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the
+  Slingshot (OoT3D): a mouse delta turns the view by 0.05 degrees a count within 0.03 degrees
+  (`aim-mm5`, `aim-oot3`), and real mouse motion in a window does the same (`inputtest aim`,
+  `aim-mm3d`). Not run: the hookshot, boomerang and OoT3D's bow; Master Quest.
 - Outline fonts: the HUD's own lettering is port-assets' outline typeface at the window's size;
   the games' text is not started.

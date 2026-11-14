@@ -22,7 +22,8 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `run <frames>` | runs frames with the held pad and keeps the last one for `shot` |
 | `input <hex>` / `stick <x> <y>` / `cstick <x> <y>` | held buttons (bits in `Settings::NativeButton` order), circle pad and C-stick (signed 16-bit, y down) |
 | `device <pad\|keyboard>` | which device the held input stands for; the HUD's prompts follow it |
-| `gyro <x> <y> <z>` | the 3DS turning from now on, degrees a second on the core's axes (x left along the D-pad, y out of the touch screen, z up along the D-pad) |
+| `gyro <x> <y> <z>` | the 3DS turning from now on, degrees a second of the game's time on the core's axes (x left along the D-pad, y out of the touch screen, z up along the D-pad) |
+| `mouse <dx> <dy>` | the mouse moved by that many counts (x right, y down) for the aim, as a window's mouse motion does; an error unless the look follows the gyroscope |
 | `r <va> <size>` / `w <va> <hex>` | guest memory of the running process: code, `.data`, `.bss`, heap |
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
@@ -57,6 +58,46 @@ item buttons and nothing else (`kChords` in `pad_input.cpp`, plans/pc-controls-h
 1 to 8 are the eight item slots: 1 to 4 press the chord layout's four item buttons, 5 to 8 press
 them with bit 12 held (`kItemKeys`). `PadInput::lastDevice()` is the device a button or key was
 last held on, the keyboard when both are; the HUD's prompts follow it.
+
+Mouse aim (`mouse_aim`, plans/pc-controls-hud.md): while the game's view is first person and
+follows the gyroscope (the first-person look, an aimed bow or Slingshot; both `PLAYER_LOOK_*`
+flags of the decomp's `docs/motion.md`), `MouseAim` asks the window for the mouse
+(`GameWindow::captureMouse`: SDL's relative mode, the pointer hidden and held, the stylus
+lifted) and turns the 3DS by its motion, so a count turns the view 0.05 degrees
+(`kDegreesPerCount`) on both axes; when the look ends, the game shuts down or the window is
+hidden, the mouse is the stylus again. How it is exact:
+- The core asks our motion device for every HID gyroscope sample
+  (`Input::MotionDevice::TakeGyroscopeSample`, Core 7) and takes it as it is; `PadInput`'s device
+  answers with `PadState::gyro` plus its `GyroSource`, which is the `MouseAim` of the running game.
+- Once a frame `MouseAim` reads the game through the addresses the install writes into
+  `z3d-options.json` as `"aim"` (`patch/<game>/aim.toml`, the decomp's names) and keeps the SDK
+  reader integrating samples as they are: zero play, zero drift and the accelerometer's revise
+  off, the drift radius negative (no averaging of like samples), the bias 0 and the calibration
+  scale 1. The app writes these through `gMotionState.reader` rather than a patch: our device
+  exists only in the app, so it holds with the patch out, after a `loadstate` and a hotswap,
+  and standalone Azahar with a real gyroscope keeps the game's own filters.
+- Mouse counts become degrees the 3DS still has to turn: view degrees divided by the game's own
+  `yawScale` and `pitchScale` (2.1 and 1.46). Each HID sample turns it around one axis only, its
+  x (pitch) or world up (yaw, from the pitch fed so far; read back from the reader's matrix
+  whenever no sample has turned it for 32 samples), 6 degrees at most, in whole units of the
+  gyroscope with the remainder carried: nothing is lost or doubled, and a mouse faster than 600
+  degrees of the 3DS a second is finished over the next samples.
+- At a limit of the look (the view is held while the 3DS turns on) motion further past it is
+  dropped, and once the game has read every sample the 3DS comes back to the limit, so the way
+  back starts at once.
+- Not covered: Master Quest's mirrored yaw, a look that starts without the first-person draw,
+  and mouse buttons (the item's own button fires).
+
+Seen: on the harness (`mouse:<dx>,<dy>`), MM3D at South Clock Town's owl statue (`aim-mm5`) and
+OoT3D inside the Deku Tree (`aim-oot3`), first person and with the bow or Slingshot aimed: 400
+counts right turn `focus.rot` 19.995 and 19.990 degrees for 20, 800 left 39.974 to 39.985 for
+40, 300 down 14.996 for 15, 600 either way while pitched 15 degrees up or down 29.965 to 29.998
+for 30 with the pitch within 0.005, and a diagonal of 437 by 211 counts 21.846 and 10.547 for
+21.85 and 10.55; `focus.rot` counts in steps of 0.0055 degrees and cuts. 2000 counts down stop
+at the limit, 76.9 degrees, and 100 up after a pause come back 4.999. In a window with real
+mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): D-pad Left or ZL logs "mouse captured for
+aim", the same four moves show the same views as the harness frames, and leaving first person
+logs "mouse released after 1600 by 600 counts", the travel the test sent.
 
 ## Options
 Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick
@@ -213,6 +254,11 @@ pause screen hides the HUD. The One Screen's HUD is not drawn in any of them.
    changes) and `overlay_quads` (a rectangle of the image at a rectangle of the window), drawn
    after the screens as the present shaders' fourth texture. Tool screenshots include them.
 
+7. `hid`: `Input::MotionDevice::TakeGyroscopeSample`. A motion device that overrides it is
+   asked once per HID gyroscope sample and its rate is taken as it is, rounded to the HID's unit;
+   every other device is read as before, its rate stretched by the host's last frame time
+   (which made a tool's unpaced run feed a tenth of the rate, unevenly).
+
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and
 toolchain into `<dependencies>/azahar-core/<revision>-clang/prefix` (`Config.dependencies`, build tree beside it), with
@@ -237,8 +283,8 @@ objects. Rebuild the app: `ninja -C build/app`.
   come from the renderer's screenshot path (XRGB rows), requested before the last frame of a `run`.
 - Sound: the core's own sink (cubeb) when windowed, the null sink when hidden. The windowed loop is
   paced by the core's frame limiter at 100%.
-- Input: every 3DS button and both sticks are `engine:z3d` devices on one shared pad state; touch
-  is the window's `engine:emu_window`.
+- Input: every 3DS button, both sticks and the motion device are `engine:z3d` devices on one
+  shared pad state; touch is the window's `engine:emu_window`.
 - User data: the core keeps it in `<user>/Azahar/` (its user path); `app.py` seeds it with copies
   of the player's `nand`, `sdmc` and `sysdata` and a link to the installed `load/` (mods, textures).
   The harness makes a fresh one per run under `scratch/harness/<name>/`, so the player's data is

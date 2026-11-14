@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <string>
 
 namespace z3d::app {
@@ -151,6 +152,15 @@ public:
     const auto &[x, y, z] = state_->gyro;
     return {Common::MakeVec(0.0F, -1.0F, 0.0F), Common::MakeVec(x, y, z)};
   }
+  // Every sample is ours, so the core never stretches the rate by the host's frame time.
+  std::optional<Common::Vec3<float>> TakeGyroscopeSample() override {
+    Common::Vec3<float> rate = Common::MakeVec(state_->gyro[0], state_->gyro[1], state_->gyro[2]);
+    if (state_->gyroSource != nullptr) {
+      const auto [x, y, z] = state_->gyroSource->takeSample();
+      rate += Common::MakeVec(x, y, z);
+    }
+    return rate;
+  }
 
 private:
   std::shared_ptr<const PadState> state_;
@@ -238,6 +248,7 @@ void PadInput::readHost() {
   PadState state;
   state.cStickInverted = state_->cStickInverted;
   state.gyro = state_->gyro;
+  state.gyroSource = state_->gyroSource;
   const bool *keys = SDL_GetKeyboardState(nullptr);
   bool keyHeld = keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_LEFT] || keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_DOWN];
   for (const KeyBinding &binding : kKeys) {

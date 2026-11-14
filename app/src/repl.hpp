@@ -10,6 +10,7 @@ class Emulator;
 class GameWindow;
 class GameOptions;
 class ModSwap;
+class MouseAim;
 class PadInput;
 
 // Line commands on stdin, one reply line each: "ok [value]" or "err <reason>".
@@ -18,12 +19,13 @@ class PadInput;
 //   watch <va> <size> | unwatch | hits (address:size:value:pc:lr per write, hex)
 //   option <id> <value> (a game option, game_options.hpp)
 //   touch <x> <y> | touch off (the stylus on the 320x240 touch screen)
+//   mouse <dx> <dy> (mouse counts for the aim, mouse_aim.hpp)
 //   patch on|off | textures on|off (mod_swap.hpp)
 class Repl {
 public:
   // `stick` values are signed 16-bit, y growing downward.
-  Repl(Emulator &emulator, GameWindow &window, PadInput &pad, GameOptions &options, ModSwap &mods)
-      : emulator_(emulator), window_(window), pad_(pad), options_(options), mods_(mods) {
+  Repl(Emulator &emulator, GameWindow &window, PadInput &pad, GameOptions &options, ModSwap &mods, MouseAim &aim)
+      : emulator_(emulator), window_(window), pad_(pad), options_(options), mods_(mods), aim_(aim) {
   }
 
   void serve(std::istream &in, std::ostream &out);
@@ -37,6 +39,7 @@ private:
   PadInput &pad_;
   GameOptions &options_;
   ModSwap &mods_;
+  MouseAim &aim_;
   bool done_ = false;
 };
 

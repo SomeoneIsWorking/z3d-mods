@@ -1,0 +1,20 @@
+# What mouse aim reads and sets in the game (app/src/mouse_aim.hpp), as sums of the decomp's names
+# (decomp/mm3d docs/motion.md). `player` is the player actor's pointer in the play state and
+# `look_flags`, `look_base` and `focus_rot` offsets in the actor; `direction` and on are offsets
+# in the reader.
+reader = ["gMotionState", "MotionState.reader"]
+angles = ["gMotionState", "MotionState.pitch"]
+valid = ["gMotionState", "MotionState.valid"]
+yaw_scale = ["gMotionState", "MotionState.yawScale"]
+pitch_scale = ["gMotionState", "MotionState.pitchScale"]
+motion_off = ["gCommonData", "CommonData.motionOff"]
+look_flags = ["PLAYER_LOOK_FLAGS"]
+# Both set: the view is first person and the gyroscope sets it.
+look_active = ["PLAYER_LOOK_GYRO", "PLAYER_LOOK_FIRST_PERSON"]
+look_base = ["PLAYER_LOOK_BASE"]
+focus_rot = ["Actor.focus", "PosRot.rot"]
+direction = ["GYRO_READER_DIRECTION"]
+filters = ["GYRO_READER_ZERO_PLAY_ON"]
+drift_radius = ["GYRO_READER_DRIFT_RADIUS"]
+drift_bias = ["GYRO_READER_DRIFT_BIAS"]
+scale = ["GYRO_READER_SCALE"]

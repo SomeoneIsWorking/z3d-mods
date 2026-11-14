@@ -10,6 +10,7 @@
 #include "game_window.hpp"
 #include "hud.hpp"
 #include "mod_swap.hpp"
+#include "mouse_aim.hpp"
 #include "pad_input.hpp"
 #include "player.hpp"
 #include "repl.hpp"
@@ -54,8 +55,9 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
   const Hud hud(window, emulator, pad, overlay, config.assets, config.userDir / game.options);
   ModSwap mods(emulator, (config.userDir / game.options).parent_path(), options.blockAddress());
+  MouseAim aim(window, emulator, pad, config.userDir / game.options);
   if (config.hidden) {
-    Repl repl(emulator, window, pad, options, mods);
+    Repl repl(emulator, window, pad, options, mods, aim);
     std::cout << "ready\n" << std::flush;
     repl.serve(std::cin, std::cout);
     return 0;
@@ -97,6 +99,7 @@ int picker(const AppConfig &config, PadInput &pad) {
       const Hud hud(window, emulator, pad, overlay, config.assets, config.userDir / game.setup.options);
       ModSwap mods(emulator, (config.userDir / game.setup.options).parent_path(),
                    options[*chosen].blockAddress());
+      const MouseAim aim(window, emulator, pad, config.userDir / game.setup.options);
       Player(emulator, window, mods, options[*chosen], pad).run();
     }
     if (window.closeRequested()) {

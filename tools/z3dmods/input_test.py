@@ -26,6 +26,7 @@ WIDTH, HEIGHT = 1280, 720
 # The player's Azahar keys (pad_input.cpp kKeys), as X keysyms.
 KEYS = {
     "a": "a", "b": "s", "x": "z", "y": "x", "start": "m", "select": "n", "l": "q", "r": "w",
+    "zl": "e", "dpad_left": "f",
     "menu": "Escape", "reload_patch": "F5", "toggle_patch": "F6", "toggle_textures": "F7", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
 }
 PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
@@ -158,6 +159,10 @@ class Session:
         subprocess.run(["xdotool", "keydown", keysym], env=self._env, check=True)
         time.sleep(seconds)
         subprocess.run(["xdotool", "keyup", keysym], env=self._env, check=True)
+
+    def mouse(self, dx: int, dy: int) -> None:
+        """The mouse moved by (dx, dy) counts, x right and y down."""
+        subprocess.run(["xdotool", "mousemove_relative", "--", str(dx), str(dy)], env=self._env, check=True)
 
     def click(self, fx: float, fy: float) -> None:
         """A left click at fraction (fx, fy) of the app window."""
@@ -392,6 +397,71 @@ def _setup(session: Session, pad: Gamepad) -> None:
     session.shot("booted")
 
 
+AIM_MOVES = (("right-400", 400, 0), ("left-800", -800, 0), ("down-300", 400, 300), ("back", 0, -300))
+
+
+def _aim_turns(session: Session) -> None:
+    """Mouse aim once the look is first person: the app takes the mouse, each move turns the
+    view by 0.05 degrees a count (app/src/mouse_aim.hpp), and the last one comes back to the start."""
+    session.expect("mouse captured for aim")
+    session.wait(1)
+    session.shot("first-person")
+    for name, dx, dy in AIM_MOVES:
+        session.mouse(dx, dy)
+        session.wait(1)
+        session.shot(name)
+
+
+def _aim_released(session: Session) -> None:
+    """The app's own count of the mouse's travel while it held it is what the test sent."""
+    travel = (sum(abs(dx) for _, dx, _ in AIM_MOVES), sum(abs(dy) for _, _, dy in AIM_MOVES))
+    line = session.expect("mouse released")
+    if not line.endswith(f"after {travel[0]} by {travel[1]} counts"):
+        raise RuntimeError(f"the app counted another travel than {travel}: {line}")
+    session.wait(1)
+    session.shot("released")
+
+
+def _aim(session: Session, pad: Gamepad) -> None:
+    """OoT3D: a file saved inside the Deku Tree (Link's house has no first person), D-pad Left
+    for first person, the mouse turns the view, and B gives the mouse back."""
+    session.wait(20)
+    session.key("start")
+    session.wait(3)
+    session.key("a")
+    session.wait(2)
+    session.key("a")
+    session.wait(10)
+    session.shot("deku-tree")
+    session.key("dpad_left")
+    session.wait(1)
+    session.shot("d-pad-left")
+    _aim_turns(session)
+    session.key("b")
+    _aim_released(session)
+
+
+def _aim_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D: the file at South Clock Town's owl statue, ZL for first person, the mouse turns the
+    view, and ZL again gives the mouse back."""
+    session.wait(30)
+    session.key("start")
+    session.wait(12)
+    session.key("a")
+    session.wait(5)
+    session.key("a")
+    session.wait(4)
+    session.key("a")
+    session.wait(15)
+    session.shot("statue")
+    session.key("zl")
+    session.wait(1)
+    session.shot("zl")
+    _aim_turns(session)
+    session.key("zl")
+    _aim_released(session)
+
+
 def _hotswap(session: Session, pad: Gamepad) -> None:
     """MM3D's mods swapped while it runs: F7 turns the textures off and on, F6 takes the patch out
     and puts it back, F5 reads it again; the game runs on (the log names each swap)."""
@@ -494,11 +564,13 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord, "chord-mm3d": _chord_mm3d}
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord, "chord-mm3d": _chord_mm3d,
+          "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
-DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d"}
+DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d", "aim": "oot3d", "aim-mm3d": "mm3d"}
 # What a scenario puts in its user folder before the app starts.
-PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "setup": _without_set}
+PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "aim": _oot3d_chord_file,
+           "aim-mm3d": _mm3d_chord_file, "setup": _without_set}
 # Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.
 PICKER = {"setup": _setup}
 SCENARIOS = {**DIRECT, **PICKER, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}

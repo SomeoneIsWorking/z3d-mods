@@ -18,7 +18,7 @@ from z3dmods.config import Config
 from z3dmods.install import GameSet
 
 # The fork's z3d-harness branch the app is built against.
-AZAHAR_REVISION = "79234172d"
+AZAHAR_REVISION = "045af2645"
 TOOLCHAIN = "clang"
 COMPILERS = ["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]
 AZAHAR_OPTIONS = {

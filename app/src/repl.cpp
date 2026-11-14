@@ -4,6 +4,7 @@
 #include "game_options.hpp"
 #include "game_window.hpp"
 #include "mod_swap.hpp"
+#include "mouse_aim.hpp"
 #include "pad_input.hpp"
 
 #include <lucent/log.h>
@@ -102,6 +103,18 @@ std::string Repl::execute(const std::string &line) {
       return "err gyro <x> <y> <z>";
     }
     pad_.setGyro(x, y, z);
+    return "ok";
+  }
+  if (command == "mouse") {
+    double dx = 0.0;
+    double dy = 0.0;
+    if (!(args >> dx >> dy)) {
+      return "err mouse <dx> <dy>";
+    }
+    if (!aim_.active()) {
+      return "err the look does not follow the gyroscope";
+    }
+    aim_.move(dx, dy);
     return "ok";
   }
   if (command == "touch") {

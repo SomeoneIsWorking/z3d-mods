@@ -18,6 +18,20 @@ union SDL_Event;
 
 namespace z3d::app {
 
+// Something that turns the 3DS by its own account (mouse_aim.hpp).
+class GyroSource {
+public:
+  GyroSource() = default;
+  virtual ~GyroSource() = default;
+  GyroSource(const GyroSource &) = delete;
+  GyroSource &operator=(const GyroSource &) = delete;
+  GyroSource(GyroSource &&) = delete;
+  GyroSource &operator=(GyroSource &&) = delete;
+  // The rate for one gyroscope sample of the HID service, degrees a second on PadState::gyro's
+  // axes; called once per sample.
+  virtual std::array<float, 3> takeSample() = 0;
+};
+
 struct PadState {
   // Indexed by Settings::NativeButton.
   std::array<bool, Settings::NativeButton::NumButtons> buttons{};
@@ -25,9 +39,11 @@ struct PadState {
   std::array<std::array<float, 2>, Settings::NativeAnalog::NumAnalogs> sticks{};
   // The C-stick as the game gets it: each axis turned around or not.
   std::array<bool, 2> cStickInverted{};
-  // The 3DS turning, in degrees a second, on the core's axes: x points left along the D-pad, y
-  // out of the touch screen, z up along the D-pad; right-handed.
+  // The 3DS turning, in degrees a second of the game's time, on the core's axes: x points left
+  // along the D-pad, y out of the touch screen, z up along the D-pad; right-handed.
   std::array<float, 3> gyro{};
+  // Turns the 3DS on top of that, sample by sample; null without one.
+  GyroSource *gyroSource = nullptr;
 };
 
 // An item button of a game's second page (plans/pad-features.md), by the name its HUD gives it.
@@ -80,6 +96,10 @@ public:
   void setStick(Settings::NativeAnalog::Values stick, float x, float y);
   // PadState::gyro, held until set again.
   void setGyro(float x, float y, float z);
+  // PadState::gyroSource, which outlives its stay here; null takes it out.
+  void setGyroSource(GyroSource *source) {
+    state_->gyroSource = source;
+  }
   // The chord layout of the game with this title ID from here on; none for a game without one.
   void bindGame(std::string_view titleId);
   // The bound game's chord, for whoever draws it; null without one. It is held while

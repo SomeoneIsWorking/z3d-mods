@@ -8,6 +8,8 @@
 
 #include "core/frontend/emu_window.h"
 
+#include <SDL3/SDL_rect.h>
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -15,7 +17,6 @@
 #include <vector>
 
 struct SDL_Window;
-struct SDL_FPoint;
 
 namespace z3d::app {
 
@@ -49,6 +50,15 @@ public:
 
   // A stylus held at a point of the 320x240 touch screen, wherever the layout draws it, or lifted.
   void touchScreen(std::optional<TouchPoint> at);
+
+  // Captured, the mouse is hidden and held in the window, the stylus is lifted and its motion
+  // is counted for takeMouseMotion (mouse_aim.hpp); released, it is the stylus again. A hidden
+  // window has no mouse.
+  void captureMouse(bool captured);
+  // Mouse counts since the last call while captured, x right and y down.
+  [[nodiscard]] SDL_FPoint takeMouseMotion() {
+    return std::exchange(mouseMotion_, {});
+  }
 
   [[nodiscard]] SDL_Window *sdlWindow() const {
     return window_;
@@ -85,6 +95,10 @@ private:
   bool menuRequested_ = false;
   std::optional<ModKey> modKey_;
   bool touching_ = false;
+  bool mouseCaptured_ = false;
+  SDL_FPoint mouseMotion_{};
+  // How far the mouse went, each way counted, since it was captured.
+  SDL_FPoint mouseTravel_{};
   OverlayLayout overlay_ = splitLayout();
   std::vector<SDL_FPoint> clicks_;
 };

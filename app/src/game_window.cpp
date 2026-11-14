@@ -7,9 +7,12 @@
 #include "core/3ds.h"
 #include "core/frontend/framebuffer_layout.h"
 
+#include <lucent/log.h>
+
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -144,7 +147,7 @@ void GameWindow::pump(bool inGame) {
       }
       break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
-      if (event.button.button == SDL_BUTTON_LEFT) {
+      if (event.button.button == SDL_BUTTON_LEFT && !mouseCaptured_) {
         if (inGame) {
           touch({event.button.x, event.button.y}, true);
         } else {
@@ -159,7 +162,12 @@ void GameWindow::pump(bool inGame) {
       }
       break;
     case SDL_EVENT_MOUSE_MOTION:
-      if (touching_) {
+      if (mouseCaptured_) {
+        mouseMotion_.x += event.motion.xrel;
+        mouseMotion_.y += event.motion.yrel;
+        mouseTravel_.x += std::abs(event.motion.xrel);
+        mouseTravel_.y += std::abs(event.motion.yrel);
+      } else if (touching_) {
         touch({event.motion.x, event.motion.y}, true);
       }
       break;
@@ -214,6 +222,25 @@ void GameWindow::touchScreen(std::optional<TouchPoint> at) {
   } else {
     touching_ = TouchPressed(px, py);
   }
+}
+
+void GameWindow::captureMouse(bool captured) {
+  if (hidden_ || captured == mouseCaptured_) {
+    return;
+  }
+  if (!SDL_SetWindowRelativeMouseMode(window_, captured)) {
+    lucent::warn("z3d", "mouse capture: {}", SDL_GetError());
+    return;
+  }
+  mouseCaptured_ = captured;
+  mouseMotion_ = {};
+  if (captured) {
+    touchScreen(std::nullopt);
+    mouseTravel_ = {};
+    lucent::info("z3d", "mouse captured for aim");
+    return;
+  }
+  lucent::info("z3d", "mouse released after {} by {} counts", mouseTravel_.x, mouseTravel_.y);
 }
 
 void GameWindow::touch(SDL_FPoint at, bool pressed) {

@@ -165,6 +165,10 @@ class HarnessSession:
         self.run_frames(max(1, round(float(seconds) * FPS)))
         return self._send("gyro 0 0 0")
 
+    def mouse(self, dx: str, dy: str) -> str:
+        """Moves the mouse by (dx, dy) counts, x right and y down, for the aim (app/src/mouse_aim.hpp)."""
+        return self._send(f"mouse {float(dx)} {float(dy)}")
+
     def _hold_analog(self, command: str, x: str, y: str, seconds: str) -> str:
         self._send(f"{command} {int(x)} {int(y)}")
         self.run_frames(max(1, round(float(seconds) * FPS)))

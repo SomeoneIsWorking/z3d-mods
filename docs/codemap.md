@@ -57,6 +57,7 @@
   - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
   - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands.
+  - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`).
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.
   - `frame`: a captured frame and its PNG encoding.

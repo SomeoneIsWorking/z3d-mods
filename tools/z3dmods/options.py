@@ -84,4 +84,6 @@ def manifest(repo: Path, game: str, address: int, layers: set[str]) -> str:
                                "hud": layout.hud_visibility, "hud_hidden": layout.hud_hidden}
     if layout.hud is not None:
         document["hud"] = layout.hud
+    if layout.aim is not None:
+        document["aim"] = layout.aim
     return json.dumps(document, indent=2) + "\n"

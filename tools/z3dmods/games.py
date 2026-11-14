@@ -40,6 +40,8 @@ class Layout:
     screen_outside: str | None = None
     # hud.toml as the app reads it (app/src/hud.hpp): elements with their guest addresses.
     hud: dict[str, object] | None = None
+    # aim.toml as the app reads it (app/src/mouse_aim.hpp): guest addresses and offsets.
+    aim: dict[str, int] | None = None
     # CommonData.hudVisibility and its values that leave the main touch screen blank or dimmed.
     hud_visibility: int | None = None
     hud_hidden: tuple[int, ...] | None = None
@@ -74,6 +76,7 @@ def _oot3d(repo: Path, d: symbols.Decomp) -> Layout:
         camera_at=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.at"),
         camera_eye=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.eye"),
         hud=_hud(repo, "oot3d", d),
+        aim=_aim(repo, "oot3d", d),
     )
 
 
@@ -128,6 +131,13 @@ def _hud(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object] | None:
     return {"icons": HUD_ICONS, "show": _resolved(d, table.get("show", [])), "elements": _resolved(d, table["element"])}
 
 
+def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
+    """aim.toml resolved, with the play state's pointer and the player's in it."""
+    table = tomllib.loads((repo / "patch" / game / "aim.toml").read_text())
+    return {key: _guest_address(d, terms) for key, terms in table.items()} | {
+        "play": symbols.global_(d, "gPlayState"), "player": _player_list_head(d)}
+
+
 # The folder of item icons beside the installed patch: <item id>.png.
 HUD_ICONS = "z3d-hud-icons"
 
@@ -155,6 +165,7 @@ def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
         screens=symbols.global_(d, "gUiScreens"),
         **_overlay(repo, "mm3d", d),
         hud=_hud(repo, "mm3d", d),
+        aim=_aim(repo, "mm3d", d),
         hud_visibility=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.hudVisibility"),
         hud_hidden=(d.define("HUD_VISIBILITY_NONE"), d.define("HUD_VISIBILITY_NONE_ALT")),
     )
