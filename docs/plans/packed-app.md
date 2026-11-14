@@ -224,6 +224,15 @@ maintainer's:
   Those stay on the maintainer's machines.
 
 ### Seen (2026-11-14)
+- The release, `v0.1.0` (commit 0d77076): the AppImage downloaded from the release has the
+  build's SHA-256; on the Ally, with an empty data folder and the dump folder, it opens the
+  picker, and unpacked it sets Majora's Mask 3D up with its own tools and boots it to the
+  title's Clock Town scene with the 4K pack. In the older-desktop container it opens the picker
+  with both tiles. No file in it holds a home path, a dump or a mod.
+- The workflow, started by hand on 7930b78 (run 43592663222, 20 minutes): its AppImage holds
+  the same 1417 files as the maintainer's build of that source; `bin/z3d` and both patches
+  are the same bytes, the glyphs the same pixels; the core's library and the picker's font
+  (Ubuntu's Noto Sans) differ, and it opens the picker on the Ally. The tag's run found the release's AppImage and built nothing.
 - The older desktop, `z3dmods inputtest appimage-older-desktop`: the AppImage started in a
   container of Ubuntu 24.04 that holds only a desktop's libraries
   (`packaging/Containerfile.desktop`, `tools/z3dmods/desktop_container.py`; no network, the
