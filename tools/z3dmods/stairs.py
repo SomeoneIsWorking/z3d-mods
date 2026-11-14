@@ -21,7 +21,6 @@ from PIL import Image
 from z3dmods import cmb, pica_texture, zsi
 from z3dmods.texture_pack import TexturePack
 
-STAIR_TEXTURE = "kaidan"
 # Faces flatter than this are landings, steeper ones are walls or modelled risers; both keep
 # their shape.
 MIN_SLOPE = math.radians(10)
@@ -35,7 +34,8 @@ KEY = 1e-3
 # Normals are stored as signed bytes.
 NORMAL_STEPS = 127
 EPSILON = 1e-9
-ROOM_FILE = re.compile(r"^scene/(.+)_\d+_info\.zsi$")
+# OoT3D keeps them in scene/, MM3D in scenes/.
+ROOM_FILE = re.compile(r"^(scenes?)/(.+)_\d+_info\.zsi$")
 # A collision triangle lies on a drawn ramp when it is this close to it: above or below, and
 # sideways past the ramp's edge (N64 units; collision vertices are integers).
 ON_RAMP = 4.0
@@ -344,12 +344,12 @@ def texture_image(model: cmb.Cmb, texture: cmb.Texture, pack: TexturePack | None
     return found or image
 
 
-def _stair_shapes(model: cmb.Cmb) -> list[tuple[int, int]]:
-    """(shape, texture slot) of every stair-textured shape, once each."""
+def _stair_shapes(model: cmb.Cmb, named: str) -> list[tuple[int, int]]:
+    """(shape, texture slot) of every shape whose texture name matches `named`, once each."""
     found: dict[int, int] = {}
     for mesh in model.meshes:
         slot = model.materials[mesh.material][0]
-        if slot >= 0 and STAIR_TEXTURE in model.textures[slot].name:
+        if slot >= 0 and re.search(named, model.textures[slot].name, re.IGNORECASE):
             found.setdefault(mesh.shape, slot)
     return list(found.items())
 
@@ -399,10 +399,10 @@ class Ramp:
         return worst
 
 
-def ramps(model: cmb.Cmb, pack: TexturePack | None) -> list[Ramp]:
+def ramps(model: cmb.Cmb, named: str, pack: TexturePack | None) -> list[Ramp]:
     """Every ramp triangle `rebuild` steps."""
     out = []
-    for shape_index, slot in _stair_shapes(model):
+    for shape_index, slot in _stair_shapes(model, named):
         shape = model.shapes[shape_index]
         steps = profile(texture_image(model, model.textures[slot], pack))
         positions = model.vertices(shape, "position")
@@ -416,11 +416,12 @@ def ramps(model: cmb.Cmb, pack: TexturePack | None) -> list[Ramp]:
     return out
 
 
-def rebuild(model: cmb.Cmb, pack: TexturePack | None) -> tuple[bytes, list[str]]:
-    """The model with every stair-textured shape stepped, and the textures it stepped."""
+def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None) -> tuple[bytes, list[str]]:
+    """The model with every stair-textured shape stepped, and the textures it stepped. `named` is
+    the game's pattern for a stair texture's name (a set's "stairs")."""
     data = model.data
     stepped = []
-    for shape_index, slot in _stair_shapes(model):
+    for shape_index, slot in _stair_shapes(model, named):
         current = cmb.Cmb.parse(data)
         texture = current.textures[slot]
         shape = current.shapes[shape_index]
@@ -508,24 +509,25 @@ def collision(scene: zsi.Scene, drawn: list[Ramp]) -> bytes | None:
     return scene.with_collision(vertices, polygons)
 
 
-def room(data: bytes, pack: TexturePack | None) -> tuple[bytes, list[str]]:
+def room(data: bytes, named: str, pack: TexturePack | None) -> tuple[bytes, list[str]]:
     """A room file with its stair ramps stepped; unchanged when it has none."""
     room_ = zsi.Room.parse(data)
     stepped: list[str] = []
     for model in reversed(room_.models()):
-        cmb_bytes, names = rebuild(cmb.Cmb.parse(data[model:]), pack)
+        cmb_bytes, names = rebuild(cmb.Cmb.parse(data[model:]), named, pack)
         if names:
             data = zsi.Room.parse(data).with_model(model, cmb_bytes)
             stepped.extend(names)
     return data, stepped
 
 
-def room_ramps(data: bytes, pack: TexturePack | None) -> list[Ramp]:
+def room_ramps(data: bytes, named: str, pack: TexturePack | None) -> list[Ramp]:
     """The ramp triangles `room` steps, as the room file has them."""
-    return [ramp for model in zsi.Room.parse(data).models() for ramp in ramps(cmb.Cmb.parse(data[model:]), pack)]
+    return [ramp for model in zsi.Room.parse(data).models()
+            for ramp in ramps(cmb.Cmb.parse(data[model:]), named, pack)]
 
 
 def scene_of(path: str) -> str | None:
     """The scene file a room file belongs to; None when `path` is not a room."""
     found = ROOM_FILE.match(path)
-    return f"scene/{found.group(1)}_info.zsi" if found else None
+    return f"{found.group(1)}/{found.group(2)}_info.zsi" if found else None

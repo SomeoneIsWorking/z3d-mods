@@ -78,12 +78,27 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
   stair textures differ by place (wood, dark rock, sandstone, moss); one drawn texture would
   replace all of them, so this waits for the player's word.
 
-## Majora's Mask 3D
-Rev 1 room files (`scenes/*_<n>_info.zsi`, all uncompressed) name these stair textures:
-`kindan2_kaidan`, `kindan2_kaidanw` (z2_kindan2 room 1), `dkh_step_01`, `dkh_step_suna_0`
-(z2_danpei rooms 5, 6, 8), `Z2mitu_step_00`/`_01` and `e1StEpc` (z2_miturin rooms 3, 10),
-`hak_r02_step_01` (z2_hakashita 2), `om_step_01` (z2_omoya 1), `tenmon_step_01`/`_02`
-(z2_tenmon_dai 0, 1), `yado_step_01` (z2_yadoya 0). Whether each is a painted ramp or modelled
-steps needs the geometry check; MM3D's CMB is version 10 (an extra `qtrs` chunk, a tangent slice)
-and keeps textures in `.ctxb` bundles, so `cmb.py` needs that layout first.
+## Majora's Mask 3D (2026-11-14)
+Same owner and switch as OoT3D: `"stairs": "kaidan|step"` in `sets/mm3d.json` is the pattern a
+stair texture's name matches (OoT3D's is `kaidan`; its `*step*` textures are left alone), the
+install writes the stepped files to `romfs_stairs/`, and "Stepped stairs" is in MM3D's options.
+File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm3d
+`docs/formats/scene_files.md`.
 
+- Geometry check: every stair-textured mesh is a sloped quad ramp, 15 to 45 degrees, none
+  modelled as steps. 17 rooms in 13 scenes: `z2_clocktower` 0, `z2_town` 0, `z2_ichiba` 0,
+  `z2_backtown` 0 (the four Clock Town districts), `z2_milk_bar` 0, `z2_musichouse` 0, `z2_danpei`
+  5, 6 and 8, `z2_hakashita` 2, `z2_kindan2` 1, `z2_miturin` 3 and 10, `z2_omoya` 1,
+  `z2_tenmon_dai` 0 and 1, `z2_yadoya` 0.
+- Drawn steps, seen (`mm-st3-1` against `mm-st3-0` with `--option stairs=0`, South Clock Town,
+  `warp:0xD800`): the flight beside the tower has risers, treads and a stepped edge; off, it is
+  the flat painted ramp. East, West and North Clock Town load from their stepped rooms (`mm-st2`).
+- Collision: written for `z2_danpei`, `z2_miturin` and `z2_tenmon_dai`, the three scenes whose
+  collision triangles lie on the drawn ramps. The Astral Observatory loads and plays with it
+  (`mm-st4-1`: the passage, the water), but Link was not walked up a flight and no height was
+  read: the run steps have no MM3D player position (`teleport` and `where` are OoT3D only).
+- Still open: the other ten scenes keep the ramp's collision, so Link walks the old slope through
+  the drawn steps there. Their collision is coarser than the drawn ramp (two triangles reach 14
+  units past the flight's side in `z2_kindan2`; none stays near the flight in `z2_yadoya`), so
+  the triangles have to be cut at the ramp's outline before they can be folded. The player's
+  position for the MM3D run steps, then heights on a flight in each of the three scenes.

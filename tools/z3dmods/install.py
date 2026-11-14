@@ -9,7 +9,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, hud, ips, options, patch_build, stairs, zsi
+from z3dmods import azahar_config, bps, ctr, hud, ips, lzs, options, patch_build, stairs, zsi
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -31,9 +31,9 @@ class GameSet:
     patch: str | None
     # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
     screen_layout: str
-    # Fold the game's stair ramps into steps (OoT3D rooms), in the folder of the patch's "stairs"
-    # layer switch.
-    stairs: bool
+    # Fold the ramps drawn with a texture whose name matches this into steps, in the folder of
+    # the patch's "stairs" layer switch.
+    stairs: str | None
     # The menu-texture edit table (sets/hud/): the base mod's edits redone on the texture pack's
     # copies, and the pad glyphs drawn over the game's button prompts.
     hud: str | None
@@ -45,7 +45,7 @@ class GameSet:
         raw = json.loads((repo / "sets" / f"{name}.json").read_text())
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
                    raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"),
-                   raw.get("stairs", False), raw.get("hud"))
+                   raw.get("stairs"), raw.get("hud"))
 
 
 def _sha(path: Path) -> str:
@@ -110,14 +110,15 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
     (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start, layers))
 
 
-def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, pack: TexturePack | None) -> dict[str, bytes]:
+def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str,
+                   pack: TexturePack | None) -> dict[str, bytes]:
     """Every room with stair ramps, stepped, and its scene with the collision on those ramps
     stepped; a file the base mod replaces is stepped from its copy."""
     files = rom.romfs()
 
     def read(path: str) -> bytes:
         base = base_romfs / path if base_romfs else None
-        return base.read_bytes() if base and base.exists() else files.read(path)
+        return lzs.unpacked(base.read_bytes() if base and base.exists() else files.read(path))
 
     out = {}
     drawn: dict[str, list[stairs.Ramp]] = {}
@@ -125,10 +126,10 @@ def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, pack: TexturePack | N
         scene = stairs.scene_of(path)
         if scene is None:
             continue
-        data, stepped = stairs.room(read(path), pack)
+        data, stepped = stairs.room(read(path), named, pack)
         if stepped:
             out[path] = data
-            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), pack))
+            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), named, pack))
     for scene, ramps in drawn.items():
         data = stairs.collision(zsi.Scene.parse(read(scene)), ramps)
         if data is not None:
@@ -149,7 +150,7 @@ def install(cfg: Config, game: GameSet) -> Path:
     if game.stairs and not game.patch:
         raise RuntimeError(f"{game.title_id}: stairs want the patch whose options.toml switches them")
     stairs_layer = options.layer(cfg.repo, game.patch, STAIRS_OPTION) if game.stairs else None
-    rooms = _stepped_rooms(rom, base_romfs, pack) if game.stairs else {}
+    rooms = _stepped_rooms(rom, base_romfs, game.stairs, pack) if game.stairs else {}
     menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
                       cfg.glyph_set())
              if game.hud else {})

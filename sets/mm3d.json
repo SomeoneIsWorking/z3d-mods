@@ -9,6 +9,7 @@
   },
   "patch": "mm3d",
   "screen_layout": "overlay",
+  "stairs": "kaidan|step",
   "hud": "hud/mm3d-usa-rev1.json",
   "azahar_global": {
     "Utility": {

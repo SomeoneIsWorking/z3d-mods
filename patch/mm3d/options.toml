@@ -28,3 +28,9 @@ id = "camera_invert_y"
 pad = "cstick_invert_y"
 label = "Camera stick: invert Y"
 default = false
+
+[[option]]
+id = "stairs"
+label = "Stepped stairs"
+default = true
+layer = "romfs_stairs"

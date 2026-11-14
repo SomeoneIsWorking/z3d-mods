@@ -1,4 +1,4 @@
-"""OoT3D room and scene files (.zsi): header commands, a room's CMB models, a scene's collision.
+"""OoT3D and MM3D room and scene files (.zsi): header commands, a room's CMB models, a scene's collision.
 
 Header offsets count from 0x10, the end of the file header. Command layout after noclip.website's
 src/OcarinaOfTime3D/zsi.ts (MIT, Jasper St. Pierre and contributors).
@@ -9,7 +9,8 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-MAGIC = b"ZSI\x01"
+# OoT3D, MM3D.
+MAGICS = (b"ZSI\x01", b"ZSI\x09")
 BASE = 0x10
 END = 0x14
 MESH = 0x0A
@@ -31,8 +32,8 @@ class Room:
 
     @classmethod
     def parse(cls, data: bytes) -> Room:
-        if data[0:4] != MAGIC:
-            raise ValueError("not an OoT3D room file")
+        if data[0:4] not in MAGICS:
+            raise ValueError("not a room file")
         commands: list[int] = []
         pointers: list[int] = []
         lists = [BASE]
@@ -89,6 +90,8 @@ class Room:
 def _model_pointers(data: bytes, header: int) -> list[int]:
     count = data[header + 1]
     entries = BASE + struct.unpack_from("<I", data, header + 4)[0]
+    if count == 0:
+        return []
     if count != 1:
         raise ValueError(f"mesh header with {count} entries")
     return [entries + field for field in MESH_ENTRY_MODELS
@@ -97,8 +100,9 @@ def _model_pointers(data: bytes, header: int) -> list[int]:
 
 COLLISION = 0x03
 # Collision header fields (decomp/oot3d docs/notes/scene_collision.md).
-COLLISION_VERTEX_COUNT = 0x0C
-COLLISION_POLYGON_COUNT = 0x0E
+# The vertex count, then the triangle count, by the file's magic: MM3D's header has two more
+# bytes before its bounds.
+COLLISION_COUNTS = {MAGICS[0]: 0x0C, MAGICS[1]: 0x0E}
 COLLISION_VERTICES = 0x18
 COLLISION_POLYGONS = 0x1C
 VERTEX_SIZE = 6
@@ -144,8 +148,8 @@ class Scene:
 
     @classmethod
     def parse(cls, data: bytes) -> Scene:
-        if data[0:4] != MAGIC:
-            raise ValueError("not an OoT3D scene file")
+        if data[0:4] not in MAGICS:
+            raise ValueError("not a scene file")
         offset = BASE
         while True:
             code, word = struct.unpack_from("<BxxxI", data, offset)
@@ -155,7 +159,7 @@ class Scene:
                 raise ValueError("scene without collision")
             offset += 8
         header = BASE + word
-        vertex_count, polygon_count = struct.unpack_from("<HH", data, header + COLLISION_VERTEX_COUNT)
+        vertex_count, polygon_count = struct.unpack_from("<HH", data, header + COLLISION_COUNTS[data[0:4]])
         vertices_at, polygons_at = (BASE + v for v in struct.unpack_from("<II", data, header + COLLISION_VERTICES))
         vertices = [struct.unpack_from("<3h", data, vertices_at + i * VERTEX_SIZE) for i in range(vertex_count)]
         polygons = []
@@ -178,6 +182,6 @@ class Scene:
         for polygon in polygons:
             out.extend(struct.pack("<5H3hf", polygon.surface, *polygon.corners, 0, *polygon.normal,
                                    polygon.distance))
-        struct.pack_into("<HH", out, self.header + COLLISION_VERTEX_COUNT, len(vertices), len(polygons))
+        struct.pack_into("<HH", out, self.header + COLLISION_COUNTS[self.data[0:4]], len(vertices), len(polygons))
         struct.pack_into("<II", out, self.header + COLLISION_VERTICES, vertices_at - BASE, polygons_at - BASE)
         return bytes(out)

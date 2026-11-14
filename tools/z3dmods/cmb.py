@@ -1,4 +1,5 @@
-"""OoT3D CMB models (version 6): textures, materials, meshes, vertices, and rebuilding one shape.
+"""OoT3D (version 6) and MM3D (version 10) CMB models: textures, materials, meshes, vertices, and
+rebuilding one shape.
 
 Chunk layout after noclip.website's src/OcarinaOfTime3D/cmb.ts (MIT, Jasper St. Pierre and
 contributors).
@@ -10,32 +11,63 @@ import struct
 from dataclasses import dataclass
 
 OCARINA = 6
+MAJORA = 10
 # Index and attribute component types (GL enums).
 COMPONENTS = {0x1400: ("b", 1), 0x1401: ("B", 1), 0x1402: ("h", 2), 0x1403: ("H", 2),
               0x1404: ("i", 4), 0x1405: ("I", 4), 0x1406: ("f", 4)}
-MATERIAL_SIZE = 0x15C
 ATTRIBUTE_ARRAY = 0
 UNSIGNED_SHORT = 0x1403
 # OoT3D sign-extends a primitive's 16-bit index count into the draw's vertex count.
 MAX_PRIMITIVE_INDICES = 0x7FFF
-# vatr slice order; a sepd's attributes come in the same order.
-SLICES = ("position", "normal", "color", "tex0", "tex1", "tex2", "bone_indices", "bone_weights")
-WIDTHS = {"position": 3, "normal": 3, "color": 4, "tex0": 2, "tex1": 2, "tex2": 2}
+WIDTHS = {"position": 3, "normal": 3, "tangent": 3, "color": 4, "tex0": 2, "tex1": 2, "tex2": 2}
 SEPD_ATTRIBUTES = 0x24
 ATTRIBUTE_SIZE = 0x1C
-# A sepd's primitive set table: a bone dimension word, then one u16 offset per prms chunk.
-SEPD_TABLE = SEPD_ATTRIBUTES + 8 * ATTRIBUTE_SIZE
 SEPD_COUNT = 0x08
 CHUNK_SIZE = 0x04
-SKLM = 0x30
-# Header offsets of the chunks that follow the skeleton-mesh chunk.
-LATER_CHUNKS = (0x34, 0x38, 0x3C, 0x40)
 VATR_TABLE = 0x0C
-VATR_DATA = VATR_TABLE + len(SLICES) * 8
 INDEX_COUNT = 0x20
-INDEX_CHUNK = 0x3C
-TEXTURE_DATA = 0x40
 CHUNK_ALIGN = 0x100
+
+
+@dataclass(frozen=True)
+class Layout:
+    """What differs between the versions."""
+
+    # vatr slice order; a sepd's attributes come in the same order.
+    slices: tuple[str, ...]
+    material_size: int
+    mesh_size: int
+    # Header offsets of the chunk pointers.
+    materials: int
+    textures: int
+    sklm: int
+    vatr: int
+    index: int
+    texture_data: int
+
+    @property
+    def sepd_table(self) -> int:
+        """A sepd's primitive set table: a bone dimension word, then one u16 offset per prms chunk."""
+        return SEPD_ATTRIBUTES + len(self.slices) * ATTRIBUTE_SIZE
+
+    @property
+    def vatr_data(self) -> int:
+        return VATR_TABLE + len(self.slices) * 8
+
+    @property
+    def later_chunks(self) -> tuple[int, ...]:
+        """Header offsets of the chunks that follow the skeleton-mesh chunk."""
+        return tuple(range(self.sklm + 4, self.texture_data + 4, 4))
+
+
+# MM3D adds a qtrs chunk pointer after the skeleton's, a tangent slice, a stencil block per
+# material and a wider mesh entry.
+LAYOUTS = {
+    OCARINA: Layout(("position", "normal", "color", "tex0", "tex1", "tex2", "bone_indices", "bone_weights"),
+                    0x15C, 0x04, 0x28, 0x2C, 0x30, 0x38, 0x3C, 0x40),
+    MAJORA: Layout(("position", "normal", "tangent", "color", "tex0", "tex1", "tex2", "bone_indices",
+                    "bone_weights"), 0x16C, 0x0C, 0x2C, 0x30, 0x34, 0x3C, 0x40, 0x44),
+}
 
 
 @dataclass(frozen=True)
@@ -72,18 +104,14 @@ class Shape:
 
     offset: int
     center: tuple[float, float, float]
-    position: Attribute
-    normal: Attribute
-    color: Attribute
-    tex0: Attribute
-    tex1: Attribute
-    tex2: Attribute
+    # By slice name.
+    attributes: dict[str, Attribute]
     primitives: list[Primitive]
     # Offset of each primitive's prm chunk.
     prm_chunks: list[int]
 
     def attribute(self, name: str) -> Attribute:
-        return getattr(self, name)
+        return self.attributes[name]
 
 
 @dataclass(frozen=True)
@@ -95,6 +123,7 @@ class Mesh:
 @dataclass(frozen=True)
 class Cmb:
     data: bytes
+    layout: Layout
     name: str
     textures: list[Texture]
     # Each material's texture indices (-1 for none), three binding slots.
@@ -110,15 +139,25 @@ class Cmb:
         if data[0:4] != b"cmb ":
             raise ValueError("not a CMB")
         version = struct.unpack_from("<I", data, 0x08)[0]
-        if version != OCARINA:
-            raise ValueError(f"CMB version {version}, not OoT3D's {OCARINA}")
+        layout = LAYOUTS.get(version)
+        if layout is None:
+            raise ValueError(f"CMB version {version}, not one of {sorted(LAYOUTS)}")
         name = data[0x10:0x20].split(b"\0")[0].decode("ascii")
-        _skl, mats, tex, sklm, _luts, vatr, indices = struct.unpack_from("<7I", data, 0x24)
-        return cls(data, name, texture_table(data, tex), _materials(data, mats), *_sklm(data, sklm),
-                   _vatr(data, vatr), indices)
 
-    def texture_data(self, texture: Texture) -> bytes:
-        base = struct.unpack_from("<I", self.data, TEXTURE_DATA)[0] + texture.offset
+        def chunk(at: int) -> int:
+            return struct.unpack_from("<I", data, at)[0]
+
+        return cls(data, layout, name, texture_table(data, chunk(layout.textures)),
+                   _materials(data, chunk(layout.materials), layout),
+                   *_sklm(data, chunk(layout.sklm), layout), _vatr(data, chunk(layout.vatr), layout),
+                   chunk(layout.index))
+
+    def texture_data(self, texture: Texture) -> bytes | None:
+        """The texture's pixels; None when the model keeps them outside (MM3D's .ctxb bundles)."""
+        start = struct.unpack_from("<I", self.data, self.layout.texture_data)[0]
+        if start == 0:
+            return None
+        base = start + texture.offset
         return self.data[base:base + texture.size]
 
     def indices(self, shape: Shape) -> list[int]:
@@ -131,8 +170,8 @@ class Cmb:
 
     def arrays(self, shape: Shape) -> list[str]:
         """The shape's attributes read per vertex; the rest are constants or unused."""
-        return [name for name in WIDTHS
-                if shape.attribute(name).mode == ATTRIBUTE_ARRAY and self.vatr[name][1]]
+        return [name for name in self.layout.slices
+                if name in WIDTHS and shape.attribute(name).mode == ATTRIBUTE_ARRAY and self.vatr[name][1]]
 
     def vertices(self, shape: Shape, name: str) -> list[tuple[float, ...]] | None:
         """Every vertex of the attribute from the shape's start, scaled; None unless an array."""
@@ -170,7 +209,7 @@ class Cmb:
         if len(shape.prm_chunks) != sets:
             if len(shape.prm_chunks) != 1:
                 raise ValueError(f"shape {shape_index} has {len(shape.prm_chunks)} primitive sets")
-            return Cmb.parse(_with_primitive_sets(self.data, shape.offset, sets)).with_shape(
+            return Cmb.parse(_with_primitive_sets(self.data, self.layout, shape.offset, sets)).with_shape(
                 shape_index, vertices, indices)
         arrays = self.arrays(shape)
         if set(arrays) != set(vertices):
@@ -184,9 +223,10 @@ class Cmb:
         if base + count > 0xFFFF:
             raise ValueError("new vertices do not fit 16-bit indices")
 
-        vatr = struct.unpack_from("<I", self.data, 0x38)[0]
+        layout = self.layout
+        vatr = struct.unpack_from("<I", self.data, layout.vatr)[0]
         slices = []
-        for name in SLICES:
+        for name in layout.slices:
             offset, size = self.vatr[name]
             data = bytearray(self.data[offset:offset + size])
             if name in vertices:
@@ -197,8 +237,8 @@ class Cmb:
                 data.extend(_encode(vertices[name], attribute, code))
             data.extend(bytes(-len(data) % 4))
             slices.append(bytes(data))
-        chunk = bytearray(self.data[vatr:vatr + VATR_DATA])
-        cursor = VATR_DATA
+        chunk = bytearray(self.data[vatr:vatr + layout.vatr_data])
+        cursor = layout.vatr_data
         for i, data in enumerate(slices):
             struct.pack_into("<II", chunk, VATR_TABLE + i * 8, len(data), cursor if data else 0)
             cursor += len(data)
@@ -207,7 +247,7 @@ class Cmb:
             if not data:
                 struct.pack_into("<I", chunk, VATR_TABLE + i * 8 + 4, cursor)
         chunk.extend(b"".join(slices))
-        position_stride = COMPONENTS[shape.position.data_type][1] * WIDTHS["position"]
+        position_stride = COMPONENTS[shape.attribute("position").data_type][1] * WIDTHS["position"]
         struct.pack_into("<II", chunk, 4, len(chunk), len(slices[0]) // position_stride)
 
         index_count = struct.unpack_from("<I", self.data, INDEX_COUNT)[0]
@@ -215,7 +255,7 @@ class Cmb:
         if index_count + len(indices) > 0xFFFF:
             raise ValueError("index buffer outgrows 16-bit primitive offsets")
         index_data.extend(struct.pack(f"<{len(indices)}H", *(base + i for i in indices)))
-        texture_data = struct.unpack_from("<I", self.data, TEXTURE_DATA)[0]
+        texture_data = struct.unpack_from("<I", self.data, layout.texture_data)[0]
         size = struct.unpack_from("<I", self.data, 4)[0]
 
         out = bytearray(self.data[:vatr])
@@ -224,13 +264,13 @@ class Cmb:
         new_index = len(out)
         out.extend(index_data)
         out.extend(bytes(-len(out) % CHUNK_ALIGN))
-        new_texture_data = len(out)
-        out.extend(self.data[texture_data:size])
-        out.extend(bytes(-len(out) % CHUNK_ALIGN))
+        if texture_data:
+            struct.pack_into("<I", out, layout.texture_data, len(out))
+            out.extend(self.data[texture_data:size])
+            out.extend(bytes(-len(out) % CHUNK_ALIGN))
         struct.pack_into("<I", out, 4, len(out))
         struct.pack_into("<I", out, INDEX_COUNT, index_count + len(indices))
-        struct.pack_into("<I", out, INDEX_CHUNK, new_index)
-        struct.pack_into("<I", out, TEXTURE_DATA, new_texture_data)
+        struct.pack_into("<I", out, layout.index, new_index)
         # Whole triangles per set, each under the game's signed count.
         per_set = -(-len(indices) // 3 // len(shape.prm_chunks)) * 3
         for i, prm in enumerate(shape.prm_chunks):
@@ -240,15 +280,15 @@ class Cmb:
         return bytes(out)
 
 
-def _with_primitive_sets(data: bytes, sepd: int, sets: int) -> bytes:
+def _with_primitive_sets(data: bytes, layout: Layout, sepd: int, sets: int) -> bytes:
     """The model with a one-set sepd holding copies of its prms chunk; later chunks move."""
     old_size = struct.unpack_from("<I", data, sepd + CHUNK_SIZE)[0]
-    table = sepd + SEPD_TABLE + 4
+    table = sepd + layout.sepd_table + 4
     prms = sepd + struct.unpack_from("<H", data, table)[0]
     prms_chunk = data[prms:prms + struct.unpack_from("<I", data, prms + CHUNK_SIZE)[0]]
-    first = SEPD_TABLE + 4 + sets * 2
+    first = layout.sepd_table + 4 + sets * 2
     first += -first % 4
-    new = bytearray(data[sepd:sepd + SEPD_TABLE + 4])
+    new = bytearray(data[sepd:sepd + layout.sepd_table + 4])
     new.extend(struct.pack(f"<{sets}H", *(first + i * len(prms_chunk) for i in range(sets))))
     new.extend(bytes(first - len(new)))
     new.extend(prms_chunk * sets)
@@ -259,7 +299,7 @@ def _with_primitive_sets(data: bytes, sepd: int, sets: int) -> bytes:
     struct.pack_into("<H", new, SEPD_COUNT, sets)
     out = bytearray(data[:sepd] + new + data[sepd + old_size:])
 
-    sklm = struct.unpack_from("<I", data, SKLM)[0]
+    sklm = struct.unpack_from("<I", data, layout.sklm)[0]
     shp = sklm + struct.unpack_from("<I", data, sklm + 0x0C)[0]
     for chunk in (sklm, shp):
         struct.pack_into("<I", out, chunk + CHUNK_SIZE, struct.unpack_from("<I", data, chunk + CHUNK_SIZE)[0] + grow)
@@ -268,8 +308,10 @@ def _with_primitive_sets(data: bytes, sepd: int, sets: int) -> bytes:
         offset = struct.unpack_from("<H", data, at)[0]
         if shp + offset > sepd:
             struct.pack_into("<H", out, at, offset + grow)
-    for at in (CHUNK_SIZE, *LATER_CHUNKS):
-        struct.pack_into("<I", out, at, struct.unpack_from("<I", data, at)[0] + grow)
+    for at in (CHUNK_SIZE, *layout.later_chunks):
+        value = struct.unpack_from("<I", data, at)[0]
+        # A model without its own texture data has no such chunk to move.
+        struct.pack_into("<I", out, at, value + grow if value else 0)
     return bytes(out)
 
 
@@ -293,11 +335,11 @@ def texture_table(data: bytes, offset: int) -> list[Texture]:
     return textures
 
 
-def _materials(data: bytes, offset: int) -> list[tuple[int, int, int]]:
+def _materials(data: bytes, offset: int, layout: Layout) -> list[tuple[int, int, int]]:
     count = struct.unpack_from("<I", data, offset + 0x08)[0]
     out = []
     for i in range(count):
-        entry = offset + 0x0C + i * MATERIAL_SIZE
+        entry = offset + 0x0C + i * layout.material_size
         out.append(tuple(struct.unpack_from("<h", data, entry + 0x10 + j * 0x18)[0] for j in range(3)))
     return out
 
@@ -307,28 +349,29 @@ def _attribute(data: bytes, offset: int) -> Attribute:
     return Attribute(start, scale, data_type, mode, struct.unpack_from("<4f", data, offset + 0x0C))
 
 
-def _sklm(data: bytes, offset: int) -> tuple[list[Mesh], list[Shape]]:
+def _sklm(data: bytes, offset: int, layout: Layout) -> tuple[list[Mesh], list[Shape]]:
     mshs, shp = struct.unpack_from("<II", data, offset + 0x08)
     mshs += offset
     shp += offset
     meshes = []
     for i in range(struct.unpack_from("<I", data, mshs + 0x08)[0]):
-        shape, material = struct.unpack_from("<HB", data, mshs + 0x10 + i * 4)
+        shape, material = struct.unpack_from("<HB", data, mshs + 0x10 + i * layout.mesh_size)
         meshes.append(Mesh(shape, material))
     shapes = []
     for i in range(struct.unpack_from("<I", data, shp + 0x08)[0]):
         sepd = shp + struct.unpack_from("<H", data, shp + 0x10 + i * 2)[0]
-        shapes.append(_shape(data, sepd))
+        shapes.append(_shape(data, sepd, layout))
     return meshes, shapes
 
 
-def _shape(data: bytes, sepd: int) -> Shape:
+def _shape(data: bytes, sepd: int, layout: Layout) -> Shape:
     if data[sepd:sepd + 4] != b"sepd":
         raise ValueError("bad sepd")
     count = struct.unpack_from("<H", data, sepd + 0x08)[0]
     center = struct.unpack_from("<3f", data, sepd + 0x0C)
-    attributes = [_attribute(data, sepd + SEPD_ATTRIBUTES + i * ATTRIBUTE_SIZE) for i in range(8)]
-    table = sepd + SEPD_ATTRIBUTES + 8 * ATTRIBUTE_SIZE + 4
+    attributes = {name: _attribute(data, sepd + SEPD_ATTRIBUTES + i * ATTRIBUTE_SIZE)
+                  for i, name in enumerate(layout.slices)}
+    table = sepd + layout.sepd_table + 4
     primitives = []
     prm_chunks = []
     for i in range(count):
@@ -337,13 +380,12 @@ def _shape(data: bytes, sepd: int) -> Shape:
         index_type, _, _, count_, offset = struct.unpack_from("<hbbHH", data, prm + 0x10)
         primitives.append(Primitive(index_type, count_, offset * 2))
         prm_chunks.append(prm)
-    position, normal, color, tex0, tex1, tex2 = attributes[:6]
-    return Shape(sepd, center, position, normal, color, tex0, tex1, tex2, primitives, prm_chunks)
+    return Shape(sepd, center, attributes, primitives, prm_chunks)
 
 
-def _vatr(data: bytes, offset: int) -> dict[str, tuple[int, int]]:
+def _vatr(data: bytes, offset: int, layout: Layout) -> dict[str, tuple[int, int]]:
     out = {}
-    for i, name in enumerate(SLICES):
+    for i, name in enumerate(layout.slices):
         size, start = struct.unpack_from("<II", data, offset + 0x0C + i * 8)
         out[name] = (offset + start, size)
     return out

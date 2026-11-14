@@ -3,8 +3,9 @@
 - `tools/z3dmods/cli.py`: the `z3dmods` commands; composes the modules below.
 - `tools/z3dmods/config.py`: the one reader of the environment and `env-assets/local.json`.
 - `tools/z3dmods/ctr.py`: decrypted CCI/NCCH/exheader/ExeFS/RomFS reading and `.code` LZ decompression.
-- `tools/z3dmods/zsi.py`: OoT3D room files: header commands, their CMB models, replacing a model and moving what follows. Scene files: the collision's vertices and triangles, read and written.
-- `tools/z3dmods/cmb.py`: OoT3D CMB models: textures, materials, meshes, vertices; rewriting one shape's geometry.
+- `tools/z3dmods/zsi.py`: OoT3D and MM3D room files: header commands, their CMB models, replacing a model and moving what follows. Scene files: the collision's vertices and triangles, read and written.
+- `tools/z3dmods/cmb.py`: CMB models, OoT3D's version 6 and MM3D's 10: textures, materials, meshes, vertices; rewriting one shape's geometry.
+- `tools/z3dmods/lzs.py`: unpacks MM3D's LzS-wrapped game files.
 - `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
 - `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, ETC1, ETC1A4) and Azahar's custom-texture hash and file name.
 - `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
@@ -12,7 +13,7 @@
 - `tools/z3dmods/ctxb.py`: CTXB menu texture bundles.
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).
 - `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies and draws port-assets' pad glyphs over the 3DS button prompts, on the game's own art where no pack covers it (edit tables in `sets/hud/`).
-- `tools/z3dmods/stairs.py`: folds stair-textured ramps in OoT3D rooms into risers and treads, and the scene's collision triangles on them the same way.
+- `tools/z3dmods/stairs.py`: folds stair-textured ramps in a game's rooms into risers and treads, and the scene's collision triangles on them the same way.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
 - `tools/z3dmods/bps.py`: BPS info and apply, with source and target CRC checks.
 - `tools/z3dmods/install.py`: installs a `sets/<game>.json` set into Azahar's `load/`, with an install record.
