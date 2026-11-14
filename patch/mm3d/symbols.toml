@@ -1,6 +1,8 @@
 # Guest constants generated from the MM3D decomp, USA 1.0 layout (tools/z3dmods/symbols.py).
 
 [functions]
+kMainScreenDraw = "MainScreen_Draw"
+kMainScreenDrawMinimap = "MainScreen_DrawMinimap"
 kCutsceneBeginScript = "Cutscene_BeginScript"
 kCutsceneStartScript = "CutsceneHandler_StartScript"
 kCutsceneRunScript = "CutsceneHandler_RunScript"
@@ -20,6 +22,9 @@ kVecDiffToGeo = "OLib_Vec3fDiffToVecGeo"
 kVecAddGeo = "OLib_AddVecGeoToVec3f"
 
 [globals]
+kLayoutDrawManager = "gLayoutDrawManager"
+kMinimapQuads = "gMinimapQuads"
+kMinimapMarkerQuads = "gMinimapMarkerQuads"
 kCommonData = "gCommonData"
 kUiCommonLayouts = "gUiCommonLayouts"
 kUiScreenContext = "gUiScreenContext"
@@ -32,6 +37,12 @@ kOcarinaSongButtons = "gOcarinaSongButtons"
 kOcarinaListSongs = "gOcarinaListSongs"
 
 [offsets]
+kDrawQueueCounts = "LayoutDrawManager.queueCounts"
+kDrawQueues = "LayoutDrawManager.queues"
+kDrawQueuePriorities = "LayoutDrawManager.priorities"
+kQuadPositions = "QuadBatch.positions"
+kQuadSizes = "QuadBatch.sizes"
+kQuadCount = "QuadBatch.count"
 kPlayHudAActionButton = "PlayHud.aActionButton"
 kUiWidgetFlags = "UiWidget.flags"
 kUiWidgetActiveFlags = "UiWidget.activeFlags"
@@ -89,6 +100,9 @@ kCsActorCueSize = "CsCmdActorCue"
 kVecGeoSize = "VecGeo"
 
 [defines]
+kDrawQueueCapacity = "LAYOUT_DRAW_QUEUE_CAPACITY"
+kDrawQueueTop = "LAYOUT_DRAW_QUEUE_TOP"
+kDrawQueueTouch = "LAYOUT_DRAW_QUEUE_TOUCH"
 kPrinterStatePrinting = "MESSAGE_PRINTER_PRINTING"
 kSaveWriterIdle = "SAVE_WRITER_IDLE"
 kEntranceLayerMask = "ENTRANCE_LAYER_MASK"

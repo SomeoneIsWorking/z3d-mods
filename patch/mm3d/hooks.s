@@ -47,6 +47,11 @@
     b printer_update
 .section .expect.printer_update, "", %progbits
     .word 0xE92D4010 @ push {r4, lr}
+@ MainScreen_Draw's call of MainScreen_DrawMinimap; r0 is the play state (minimap.cpp).
+.section .patch.minimap, "ax", %progbits
+    bl _ZN7z3dmods4mm3d11drawMinimapEPv
+.section .expect.minimap, "", %progbits
+    .word 0xEBF41FC7 @ bl 0x2A326C
 .text
 printer_update:
     push {r0-r3, r12, lr}

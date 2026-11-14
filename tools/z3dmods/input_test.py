@@ -344,7 +344,7 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False,
                      aimed_on_y: bool = False) -> None:
     """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle,
     the Bunny Hood, every song, with `notebook` the Bombers' Notebook, with `maps` every
-    region's map and with `aimed_on_y` the bow on the game's Y and so on slot 1 (the patch's
+    region's and scene's map and with `aimed_on_y` the bow on the game's Y and so on slot 1 (the patch's
     slots are made again from the game's buttons), written by the game's own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
@@ -366,6 +366,9 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False,
     if maps:
         regions = save + symbols.offset(d, 'SaveData.weekEventReg') + d.define('WEEK_EVENT_REGION_MAPS')
         script.insert(-1, f"poke:{regions:#x},{(1 << d.define('REGION_MAP_COUNT')) - 1:02x}")
+        # Every scene's map, as Tingle's maps show them: the minimap in play.
+        scenes = save + symbols.offset(d, 'SaveData.scenesVisible')
+        script.insert(-1, f"poke:{scenes:#x},{'ff' * 4 * d.define('SCENES_VISIBLE_WORDS')}")
     if aimed_on_y:
         equipment = save + symbols.offset(d, "SaveData.equipment")
         button_slots = equipment + symbols.offset(d, "EquipmentData.buttonSlots")
@@ -707,10 +710,12 @@ def _notebook_mm3d(session: Session, pad: Gamepad) -> None:
 
 
 def _map_zoom_mm3d(session: Session, pad: Gamepad) -> None:
-    """MM3D with every region's map: on the Map screen the pad's X zooms in at the loupe and out
+    """MM3D with every region's map: the minimap in play at the top screen's bottom right; on the
+    Map screen the pad's X zooms in at the loupe and out
     again, the left stick moves the loupe; the same with the keyboard's X by name and its stick
     keys, the prompts shown as caps."""
     _mm3d_file_1(session)
+    session.shot("play-minimap")
     pad.button("select")
     session.wait(3)
     session.shot("pad-map")

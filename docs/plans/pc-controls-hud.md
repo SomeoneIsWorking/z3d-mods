@@ -357,7 +357,12 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   keeps -1 there, a counter's `none`). MM3D's are by dungeon, each dungeon's scenes an element;
   seen in Woodfall Temple (3) and Inverted Stone Tower (2), none in Snowhead, and OoT3D's Forest
   Temple with none, then 2 (`mmkeys6`, `ootkeys8`).
-- Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
+- The minimap at the top screen's bottom right in both games, each game's own: OoT3D's where The One
+  Screen puts it, MM3D's moved there by the patch from the touch screen's draw queue to the top
+  screen's (`patch/mm3d/minimap.cpp`), shown, like the game's, once the scene's map is owned
+  (Tingle's). Seen in South Clock Town, Termina Field and Woodfall Temple (`mmmap7`, `mmmap3`)
+  and in the window (`map-zoom-mm3d`, `play-minimap`), the Map screen's own map unchanged.
+- Missing from MM3D's HUD: View, the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
   game's own clock still draws and is not ours yet.
 - Missing from OoT3D's HUD: the carrots and View; the bow's, bombchus' and beans' counts follow

@@ -13,6 +13,7 @@ SECTIONS {
   .patch.interpreter_tail kCutsceneRunScript + 0x28 : { KEEP(*(.patch.interpreter_tail)) }
   .patch.camera_follow kCameraFollow : { KEEP(*(.patch.camera_follow)) }
   .patch.interpreter_state1 kCutsceneStartScript + 0x2C : { KEEP(*(.patch.interpreter_state1)) }
+  .patch.minimap kMainScreenDraw + 0xCC : { KEEP(*(.patch.minimap)) }
   . = PAYLOAD;
   .payload : { KEEP(*(.options)) *(.text*) *(.rodata*) *(.data*) }
   /* The item slots' block the app reads and writes (tools/z3dmods/slot_link.py). */
