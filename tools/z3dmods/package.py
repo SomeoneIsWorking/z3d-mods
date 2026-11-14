@@ -128,7 +128,7 @@ def build(cfg: Config, out: Path) -> Path:
     if out.exists():
         shutil.rmtree(out)
     (out / "bin").mkdir(parents=True)
-    binary = app.binary(cfg)
+    binary = app.current_binary(cfg)
     shutil.copy2(binary, out / "bin" / binary.name)
     _libraries(binary, next(app.core_prefix(cfg).glob("lib*/libazahar_core.so")), out / "lib")
     shutil.copytree(cfg.repo / "tools" / "z3dmods", out / "tools" / "z3dmods",

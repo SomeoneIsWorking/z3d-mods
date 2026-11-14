@@ -61,13 +61,24 @@ def core(cfg: Config) -> Path:
     return prefix
 
 
+def _build(cfg: Config) -> None:
+    tree = cfg.app_binary.parent
+    if not (tree / "build.ninja").exists():
+        subprocess.run(["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
+                        "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={core(cfg)}"], check=True)
+    subprocess.run(["ninja", "-C", str(tree)], check=True)
+
+
 def binary(cfg: Config) -> Path:
     """Builds the app only when no build exists; an existing build is used as it is."""
     if not cfg.app_binary.exists():
-        tree = cfg.app_binary.parent
-        subprocess.run(["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
-                        "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={core(cfg)}"], check=True)
-        subprocess.run(["ninja", "-C", str(tree)], check=True)
+        _build(cfg)
+    return cfg.app_binary
+
+
+def current_binary(cfg: Config) -> Path:
+    """The app built from the checkout as it is now, which a package is made of."""
+    _build(cfg)
     return cfg.app_binary
 
 
