@@ -8,14 +8,13 @@
 #include "../common/slots.hpp"
 #include "../common/song_sequence.hpp"
 #include "game.hpp"
+#include "play_update.hpp"
 #include "symbols.hpp"
 
 #include <stdint.h>
 
 namespace z3dmods::mm3d {
 namespace {
-
-using MessageStateFn = int32_t (*)(void *messages);
 
 // A slot's value, seven bits: an inventory slot, a song list entry from kFirstSong on, or nothing.
 using Slots = SlotTable<7>;
@@ -120,7 +119,7 @@ public:
       unapply(save);
     } else {
       apply(save, table);
-      if (link.mode == static_cast<uint8_t>(PadMode::Play) && settled(play, common)) {
+      if (link.mode == static_cast<uint8_t>(PadMode::Play) && inPlainPlay(play)) {
         use(play, save, table, held, pressed);
       }
     }
@@ -244,15 +243,6 @@ private:
     return entry >= 0 && songRow(save, static_cast<uint32_t>(entry)) != kNoRow
                ? static_cast<uint8_t>(kFirstSong + entry)
                : kNoValue;
-  }
-
-  // Plain play: no cutscene, scene change or text box, the HUD up.
-  static bool settled(void *play, const uint8_t *common) {
-    return guest::read<uint8_t>(play, kPlayCutscene + kCsState) == 0 &&
-           guest::read<int8_t>(play, kPlayTransitionTrigger) == 0 &&
-           guest::read<uint16_t>(common, kCommonHudVisibility) == kHudVisibilityAll &&
-           guest::function<MessageStateFn>(kMessageGetState)(
-               static_cast<uint8_t *>(play) + kPlayMessageContext) == kMessageStateNone;
   }
 
   // Whether a slot value presses the game's ocarina button instead of an item button.

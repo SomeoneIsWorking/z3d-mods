@@ -48,7 +48,7 @@ printer_update:
     b kPrinterUpdate + 4
 play_entry:
     push {r0-r3, r12, lr}
-    bl _ZN7z3dmods4mm3d15updateSlotItemsEPv
+    bl _ZN7z3dmods4mm3d10updatePlayEPv
     pop {r0-r3, r12, lr}
     push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
     b kPlayUpdate + 4

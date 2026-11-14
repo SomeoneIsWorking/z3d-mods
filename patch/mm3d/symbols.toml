@@ -12,6 +12,8 @@ kPlayUpdate = "Play_Update"
 kActorUpdateFirstCall = "func_0016EBAC"
 kPlaySaveAtStatue = "Play_SaveAtStatue"
 kPrinterUpdate = "MessagePrinter_Update"
+kSaveStartWrite = "SaveFile_StartWrite"
+kSaveUpdateWrite = "SaveFile_UpdateWrite"
 
 [globals]
 kCommonData = "gCommonData"
@@ -64,6 +66,11 @@ kCsTextAlt2 = "CsCmdText.altTextId2"
 kPrinterVtable = "MessagePrinter.vtable"
 kPrinterState = "MessagePrinter.state"
 kPrinterInstantOnSlot = "MessagePrinterVtbl.instantOn"
+kCommonEntrance = "CommonData.entrance"
+kSaveDay = "SaveData.day"
+kSaveTime = "SaveData.time"
+kPlaySaveWriter = "PlayState.saveWriter"
+kSaveWriterState = "SaveWriter.state"
 
 [sizes]
 kScriptHeaderSize = "CutsceneScript"
@@ -73,6 +80,10 @@ kCsActorCueSize = "CsCmdActorCue"
 
 [defines]
 kPrinterStatePrinting = "MESSAGE_PRINTER_PRINTING"
+kSaveWriterIdle = "SAVE_WRITER_IDLE"
+kEntranceLayerMask = "ENTRANCE_LAYER_MASK"
+kFinalDay = "FINAL_DAY"
+kClockTimeDawn = "CLOCK_TIME_DAWN"
 kButtonA = "PAD_A"
 kButtonR = "PAD_R"
 kButtonL = "PAD_L"

@@ -345,6 +345,29 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
     _copy_file(_harness_file(cfg, "mm3d", script + MM3D_SAVE, out), user)
 
 
+# Termina Field from South Clock Town's owl statue: a scene change autosave writes the file at.
+MM3D_FIELD = 0x5400
+# Six full hearts, which a new file does not have: the loaded file shows them if it is the one saved.
+MM3D_HEARTS = 0x60
+
+
+def _mm3d_autosave_file(cfg: Config, user: Path, out: Path) -> None:
+    """File 1 with six hearts, written by autosave on the scene change into Termina Field."""
+    d = symbols.load(cfg.repo, "mm3d")
+    save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
+    hearts = MM3D_HEARTS.to_bytes(2, "little").hex()
+    script = list(MM3D_BOOT) + [f"poke:{save + symbols.offset(d, 'SaveData.healthCapacity'):#x},{hearts}",
+                                f"poke:{save + symbols.offset(d, 'SaveData.health'):#x},{hearts}",
+                                "option:autosave,1", f"warp:{MM3D_FIELD:#x}", "wait:12"]
+    _copy_file(_harness_file(cfg, "mm3d", script, out), user)
+
+
+def _mm3d_reload(session: Session, pad: Gamepad) -> None:
+    """File 1, as autosave wrote it, loaded in the window."""
+    _mm3d_file_1(session)
+    session.shot("loaded")
+
+
 def _oot3d_file_1(session: Session) -> None:
     """From the boot to File 1 in play, on the keyboard."""
     session.wait(20)
@@ -1034,16 +1057,18 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "masks-mm3d": _masks_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
-               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "masks-mm3d": "mm3d"}
+               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "masks-mm3d": "mm3d",
+               "autosave-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
 PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-mm3d": _mm3d_slots_file,
            "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file, "masks-mm3d": _mm3d_slots_file,
+           "autosave-mm3d": _mm3d_autosave_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}

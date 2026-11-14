@@ -14,6 +14,12 @@ field = "quickText"
 label = "Quick Text"
 default = true
 
+[[option]]
+id = "autosave"
+field = "autosave"
+label = "Autosave after each scene change"
+default = false
+
 # The game turns its camera with the C-stick itself; the app turns the stick around.
 [[option]]
 id = "camera_invert_x"
