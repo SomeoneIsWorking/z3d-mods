@@ -34,7 +34,7 @@ def install_set(args: argparse.Namespace) -> None:
 
 
 def setup_game(args: argparse.Namespace) -> None:
-    setup.setup(config.load(), args.rom, args.user)
+    setup.setup(config.load(), args.rom, args.user, args.mods)
 
 
 def run_steps(args: argparse.Namespace) -> None:
@@ -81,6 +81,7 @@ def main() -> None:
     inst.set_defaults(run=install_set)
     made = commands.add_parser("setup", help="install the set of a dump's game into a z3d app user folder; the app's picker runs this")
     made.add_argument("--user", type=Path, required=True, help="the app's user folder (holds Azahar/)")
+    made.add_argument("--mods", type=Path, help="the player's mod downloads; env-assets/downloads without it")
     made.add_argument("rom", type=Path)
     made.set_defaults(run=setup_game)
     run = commands.add_parser("run", help="run the player's Azahar headless through scripted steps")

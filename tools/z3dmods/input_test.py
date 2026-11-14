@@ -14,11 +14,12 @@ import shutil
 import signal
 import subprocess
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, config, games, harness, play, shortcut, steps, symbols
+from z3dmods import app, config, ctr, games, harness, play, shortcut, steps, symbols
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -469,6 +470,59 @@ def _aim_mm3d(session: Session, pad: Gamepad) -> None:
     _aim_released(session)
 
 
+def _setup_refused(session: Session, pad: Gamepad) -> None:
+    """A setup the installer refuses: the picker shows why, and A goes back to the tiles."""
+    session.expect("picker: on")
+    session.wait(2)
+    pad.stick(32767, 0, 0.3)
+    session.expect("picker: on Majora")
+    pad.button("a")
+    session.expect("installer ended with 1", 300)
+    session.wait(1)
+    session.shot("refused")
+    pad.button("a")
+    session.expect("picker: on Majora")
+    session.wait(1)
+    session.shot("back")
+
+
+def _wrong_dump(cfg: Config, out: Path) -> Config:
+    """SETUP_GAME's dump with nothing after its ExeFS and one byte of its code changed: the
+    game's title and icon, not the revision the set is made for."""
+    title_id = GameSet.named(cfg.repo, SETUP_GAME).title_id
+    dump = ctr.open_cci(cfg.rom(title_id))
+    with cfg.rom(title_id).open("rb") as stream:
+        data = bytearray(stream.read(dump.offset + dump.exefs_offset + dump.exefs_size))
+    data[dump.offset + dump.exefs_offset + 0x1200] ^= 0xFF
+    wrong = out / "dumps" / f"{play.TITLES[SETUP_GAME]} (another revision).3ds"
+    wrong.parent.mkdir(parents=True)
+    wrong.write_bytes(data)
+    # The core reads the icon only from an image of the whole size; the rest is a hole.
+    os.truncate(wrong, cfg.rom(title_id).stat().st_size)
+    return replace(cfg, roms=cfg.roms | {title_id: wrong})
+
+
+def _base_mod(cfg: Config) -> Path:
+    """The folder of SETUP_GAME's base mod among the downloads."""
+    base = GameSet.named(cfg.repo, SETUP_GAME).base
+    return next(p for p in cfg.mod_sources.rglob(base["code_patch"]) if p.is_file()).parent
+
+
+def _missing_mod(cfg: Config, out: Path) -> Config:
+    """A mods folder with nothing in it."""
+    (out / "mods").mkdir(parents=True)
+    return replace(cfg, mod_sources=out / "mods")
+
+
+def _different_mod(cfg: Config, out: Path) -> Config:
+    """A mods folder whose copy of SETUP_GAME's base mod has one file that is not the set's."""
+    base = GameSet.named(cfg.repo, SETUP_GAME).base
+    shutil.copytree(_base_mod(cfg), out / "mods" / "base")
+    with (out / "mods" / "base" / base["exheader"]).open("ab") as stream:
+        stream.write(b"changed")
+    return replace(cfg, mod_sources=out / "mods")
+
+
 def _menu_pad(session: Session, pad: Gamepad) -> None:
     """The menus read the pad by its own button names whatever game was played last: after
     OoT3D, whose set trades X and Y on their way to the game, X still opens the options and
@@ -603,9 +657,13 @@ DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord, 
 DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d", "aim": "oot3d", "aim-mm3d": "mm3d"}
 # What a scenario puts in its user folder before the app starts.
 PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "aim": _oot3d_chord_file,
-           "aim-mm3d": _mm3d_chord_file, "setup": _without_set}
+           "aim-mm3d": _mm3d_chord_file, "setup": _without_set,
+           "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set}
 # Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.
-PICKER = {"menu-pad": _menu_pad, "setup": _setup}
+PICKER = {"menu-pad": _menu_pad, "setup": _setup, "setup-wrong-dump": _setup_refused, "setup-missing-mod": _setup_refused,
+          "setup-different-mod": _setup_refused}
+# The player's files a picker scenario runs on, when they are not the config's.
+FILES = {"setup-wrong-dump": _wrong_dump, "setup-missing-mod": _missing_mod, "setup-different-mod": _different_mod}
 SCENARIOS = {**DIRECT, **PICKER, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
@@ -617,7 +675,7 @@ def _session(cfg: Config, scenario: str, out: Path) -> Session:
     if scenario in DIRECT:
         return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user))
     if scenario in PICKER:
-        return Session(out, play.launch_args(cfg, None, user))
+        return Session(out, play.launch_args(FILES[scenario](cfg, out) if scenario in FILES else cfg, None, user))
     entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"
     if not entry.exists():
         raise RuntimeError(f"{entry} is missing; run z3dmods shortcut")

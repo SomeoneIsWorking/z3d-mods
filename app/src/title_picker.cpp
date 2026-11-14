@@ -34,6 +34,11 @@ constexpr float kTileShare = 0.42F;
 constexpr float kTileLift = 0.06F;
 // A line of text wraps at this share of the window's width.
 constexpr float kTextWidth = 0.9F;
+// The setup screen's text fills at most this share of the window's height: its lower part
+// shrinks by kShrink a step, down to kSmallestShare, until it does.
+constexpr float kTextHeight = 0.9F;
+constexpr float kShrink = 0.9F;
+constexpr float kSmallestShare = 1.0F / 60.0F;
 
 struct Rgb {
   uint8_t r;
@@ -301,12 +306,22 @@ void TitlePicker::drawSetUp(const std::string &heading, const std::string &line)
   TTF_Text *top = makeText(engine_, font_, heading, kText);
   TTF_SetTextWrapWidth(top, static_cast<int>(current.width * kTextWidth));
   const SDL_FPoint topSize = textSize(top);
-  TTF_SetFontSize(font_, current.height * kTitleShare);
-  TTF_Text *bottom = makeText(engine_, font_, line, kDim);
-  TTF_SetTextWrapWidth(bottom, static_cast<int>(current.width * kTextWidth));
-  const SDL_FPoint bottomSize = textSize(bottom);
-  // The two together sit in the middle, however many lines the lower one takes.
+  // The two together sit in the middle; the lower one shrinks until its lines fit under the other.
   const float gap = current.height * 0.05F;
+  const float room = current.height * kTextHeight - topSize.y - gap;
+  float size = current.height * kTitleShare;
+  TTF_Text *bottom = nullptr;
+  SDL_FPoint bottomSize{};
+  do {
+    if (bottom != nullptr) {
+      TTF_DestroyText(bottom);
+      size *= kShrink;
+    }
+    TTF_SetFontSize(font_, size);
+    bottom = makeText(engine_, font_, line, kDim);
+    TTF_SetTextWrapWidth(bottom, static_cast<int>(current.width * kTextWidth));
+    bottomSize = textSize(bottom);
+  } while (bottomSize.y > room && size > current.height * kSmallestShare);
   const float y = (current.height - topSize.y - gap - bottomSize.y) / 2.0F;
   TTF_DrawRendererText(top, (current.width - topSize.x) / 2.0F, y);
   TTF_DestroyText(top);

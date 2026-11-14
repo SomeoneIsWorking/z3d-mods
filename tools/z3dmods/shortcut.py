@@ -18,10 +18,7 @@ def folders() -> list[Path]:
 
 
 def exec_line(cfg: Config) -> str:
-    uv = shutil.which("uv")
-    if uv is None:
-        raise RuntimeError("uv is not on PATH")
-    return f'"{uv}" --directory "{cfg.repo}" run --frozen z3dmods play'
+    return " ".join(f'"{part}"' for part in (*cfg.tool_command, "play"))
 
 
 def desktop_entry(exec_: str, folder: Path | None = None) -> str:

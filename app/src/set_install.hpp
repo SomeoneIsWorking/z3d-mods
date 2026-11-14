@@ -34,6 +34,11 @@ public:
   [[nodiscard]] const std::string &lastLine() const {
     return lastLine_;
   }
+  // Why the installer refused the player's files, in its own lines; its last line when it
+  // ended some other way.
+  [[nodiscard]] const std::string &failure() const {
+    return refusal_.empty() ? lastLine_ : refusal_;
+  }
   // The ended installer left the set in place.
   [[nodiscard]] bool succeeded() const {
     return succeeded_;
@@ -52,6 +57,7 @@ private:
   std::filesystem::path manifest_;
   std::string pending_;
   std::string lastLine_;
+  std::string refusal_;
   bool succeeded_ = false;
   bool fresh_ = false;
 };

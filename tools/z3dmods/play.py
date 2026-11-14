@@ -8,12 +8,10 @@ Azahar's saves are not touched.
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
 from pathlib import Path
 
-from z3dmods import app
+from z3dmods import app, ctr
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -23,12 +21,33 @@ TITLES = {"oot3d": "Ocarina of Time 3D", "mm3d": "Majora's Mask 3D"}
 DESKTOP_ID = "z3d"
 
 
+DUMP_SUFFIXES = (".3ds", ".cci")
+
+
+def dumps(cfg: Config, folder: Path) -> dict[str, Path]:
+    """The dumps in `folder` of the games a set is made for, by title ID."""
+    titles = {GameSet.named(cfg.repo, name).title_id for name in TITLES}
+    found: dict[str, Path] = {}
+    for path in sorted(folder.iterdir()):
+        if path.suffix.lower() not in DUMP_SUFFIXES:
+            continue
+        try:
+            title_id = f"{ctr.open_cci(path).program_id:016X}"
+        except (ValueError, OSError):
+            continue
+        if title_id in titles:
+            found.setdefault(title_id, path)
+    return found
+
+
 def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> Path:
     """The picker's games (app/src/game_library.hpp) as `folder`/library.json; `rom_folder` puts the
     ROMs, under their own names, in another machine's ROM folder."""
     entries = []
     for name in TITLES:
         game = GameSet.named(cfg.repo, name)
+        if game.title_id not in cfg.roms:
+            continue
         rom = cfg.rom(game.title_id)
         if rom_folder is not None:
             rom = rom_folder / rom.name
@@ -49,11 +68,8 @@ def picker_args(binary: Path, library: Path, font: Path, assets: Path, user: Pat
 
 
 def installer(cfg: Config, user: Path) -> list[str]:
-    """`z3dmods setup` on the user folder `user`, as the app runs it."""
-    uv = shutil.which("uv")
-    if uv is None:
-        raise RuntimeError("uv is not on PATH")
-    return [uv, "--directory", str(cfg.repo), "run", "--frozen", "z3dmods", "setup", "--user", str(user)]
+    """`z3dmods setup` on the user folder `user` and the config's mod downloads, as the app runs it."""
+    return [*cfg.tool_command, "setup", "--user", str(user), "--mods", str(cfg.mod_sources)]
 
 
 def launch_args(cfg: Config, name: str | None, user: Path) -> list[str]:
@@ -68,4 +84,4 @@ def launch_args(cfg: Config, name: str | None, user: Path) -> list[str]:
 def play(cfg: Config, name: str | None) -> int:
     app.seed_user(cfg, cfg.app_data, fresh=False)
     args = launch_args(cfg, name, cfg.app_data)
-    return subprocess.run(args, env=dict(os.environ, **cfg.session_env), check=False).returncode
+    return subprocess.run(args, env=cfg.app_env(), check=False).returncode

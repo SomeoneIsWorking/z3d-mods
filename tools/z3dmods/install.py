@@ -24,11 +24,15 @@ STAIRS_OPTION = "stairs"
 @dataclass(frozen=True)
 class GameSet:
     title_id: str
+    # The dump the set is made for, in the player's words.
+    dump: str
     code_sha256: str
     base: dict
     textures: dict | None
     azahar_global: dict
     patch: str | None
+    # Where the patch's payload starts: the page after the base mod's .bss.
+    payload: int | None
     # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
     screen_layout: str
     # Fold the ramps drawn with a texture whose name matches this into steps, in the folder of
@@ -43,21 +47,25 @@ class GameSet:
     def named(cls, repo: Path, name: str) -> GameSet:
         """A game's set, sets/<name>.json."""
         raw = json.loads((repo / "sets" / f"{name}.json").read_text())
-        return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
-                   raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"),
+        return cls(raw["title_id"], raw["dump"], raw["code_sha256"], raw["base"], raw.get("textures"),
+                   raw.get("azahar_global", {}), raw.get("patch"),
+                   int(raw["payload"], 16) if "payload" in raw else None, raw.get("screen_layout", "default"),
                    raw.get("stairs"), raw.get("hud"))
 
 
-def _check_sources(cfg: Config, game: GameSet) -> None:
-    """Every third-party file the install reads is the copy the set names (source_check.py)."""
-    root = cfg.env_assets / game.base["root"]
+def _sources(cfg: Config, game: GameSet) -> tuple[Path, Path | None]:
+    """The base mod's folder and the texture pack's among the player's downloads: the copies
+    the set names by hash (source_check.py)."""
     used = {game.base[key] for key in ("code_patch", "exheader", "romfs") if key in game.base}
     if used != set(game.base["sha256"]):
         raise RuntimeError(f"{game.title_id}: the set's base hashes do not cover exactly {sorted(used)}")
-    for name, expected in game.base["sha256"].items():
-        source_check.check(root / name, expected)
-    if game.textures:
-        source_check.check(cfg.env_assets / game.textures["root"], game.textures["sha256"])
+    source_check.unpack(cfg.mod_sources)
+    base = source_check.find_files(cfg.mod_sources, game.base["name"], game.base["from"],
+                                   game.base["code_patch"], game.base["sha256"])
+    textures = game.textures and source_check.find_folder(
+        cfg.mod_sources, game.textures["name"], game.textures["from"], game.textures["folder"],
+        game.textures["sha256"])
+    return base, textures
 
 
 def _sha(path: Path) -> str:
@@ -108,7 +116,10 @@ def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: 
     exheader = ctr.Exheader.parse(base_exheader)
     data_end = exheader.data.address + exheader.data.pages * PAGE
     payload = data_end + _page(exheader.bss_size)
-    ours = patch_build.build(cfg.repo, game.patch, payload, cfg.repo / "build" / "patch" / game.patch)
+    if payload != game.payload:
+        raise RuntimeError(f"{game.title_id}: the base mod leaves 0x{payload:X} for our patch, the set says "
+                           f"0x{game.payload or 0:X}")
+    ours = patch_build.patch(cfg.repo, game.patch, payload)
     for offset, original in ours.expected.items():
         if code[offset:offset + len(original)] != original:
             raise RuntimeError(f"0x{offset + patch_build.CODE_BASE:08X} in the base mod's code is not the "
@@ -158,16 +169,20 @@ def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: Tex
 
 
 def install(cfg: Config, game: GameSet) -> Path:
-    _check_sources(cfg, game)
-    root = cfg.env_assets / game.base["root"]
-    code_patch = root / game.base["code_patch"]
-    rom = ctr.open_cci(cfg.rom(game.title_id))
-    vanilla = rom.code()
+    rom_path = cfg.rom(game.title_id)
+    try:
+        rom = ctr.open_cci(rom_path)
+        vanilla = rom.code()
+    except ValueError as error:
+        raise source_check.Refused(f"{rom_path.name} is not a decrypted 3DS dump\n{error}") from error
     if ctr.sha256(vanilla) != game.code_sha256:
-        raise RuntimeError(f"{game.title_id}: ROM code.bin is not the revision this set targets")
+        raise source_check.Refused(f"{rom_path.name} is not the dump this setup was made for\n"
+                                   f"It needs {game.dump}")
+    root, texture_root = _sources(cfg, game)
+    code_patch = root / game.base["code_patch"]
 
     base_romfs = root / game.base["romfs"] if "romfs" in game.base else None
-    pack = TexturePack(cfg.env_assets / game.textures["root"]) if game.textures else None
+    pack = TexturePack(texture_root) if texture_root else None
     if game.hud and not pack:
         raise RuntimeError(f"{game.title_id}: the menu textures are built on a texture pack, and the set has none")
     if game.stairs and not game.patch:
@@ -209,9 +224,9 @@ def install(cfg: Config, game: GameSet) -> Path:
         textures = cfg.textures_dir(game.title_id)
         _remove_recorded(textures)
         textures.mkdir(parents=True, exist_ok=True)
-        if game.textures:
+        if texture_root:
             # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
-            _copy_tree(cfg.env_assets / game.textures["root"], textures, frozenset(menus))
+            _copy_tree(texture_root, textures, frozenset(menus))
         for name, png in menus.items():
             target = textures / HUD_FOLDER / name
             target.parent.mkdir(parents=True, exist_ok=True)

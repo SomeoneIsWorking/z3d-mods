@@ -1,7 +1,10 @@
-"""Build our MIT code patch for a game: clang/lld into an ELF, then IPS records relative to .text."""
+"""Our MIT code patch for a game: built with clang/lld into an ELF, then IPS records relative to
+.text. A package carries the build (`prebuilt/<game>/`: `code.ips` and `hooks.json`, the payload's
+range and the base code each hook replaces), so the player's machine needs no compiler."""
 
 from __future__ import annotations
 
+import json
 import shutil
 import struct
 import subprocess
@@ -28,6 +31,37 @@ class Patch:
     expected: dict[int, bytes]
     payload_start: int
     payload_end: int
+
+
+PREBUILT = "prebuilt"
+
+
+def save(patch: Patch, folder: Path) -> None:
+    """Writes a build for a package."""
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "code.ips").write_bytes(ips.build(patch.records))
+    hooks = {"payload": patch.payload_start, "payload_end": patch.payload_end,
+             "expected": {str(offset): original.hex() for offset, original in patch.expected.items()}}
+    (folder / "hooks.json").write_text(json.dumps(hooks, indent=2) + "\n")
+
+
+def _load(folder: Path) -> Patch:
+    hooks = json.loads((folder / "hooks.json").read_text())
+    expected = {int(offset): bytes.fromhex(original) for offset, original in hooks["expected"].items()}
+    return Patch(ips.parse((folder / "code.ips").read_bytes()), expected, hooks["payload"], hooks["payload_end"])
+
+
+def patch(repo: Path, game: str, payload: int) -> Patch:
+    """The game's patch with its payload at `payload`: the package's build where there is one,
+    else built here from patch/<game>/."""
+    folder = repo / PREBUILT / game
+    if not folder.is_dir():
+        return build(repo, game, payload, repo / "build" / "patch" / game)
+    shipped = _load(folder)
+    if shipped.payload_start != payload:
+        raise RuntimeError(f"the shipped {game} patch is built for 0x{shipped.payload_start:X}, "
+                           f"and the base mod leaves 0x{payload:X}")
+    return shipped
 
 
 def _tool(name: str) -> str:

@@ -39,7 +39,10 @@ So two code mods cannot both be patches, but a base mod can be baked into a loca
 
 ## Installed sets
 
-`uv run --frozen z3dmods install oot3d mm3d` installs from `sets/<game>.json`. It checks the ROM's
+`uv run --frozen z3dmods install oot3d mm3d` installs from `sets/<game>.json`. A set names each
+third-party source by its SHA-256 and where to get it, not by a path: the install finds the copies
+with those hashes under `env-assets/downloads/` (`source_check.py`; the app's installer looks in
+the player's mods folder the same way). It checks the ROM's
 `code.bin` hash, writes `z3dmods-install.json` beside the files it wrote, and on reinstall removes
 only those (refusing a folder with files it did not write, or a file changed since).
 

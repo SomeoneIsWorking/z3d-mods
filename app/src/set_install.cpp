@@ -5,9 +5,16 @@
 
 #include <array>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 namespace z3d::app {
+namespace {
+
+// What a line of the installer's refusal starts with (tools/z3dmods/setup.py REFUSAL).
+constexpr std::string_view kRefusal = "! ";
+
+} // namespace
 
 SetInstall::SetInstall(std::vector<std::string> command, std::filesystem::path userDir)
     : command_(std::move(command)), userDir_(std::move(userDir)) {
@@ -47,6 +54,7 @@ void SetInstall::start(const GameSetup &game) {
   manifest_ = userDir_ / game.options;
   pending_.clear();
   lastLine_.clear();
+  refusal_.clear();
   succeeded_ = false;
   lucent::info("install", "running {} on {}", command.front(), game.rom.string());
 }
@@ -62,6 +70,9 @@ void SetInstall::read() {
     if (end > 0) {
       lastLine_ = pending_.substr(0, end);
       lucent::info("install", "{}", lastLine_);
+      if (lastLine_.starts_with(kRefusal)) {
+        refusal_ += (refusal_.empty() ? "" : "\n") + lastLine_.substr(kRefusal.size());
+      }
     }
     pending_.erase(0, end + 1);
   }

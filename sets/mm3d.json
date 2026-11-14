@@ -1,9 +1,10 @@
 {
   "title_id": "0004000000125500",
+  "dump": "Majora's Mask 3D (USA) (Rev 1)",
   "code_sha256": "6eec27b1827eab2c87744ac38066d569ffe6fe75790b1eb3300bd91f5099038d",
   "base": {
     "name": "Project Restoration v1.5.9 v110/citra (leoetlino, GPL-2.0)",
-    "root": "downloads/project-restoration-v1.5.9/x/v110/citra",
+    "from": "https://github.com/leoetlino/project-restoration/releases (v1.5.9: its v110/citra folder)",
     "code_patch": "code.bps",
     "exheader": "exheader.bin",
     "sha256": {
@@ -12,12 +13,14 @@
     }
   },
   "patch": "mm3d",
+  "payload": "0x8F7000",
   "screen_layout": "overlay",
   "stairs": "kaidan|step",
   "hud": "hud/mm3d-usa-rev1.json",
   "textures": {
     "name": "Henriko Magnifico MM3D 4K 3.0b-1, 1080p variant (free, no licence stated)",
-    "root": "downloads/henriko-mm3d-4k-3.0b-1/x/MM3D 4K 3.0b (1080p)/user/load/textures/0004000000125500",
+    "from": "https://henrikomagnifico.com/zelda-majoras-mask-3d-4k (3.0b-1, the 1080p download)",
+    "folder": "0004000000125500",
     "sha256": "a837fac3fc34c381cc4f0051aaa6cd67d69f7b4f0910c01a13d861c065daf544"
   },
   "azahar_global": {

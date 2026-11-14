@@ -1,9 +1,10 @@
 {
   "title_id": "0004000000033500",
+  "dump": "Ocarina of Time 3D (USA)",
   "code_sha256": "ef210566e1d9d16879a746dfb063fcbad232f0171d860de906531ecc526cc020",
   "base": {
     "name": "The One Screen alpha 1.1.12 (toadalle, MIT code)",
-    "root": "downloads/the-one-screen-891b60e364cc660b2d1edfd7916ec01e3bb0cadf/x/load/mods/0004000000033500",
+    "from": "https://github.com/toadalle/The-One-Screen (commit 891b60e, alpha 1.1.12: its load/mods/0004000000033500 folder)",
     "code_patch": "exefs/code.ips",
     "exheader": "exheader.bin",
     "romfs": "romfs",
@@ -14,12 +15,14 @@
     }
   },
   "patch": "oot3d",
+  "payload": "0x64C000",
   "screen_layout": "single_screen",
   "stairs": "kaidan",
   "hud": "hud/the-one-screen-891b60e.json",
   "textures": {
     "name": "Henriko Magnifico OoT3D 4K 5.0a, 1080p variant (free, no licence stated)",
-    "root": "downloads/henriko-oot3d-5.0a-1080p/x/OOT3D 4K 5.0a (1080p)/user/load/textures/0004000000033500",
+    "from": "https://henrikomagnifico.com/zelda-ocarina-of-time-3d-4k (5.0a, the 1080p download)",
+    "folder": "0004000000033500",
     "sha256": "06102c372abf4e315fd7095cc36744b8f06e4d76eab358080e46521895793c85"
   },
   "azahar_global": {

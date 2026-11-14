@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import csv
+import json
 import operator
 import re
 import subprocess
@@ -111,9 +112,22 @@ def _read_header(path: Path, decomp: Decomp) -> None:
                     decomp.sizes[name] = int(size.group(1), 16)
 
 
+# A package's copy of what the tools read from a decomp: everything but the function map.
+PACKAGED = "symbols.json"
+
+
+def save(decomp: Decomp, path: Path) -> None:
+    table = {"globals": decomp.globals, "offsets": decomp.offsets, "sizes": decomp.sizes, "defines": decomp.defines}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(table, indent=1) + "\n")
+
+
 def load(repo: Path, game: str) -> Decomp:
     source = SOURCES[game]
     root = repo / source.path
+    packaged = repo / "prebuilt" / game / PACKAGED
+    if not root.exists() and packaged.exists():
+        return Decomp(**json.loads(packaged.read_text()))
     if not root.is_dir() or not any(root.iterdir()):
         raise RuntimeError(f"{root} is empty: git submodule update --init {source.path}")
     decomp = Decomp()

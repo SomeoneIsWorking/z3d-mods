@@ -1,4 +1,5 @@
-"""The one reader of the environment and of the gitignored local settings."""
+"""The one reader of the environment and of the local settings: a checkout's gitignored
+env-assets/local.json, or a package's folders file in the player's data (package.py)."""
 
 from __future__ import annotations
 
@@ -6,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,10 +17,12 @@ REPO = Path(__file__).resolve().parents[2]
 @dataclass(frozen=True)
 class Config:
     repo: Path
-    env_assets: Path
+    # The player's own third-party mod downloads, searched by the sets' hashes (source_check.py).
+    mod_sources: Path
     azahar_data: Path
     azahar_config: Path
-    azahar_appimage: Path
+    # Standalone Azahar, which the checkout's tools run; a package has none.
+    azahar_appimage: Path | None
     roms: dict[str, Path]
     # The SomeoneIsWorking/azahar checkout the app builds inside (local.json "azahar_source").
     azahar_source: Path | None
@@ -31,11 +35,23 @@ class Config:
     session_env: dict[str, str]
     # The shared port-assets checkout ($PORT_ASSETS_DIR, else shared/port-assets beside this repo's parent).
     port_assets: Path
+    # This program as another program starts it: the app's installer, the desktop entry.
+    tool_command: tuple[str, ...]
+    # The picker's font and the folder of the app's shared libraries, where a package brings them.
+    bundled_font: Path | None = None
+    libraries: Path | None = None
 
     def rom(self, title_id: str) -> Path:
         if title_id not in self.roms:
-            raise KeyError(f"no ROM for {title_id} in env-assets/local.json")
+            raise KeyError(f"no dump of {title_id} is known")
         return self.roms[title_id]
+
+    def app_env(self) -> dict[str, str]:
+        """The environment the app runs in: the player's session and the package's libraries."""
+        env = dict(os.environ, **self.session_env)
+        if self.libraries is not None:
+            env["LD_LIBRARY_PATH"] = str(self.libraries)
+        return env
 
     def mods_dir(self, title_id: str) -> Path:
         return self.azahar_data / "load" / "mods" / title_id
@@ -44,7 +60,9 @@ class Config:
         return self.azahar_data / "load" / "textures" / title_id
 
     def ui_font(self) -> Path:
-        """The title picker's outline font, from fontconfig."""
+        """The title picker's outline font: the package's, else fontconfig's."""
+        if self.bundled_font is not None:
+            return self.bundled_font
         if shutil.which("fc-match") is None:
             raise RuntimeError("fc-match is missing: sudo dnf install fontconfig (Fedora), "
                                "sudo apt install fontconfig (Debian/Ubuntu)")
@@ -87,16 +105,52 @@ def _session_env() -> dict[str, str]:
     return {key: found[key] for key in SESSION_KEYS if key in found}
 
 
+# What marks REPO as a package (package.py) and not a checkout.
+PACKAGE_MARK = "package.json"
+# The player's folders, in a package's app data: {"roms": <folder>, "mods": <folder>}.
+FOLDERS = "folders.json"
+
+
+def _packaged(data_home: Path) -> Config:
+    """A package's layout (package.py): everything beside the tools, the player's data in
+    `user/` inside it when that exists (a portable install), else in their data folder."""
+    portable = REPO / "user"
+    app_data = Path(os.environ.get(APP_DATA_ENV) or (portable if portable.is_dir() else data_home / "z3d"))
+    folders = json.loads((app_data / FOLDERS).read_text()) if (app_data / FOLDERS).exists() else {}
+    return Config(
+        repo=REPO,
+        mod_sources=Path(folders.get("mods") or app_data / "mods"),
+        azahar_data=app_data / "Azahar",
+        azahar_config=app_data / "Azahar" / "config",
+        azahar_appimage=None,
+        roms={},
+        azahar_source=None,
+        dependencies=REPO,
+        app_binary=REPO / "bin" / "z3d",
+        app_data=app_data,
+        session_env=_session_env(),
+        port_assets=REPO / "assets",
+        tool_command=(sys.executable, "-I", "-m", "z3dmods.packed"),
+        bundled_font=next((REPO / "fonts").glob("*.ttf")),
+        libraries=REPO / "lib",
+    )
+
+
 def load() -> Config:
     home = Path.home()
     data_home = Path(os.environ.get("XDG_DATA_HOME") or home / ".local/share")
+    if (REPO / PACKAGE_MARK).exists():
+        return _packaged(data_home)
     config_home = Path(os.environ.get("XDG_CONFIG_HOME") or home / ".config")
+    uv = shutil.which("uv")
+    if uv is None:
+        raise RuntimeError("uv is not on PATH")
     env_assets = REPO / "env-assets"
     local = json.loads((env_assets / "local.json").read_text())
     installed = json.loads((data_home / "opensu/emulators/azahar/installed.json").read_text())
     return Config(
         repo=REPO,
-        env_assets=env_assets,
+        mod_sources=env_assets / "downloads",
         azahar_data=data_home / "azahar-emu",
         azahar_config=config_home / "azahar-emu",
         azahar_appimage=data_home / "opensu/emulators/azahar" / installed["file"],
@@ -107,4 +161,5 @@ def load() -> Config:
         app_data=Path(os.environ.get(APP_DATA_ENV) or data_home / "z3d-mods"),
         session_env=_session_env(),
         port_assets=Path(os.environ.get("PORT_ASSETS_DIR") or REPO.parent.parent / "shared" / "port-assets"),
+        tool_command=(uv, "--directory", str(REPO), "run", "--frozen", "z3dmods"),
     )
