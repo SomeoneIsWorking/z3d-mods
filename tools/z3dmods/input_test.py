@@ -324,8 +324,8 @@ MM3D_ITEMS = ("BOW", "BOMB")
 
 
 def _mm3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
-    """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle
-    and every song, written by the game's own save there."""
+    """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle,
+    the Bunny Hood and every song, written by the game's own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
     items = save + symbols.offset(d, "SaveData.items")
@@ -338,6 +338,7 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
     songs = sum(1 << bit for bit in range(first, first + d.define("QUEST_SONG_COUNT"))) | 1 << d.define("QUEST_SONG_LULLABY_INTRO")
     script += [f"poke:{items + d.define('SLOT_OCARINA'):#x},{d.define('ITEM_OCARINA'):02x}",
                f"poke:{items + d.define('BOTTLE_SLOTS_FIRST'):#x},{d.define('ITEM_BOTTLE'):02x}",
+               f"poke:{items + d.define('SLOT_MASK_BUNNY'):#x},{d.define('ITEM_MASK_BUNNY'):02x}",
                f"poke:{save + symbols.offset(d, 'SaveData.questItems'):#x},{songs.to_bytes(4, 'little').hex()}",
                f"poke:{save + symbols.offset(d, 'SaveData.upgrades'):#x},{MM3D_BAGS.to_bytes(4, 'little').hex()}",
                "wait:1"]
@@ -542,6 +543,47 @@ def _slots_mm3d(session: Session, pad: Gamepad) -> None:
     for shot in range(6):
         session.wait(5)
         session.shot(f"song-{shot}")
+
+
+# The Items screen's Masks tab on the touch screen, and where the overlay layout draws that
+# screen on the top one (patch/mm3d/overlay.toml, layouts.menu).
+MM3D_MASKS_TAB = (115, 222)
+MM3D_MENU_PIECE = (59.2, 28.8, 281.6, 211.2)
+
+
+def _masks_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D's Masks screen from a real pad: Menu opens Items, a click its Masks tab, the stick
+    goes to the Bunny Hood and the D-pad's Left takes it; in play Left puts it on and takes it
+    off. The right stick's click is first person and again leaves it."""
+    _mm3d_file_1(session)
+    pad.button("start")
+    session.wait(2)
+    piece = MM3D_MENU_PIECE
+    session.click_top(piece[0] + MM3D_MASKS_TAB[0] * piece[2] / TOUCH_SCREEN[0],
+                      piece[1] + MM3D_MASKS_TAB[1] * piece[3] / TOUCH_SCREEN[1])
+    session.wait(2)
+    session.shot("masks-screen")
+    for x, y in ((32767, 0), (32767, 0), (0, 32767)):
+        pad.stick(x, y, 0.2)
+        session.wait(0.5)
+    pad.dpad("left")
+    session.wait(0.5)
+    session.shot("assigned")
+    pad.button("start")
+    session.wait(2)
+    session.shot("play")
+    pad.dpad("left")
+    session.wait(3)
+    session.shot("mask-on")
+    pad.dpad("left")
+    session.wait(3)
+    session.shot("mask-off")
+    pad.button("rs")
+    session.wait(1.5)
+    session.shot("first-person")
+    pad.button("rs")
+    session.wait(1.5)
+    session.shot("third-person")
 
 
 def _verbs_mm3d(session: Session, pad: Gamepad) -> None:
@@ -992,16 +1034,16 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "masks-mm3d": _masks_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
-               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d"}
+               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "masks-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
 PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-mm3d": _mm3d_slots_file,
-           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file,
+           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file, "masks-mm3d": _mm3d_slots_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}

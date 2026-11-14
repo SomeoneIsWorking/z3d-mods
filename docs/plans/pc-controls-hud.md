@@ -220,9 +220,15 @@ draw in the app only what that cannot reach.
 - MM3D's map, ocarina and Gear verbs press Project Restoration's own shortcuts (ZR with
   Select, A and Start; `kGames` in `pad_input.cpp`), seen with real keys and a pad (`inputtest
   verbs-mm3d`).
-- Not done: MM3D's Masks screen and the X and Y lanes were not run
-  with a pad; R3 and the mouse's free camera are unseen in a window; with
-  item counts are not coloured at capacity.
+- MM3D's Masks screen with a pad (`inputtest masks-mm3d`): a click on the Masks tab, the stick
+  to the Bunny Hood, D-Left takes it; in play D-Left puts it on and takes it off; R3 enters
+  first person and leaves it. `slots-mm3d` uses four slots in a row, which fills the game's
+  four item buttons (I, II, X, Y), so the X and Y lanes run there.
+- Not built: the mouse as the free camera outside aim. The right stick is the C-stick, which
+  OoT3D's `free_camera.cpp` and Project Restoration read as a rate; a mouse wants an angle, so
+  the next step is a yaw and pitch delta in the link block that `free_camera.cpp` adds to its
+  orbit, and for MM3D the RE of Project Restoration's camera input.
+- Not done: item counts are not coloured at capacity.
 - Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
   game's own clock still draws and is not ours yet.
