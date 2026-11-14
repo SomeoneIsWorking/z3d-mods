@@ -1,16 +1,19 @@
-// Mouse aim: while the game's look follows the gyroscope (first person, an aimed item), the mouse
-// turns the 3DS for it, so a mouse count turns the view by kDegreesPerCount. The game adds the
-// SDK gyroscope reader's direction to the look (decomp docs/motion.md); here the reader is set to
-// integrate our samples as they are, and each sample is one turn around the 3DS's x (pitch) or
-// around world up (yaw).
+// The mouse in play. While the game's look follows the gyroscope (first person, an aimed item),
+// the mouse turns the 3DS for it, so a mouse count turns the view by kDegreesPerCount. The game
+// adds the SDK gyroscope reader's direction to the look (decomp docs/motion.md); here the reader is
+// set to integrate our samples as they are, and each sample is one turn around the 3DS's x (pitch)
+// or around world up (yaw). Otherwise in play it turns the patch's free camera by the same angle
+// per count, through the slot link.
 #pragma once
 
 #include "pad_input.hpp"
+#include "slot_link.hpp"
 
 #include <array>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <string_view>
 
 namespace z3d::app {
 
@@ -23,18 +26,24 @@ public:
   static constexpr double kDegreesPerCount = 0.05;
 
   // `manifest` is the game's z3d-options.json; without its "aim" the mouse stays the stylus.
-  MouseAim(GameWindow &window, Emulator &emulator, PadInput &pad, const std::filesystem::path &manifest);
+  MouseAim(GameWindow &window, Emulator &emulator, PadInput &pad, SlotLink &link,
+           const std::filesystem::path &manifest);
   ~MouseAim() override;
   MouseAim(const MouseAim &) = delete;
   MouseAim &operator=(const MouseAim &) = delete;
   MouseAim(MouseAim &&) = delete;
   MouseAim &operator=(MouseAim &&) = delete;
 
-  // The mouse moved by this many counts, x right and y down; dropped unless the look is active.
+  // The mouse moved by this many counts, x right and y down: the aim while the look is active,
+  // else the free camera in play; dropped otherwise.
   void move(double dx, double dy);
   // The game's look follows the gyroscope as of the last frame.
   [[nodiscard]] bool active() const {
     return active_;
+  }
+  // The mouse turns the free camera as of the last frame.
+  [[nodiscard]] bool looking() const {
+    return looking_;
   }
 
   std::array<float, 3> takeSample() override;
@@ -66,6 +75,8 @@ private:
 
   // Once a frame: the reader's settings, whether the look is active, the window's mouse.
   void update();
+  // What the mouse does now, for the log.
+  [[nodiscard]] std::string_view job() const;
   // The reader's address once it integrates samples as they are.
   [[nodiscard]] std::optional<uint32_t> exactReader();
   // The player actor while its look follows the gyroscope.
@@ -77,8 +88,14 @@ private:
   GameWindow &window_;
   Emulator &emulator_;
   PadInput &pad_;
+  SlotLink &link_;
   std::optional<Layout> layout_;
   bool active_ = false;
+  bool looking_ = false;
+  // How far the mouse went, each way counted, since it last took another job.
+  std::array<double, 2> travel_{};
+  // The free camera's turn rounding to whole binary angles left over: right, down.
+  std::array<double, 2> lookCarry_{};
   // View degrees per degree of the 3DS, the game's own.
   double yawScale_ = 1.0;
   double pitchScale_ = 1.0;

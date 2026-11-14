@@ -42,6 +42,13 @@ public:
   [[nodiscard]] PadMode mode() const {
     return mode_;
   }
+  // Whether the running patch takes the free camera's turn (look()).
+  [[nodiscard]] bool looks() const {
+    return layout_.has_value() && mode_ != PadMode::ByName;
+  }
+  // Turns the free camera by this many binary angles, right and down; it goes in after the next
+  // frame, added to what the patch has not taken yet.
+  void look(int32_t right, int32_t down);
 
 private:
   // Guest addresses of the block's fields.
@@ -53,6 +60,7 @@ private:
     uint32_t lanes = 0;
     uint32_t beat = 0;
     uint32_t charge = 0;
+    uint32_t look = 0;
   };
 
   void update();
@@ -65,6 +73,8 @@ private:
   // The block's beat as last read, and the frame it last moved in; none before it ever has.
   uint8_t beat_ = 0;
   std::optional<uint64_t> alive_;
+  // The turn look() was given since the last frame.
+  std::array<int32_t, 2> look_{};
 };
 
 } // namespace z3d::app

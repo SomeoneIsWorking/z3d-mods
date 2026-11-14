@@ -4,6 +4,7 @@
 #include "game_window.hpp"
 
 #include <lucent/json.h>
+#include <lucent/log.h>
 
 #include <SDL3/SDL_rect.h>
 
@@ -52,8 +53,12 @@ template <typename T> std::array<uint8_t, sizeof(T)> bytesOf(const T &value) {
 
 } // namespace
 
-MouseAim::MouseAim(GameWindow &window, Emulator &emulator, PadInput &pad, const std::filesystem::path &manifest)
-    : window_(window), emulator_(emulator), pad_(pad) {
+MouseAim::MouseAim(GameWindow &window, Emulator &emulator, PadInput &pad, SlotLink &link,
+                   const std::filesystem::path &manifest)
+    : window_(window), emulator_(emulator), pad_(pad), link_(link) {
+  emulator_.onFrame([this] {
+    update();
+  });
   std::ifstream file(manifest);
   const std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   std::string error;
@@ -69,16 +74,13 @@ MouseAim::MouseAim(GameWindow &window, Emulator &emulator, PadInput &pad, const 
                    address(*aim, "direction"),  address(*aim, "filters"),     address(*aim, "drift_radius"),
                    address(*aim, "drift_bias"), address(*aim, "scale")};
   pad_.setGyroSource(this);
-  emulator_.onFrame([this] {
-    update();
-  });
 }
 
 MouseAim::~MouseAim() {
   if (layout_) {
     pad_.setGyroSource(nullptr);
-    window_.captureMouse(false);
   }
+  window_.captureMouse(false);
 }
 
 template <typename T> std::optional<T> MouseAim::read(uint32_t address) const {
@@ -91,7 +93,23 @@ template <typename T> std::optional<T> MouseAim::read(uint32_t address) const {
   return value;
 }
 
+std::string_view MouseAim::job() const {
+  if (active_) {
+    return "aim";
+  }
+  return looking_ ? "camera" : "stylus";
+}
+
 void MouseAim::move(double dx, double dy) {
+  travel_ = {travel_[0] + std::abs(dx), travel_[1] + std::abs(dy)};  if (looking_) {
+    // Right and down, as the mouse went.
+    const std::array<double, 2> wanted{lookCarry_[0] + dx * kDegreesPerCount * kBinaryAngle,
+                                       lookCarry_[1] + dy * kDegreesPerCount * kBinaryAngle};
+    const std::array<double, 2> whole{std::trunc(wanted[0]), std::trunc(wanted[1])};
+    lookCarry_ = {wanted[0] - whole[0], wanted[1] - whole[1]};
+    link_.look(static_cast<int32_t>(whole[0]), static_cast<int32_t>(whole[1]));
+    return;
+  }
   if (!active_) {
     return;
   }
@@ -199,18 +217,34 @@ std::array<double, 2> MouseAim::pastLimits(uint32_t player) const {
 }
 
 void MouseAim::update() {
-  const std::optional<uint32_t> reader = exactReader();
-  const std::optional<float> yawScale = read<float>(layout_->yawScale);
-  const std::optional<float> pitchScale = read<float>(layout_->pitchScale);
-  const std::optional<uint32_t> player = lookingPlayer();
+  std::optional<uint32_t> reader;
+  std::optional<float> yawScale;
+  std::optional<float> pitchScale;
+  std::optional<uint32_t> player;
+  if (layout_) {
+    reader = exactReader();
+    yawScale = read<float>(layout_->yawScale);
+    pitchScale = read<float>(layout_->pitchScale);
+    player = lookingPlayer();
+  }
+  const std::string_view before = job();
   active_ = reader && yawScale && *yawScale > 0.0F && pitchScale && *pitchScale > 0.0F && player;
-  window_.captureMouse(active_);
+  looking_ = !active_ && link_.looks() && link_.mode() == PadMode::Play;
+  if (job() != before) {
+    lucent::info("z3d", "mouse {}: {} took {} by {} counts", job(), before, travel_[0], travel_[1]);
+    travel_ = {};
+  }
+  window_.captureMouse(active_ || looking_);
   const SDL_FPoint moved = window_.takeMouseMotion();
+  if (!looking_) {
+    lookCarry_ = {};
+  }
   if (!active_) {
     pitch_ = 0.0;
     yaw_ = 0.0;
     past_ = {};
     pastFor_ = 0;
+    move(moved.x, moved.y);
     return;
   }
   yawScale_ = *yawScale;

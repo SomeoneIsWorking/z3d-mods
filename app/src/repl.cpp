@@ -121,8 +121,8 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> dx >> dy)) {
       return "err mouse <dx> <dy>";
     }
-    if (!aim_.active()) {
-      return "err the look does not follow the gyroscope";
+    if (!aim_.active() && !aim_.looking()) {
+      return "err the mouse neither aims nor turns the camera";
     }
     aim_.move(dx, dy);
     return "ok";

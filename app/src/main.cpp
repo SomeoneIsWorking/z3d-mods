@@ -65,10 +65,10 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   Emulator emulator(config, game.rom, window);
   options.apply(emulator, pad);
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
-  const SlotLink link(emulator, pad, config.userDir / game.options);
+  SlotLink link(emulator, pad, config.userDir / game.options);
   const Hud hud(window, emulator, pad, link, overlay, config.assets, config.userDir / game.options);
   ModSwap mods(emulator, (config.userDir / game.options).parent_path(), options.blockAddress());
-  MouseAim aim(window, emulator, pad, config.userDir / game.options);
+  MouseAim aim(window, emulator, pad, link, config.userDir / game.options);
   if (config.hidden) {
     Repl repl(emulator, window, pad, options, mods, aim);
     std::cout << "ready\n" << std::flush;
@@ -127,12 +127,12 @@ int picker(const AppConfig &config, PadInput &pad) {
       options[*chosen].apply(emulator, pad);
       const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
                                   config.userDir / game.setup.options);
-      const SlotLink link(emulator, pad, config.userDir / game.setup.options);
+      SlotLink link(emulator, pad, config.userDir / game.setup.options);
       const Hud hud(window, emulator, pad, link, overlay, config.assets,
                     config.userDir / game.setup.options);
       ModSwap mods(emulator, (config.userDir / game.setup.options).parent_path(),
                    options[*chosen].blockAddress());
-      const MouseAim aim(window, emulator, pad, config.userDir / game.setup.options);
+      const MouseAim aim(window, emulator, pad, link, config.userDir / game.setup.options);
       Player(emulator, window, mods, options[*chosen], pad).run();
     }
     if (window.closeRequested()) {

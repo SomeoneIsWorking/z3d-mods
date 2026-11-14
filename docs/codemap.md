@@ -55,13 +55,13 @@
 - `decomp/oot3d/`: submodule, our fork of zeldaret/oot3d (CC0): OoT3D symbols, structs and RE docs.
 - `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT): MM3D 1.0-layout symbols, structs and RE docs.
 - `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
-- `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
+- `patch/common/`: guest memory and call helpers for the patches, the Start cutscene skip shared by both games, and the mouse's camera turn taken from the link block (`mouse_look.hpp`).
   - `slots.hpp`: the item slots both games' patches share: slot values packed for a save's spare bytes, and which of the game's item buttons carry the slots in use.
   - `song_sequence.hpp`: a song's notes held one after another in the pad for the game to recognise.
   - `ctr.hpp`: 3DS kernel calls and service IPC from inside a title.
   - `cstick.hpp`: the New 3DS C-stick, read from `ir:rst`'s shared memory.
-- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the text font as one fixed texture (`font_atlas.cpp`), the right-stick free camera (`free_camera.cpp`), the item slots (`slot_items.cpp`) and a slot's song played on the ocarina (`song_player.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
-- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), autosave (`autosave.cpp`), the per-frame update in front of Play_Update and its plain-play test (`play_update.cpp`), View again on the Map screen opening the Bombers' Notebook (`notebook.cpp`), the item slots with their songs (`slot_items.cpp`), the game's own A button hidden (`base_hud.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the text font as one fixed texture (`font_atlas.cpp`), the right-stick and mouse free camera (`free_camera.cpp`), the item slots (`slot_items.cpp`) and a slot's song played on the ocarina (`song_player.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), autosave (`autosave.cpp`), the per-frame update in front of Play_Update and its plain-play test (`play_update.cpp`), View again on the Map screen opening the Bombers' Notebook (`notebook.cpp`), the item slots with their songs (`slot_items.cpp`), the game's own A button hidden (`base_hud.cpp`), the mouse turning the game's C-stick camera (`mouse_camera.cpp`), its switches (`options.toml`), hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).
   - `core_settings`: the core's settings and user path from the config, applied first; a game's settings before it loads.
@@ -84,7 +84,7 @@
   - `pad_input`: the core's `z3d` input engine: the pad, keyboard and mouse tables (verbs and item slots in play, 3DS buttons by name elsewhere) and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
   - `term_signal`: SIGTERM and SIGINT: SDL's quit event for the window's loop, and the process ended when the loop cannot take it.
   - `slot_link`: the item slots' block in the running game's patch: the held slots written in, the pad table the game wants and each slot's content read out.
-  - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`).
+  - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`), and as the camera's turn through the link block in the rest of play.
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.
   - `frame`: a captured frame and its PNG encoding.

@@ -8,8 +8,10 @@ SECTIONS {
   .patch.interpreter_start kCutsceneBeginScript + 0x1D8 : { KEEP(*(.patch.interpreter_start)) }
   .patch.actor_update kActorUpdateAll + 0x48 : { KEEP(*(.patch.actor_update)) }
   .patch.printer_update kPrinterUpdate : { KEEP(*(.patch.printer_update)) }
+  .patch.cstick_neutral kCStickNeutral : { KEEP(*(.patch.cstick_neutral)) }
   .patch.save_entry kPlaySaveAtStatue : { KEEP(*(.patch.save_entry)) }
   .patch.interpreter_tail kCutsceneRunScript + 0x28 : { KEEP(*(.patch.interpreter_tail)) }
+  .patch.camera_follow kCameraFollow : { KEEP(*(.patch.camera_follow)) }
   .patch.interpreter_state1 kCutsceneStartScript + 0x2C : { KEEP(*(.patch.interpreter_state1)) }
   . = PAYLOAD;
   .payload : { KEEP(*(.options)) *(.text*) *(.rodata*) *(.data*) }

@@ -32,6 +32,16 @@
     b play_entry
 .section .expect.play_entry, "", %progbits
     .word 0xE92D4FF0 @ push {r4-r11, lr}
+@ Camera_Follow's first instruction, the camera the C-stick turns; r0 is the camera.
+.section .patch.camera_follow, "ax", %progbits
+    b camera_follow
+.section .expect.camera_follow, "", %progbits
+    .word 0xE92D4FF0 @ push {r4-r11, lr}
+@ Input_CStickNeutral's first instruction; r0 is the play state's input.
+.section .patch.cstick_neutral, "ax", %progbits
+    b cstick_neutral
+.section .expect.cstick_neutral, "", %progbits
+    .word 0xE2800058 @ add r0, r0, #0x58
 @ MessagePrinter_Update's first instruction; r0 is the printer, s0 the frame's seconds.
 .section .patch.printer_update, "ax", %progbits
     b printer_update
@@ -46,6 +56,23 @@ printer_update:
     pop {r0-r3, r12, lr}
     push {r4, lr}
     b kPrinterUpdate + 4
+cstick_neutral:
+    push {r0-r3, r12, lr}
+    bl _ZN7z3dmods4mm3d12mouseTurningEv
+    cmp r0, #0
+    pop {r0-r3, r12, lr}
+    movne r0, #0
+    bxne lr
+    add r0, r0, #0x58
+    b kCStickNeutral + 4
+camera_follow:
+    push {r0-r3, r12, lr}
+    vpush {d0-d7}
+    bl _ZN7z3dmods4mm3d17turnCameraByMouseEPv
+    vpop {d0-d7}
+    pop {r0-r3, r12, lr}
+    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+    b kCameraFollow + 4
 play_entry:
     push {r0-r3, r12, lr}
     bl _ZN7z3dmods4mm3d10updatePlayEPv

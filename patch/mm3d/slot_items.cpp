@@ -74,7 +74,8 @@ public:
     const uint16_t pressed = held & static_cast<uint16_t>(~held_);
     held_ = held;
     link.beat = static_cast<uint8_t>(link.beat + 1);
-    link.mode = static_cast<uint8_t>(PadMode::ByName);
+    // Written once an update: the app may read the block while the game is inside it.
+    PadMode mode = PadMode::ByName;
     for (uint32_t slot = 0; slot < kSlotCount; ++slot) {
       if (((held >> slot) & 1U) == 0) {
         charge_[slot] = 0;
@@ -85,6 +86,7 @@ public:
       // The title screen: the next file loads with its own items on the buttons.
       lanes_ = {};
       applied_ = 0;
+      link.mode = static_cast<uint8_t>(mode);
       return;
     }
     uint8_t *save = common + kCommonSave;
@@ -97,21 +99,21 @@ public:
     bool editing = false;
     if (screen == screenAt(kUiScreenItems)) {
       editing = true;
-      link.mode = static_cast<uint8_t>(PadMode::Assign);
+      mode = PadMode::Assign;
       table.assign(0, kSlotCount, pressed,
                    cellUnderCursor(screen, save, kSaveItemGrid, kItemGridColumns, 0));
     } else if (screen == screenAt(kUiScreenMasks)) {
       editing = true;
-      link.mode = static_cast<uint8_t>(PadMode::Assign);
+      mode = PadMode::Assign;
       table.assign(0, kSlotCount, pressed,
                    cellUnderCursor(screen, save, kSaveMaskGrid, kMaskGridColumns, kMaskSlotsFirst));
     } else if (screen == screenAt(kUiScreenOcarina)) {
       if (guest::read<int32_t>(screen, kOcarinaScreenPlayPage) == 0) {
-        link.mode = static_cast<uint8_t>(PadMode::Assign);
+        mode = PadMode::Assign;
         table.assign(0, kSlotCount, pressed, songUnderCursor(screen, save));
       }
     } else if (screen == screenAt(kUiScreenMain)) {
-      link.mode = static_cast<uint8_t>(PadMode::Play);
+      mode = PadMode::Play;
     }
     drop(save, table);
     if (editing) {
@@ -119,13 +121,14 @@ public:
       unapply(save);
     } else {
       apply(save, table);
-      if (link.mode == static_cast<uint8_t>(PadMode::Play) && inPlainPlay(play)) {
+      if (mode == PadMode::Play && inPlainPlay(play)) {
         use(play, save, table, held, pressed);
       }
     }
     playNotes(screen);
     keep(save, store);
     publish(save, table);
+    link.mode = static_cast<uint8_t>(mode);
   }
 
   // A saved file has the game's own items on the buttons, so it reads the same without the patch.

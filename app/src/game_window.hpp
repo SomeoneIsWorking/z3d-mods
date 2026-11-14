@@ -124,8 +124,6 @@ private:
   bool touching_ = false;
   bool mouseCaptured_ = false;
   SDL_FPoint mouseMotion_{};
-  // How far the mouse went, each way counted, since it was captured.
-  SDL_FPoint mouseTravel_{};
   OverlayLayout overlay_ = splitLayout();
   std::vector<SDL_FPoint> clicks_;
 };

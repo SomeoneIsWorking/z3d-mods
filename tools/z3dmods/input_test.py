@@ -756,7 +756,7 @@ AIM_MOVES = (("right-400", 400, 0), ("left-800", -800, 0), ("down-300", 400, 300
 def _aim_turns(session: Session) -> None:
     """Mouse aim once the look is first person: the app takes the mouse, each move turns the
     view by 0.05 degrees a count (app/src/mouse_aim.hpp), and the last one comes back to the start."""
-    session.expect("mouse captured for aim")
+    session.expect("mouse aim:")
     session.wait(1)
     session.shot("first-person")
     for name, dx, dy in AIM_MOVES:
@@ -766,10 +766,10 @@ def _aim_turns(session: Session) -> None:
 
 
 def _aim_released(session: Session) -> None:
-    """The app's own count of the mouse's travel while it held it is what the test sent."""
+    """The app's own count of the mouse's travel while it aimed is what the test sent."""
     travel = (sum(abs(dx) for _, dx, _ in AIM_MOVES), sum(abs(dy) for _, _, dy in AIM_MOVES))
-    line = session.expect("mouse released")
-    if not line.endswith(f"after {travel[0]} by {travel[1]} counts"):
+    line = session.expect(": aim took")
+    if not line.endswith(f"aim took {travel[0]} by {travel[1]} counts"):
         raise RuntimeError(f"the app counted another travel than {travel}: {line}")
     session.wait(1)
     session.shot("released")
@@ -813,6 +813,33 @@ def _aim_mm3d(session: Session, pad: Gamepad) -> None:
     _aim_turns(session)
     session.key("play", "first_person")
     _aim_released(session)
+
+
+CAMERA_MOVES = (("right-400", 400, 0), ("left-400", -400, 0), ("up-200", 0, -200), ("down-200", 0, 200))
+
+
+def _camera_turns(session: Session) -> None:
+    """In play the app takes the mouse for the camera, and each move turns it (app/src/mouse_aim.hpp)."""
+    session.shot("file")
+    session.expect("mouse camera:")
+    session.wait(1)
+    session.shot("play")
+    for name, dx, dy in CAMERA_MOVES:
+        session.mouse(dx, dy)
+        session.wait(1)
+        session.shot(name)
+
+
+def _camera(session: Session, pad: Gamepad) -> None:
+    """OoT3D: the free camera inside the Deku Tree turned by real mouse motion."""
+    _oot3d_file_1(session)
+    _camera_turns(session)
+
+
+def _camera_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D: the game's own C-stick camera at South Clock Town's owl statue turned by real mouse motion."""
+    _mm3d_file_1(session)
+    _camera_turns(session)
 
 
 def _setup_refused(session: Session, pad: Gamepad) -> None:
@@ -1144,12 +1171,12 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "camera": _camera, "camera-mm3d": _camera_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
                "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
-               "autosave-mm3d": "mm3d"}
+               "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
@@ -1157,7 +1184,7 @@ PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-
            "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file, "masks-mm3d": _mm3d_slots_file, "gaps": _oot3d_slots_file,
            "notebook-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, notebook=True),
            "map-zoom-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, maps=True),
-           "autosave-mm3d": _mm3d_autosave_file,
+           "autosave-mm3d": _mm3d_autosave_file, "camera": _oot3d_slots_file, "camera-mm3d": _mm3d_slots_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}

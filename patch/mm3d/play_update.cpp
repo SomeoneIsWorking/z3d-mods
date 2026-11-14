@@ -24,6 +24,7 @@ void updatePlay(void *play) {
   updateSlotItems(play);
   updateAutosave(play);
   updateNotebook(play);
+  dropUntakenLook();
 }
 
 } // namespace z3dmods::mm3d

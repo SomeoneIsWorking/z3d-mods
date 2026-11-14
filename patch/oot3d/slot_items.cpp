@@ -58,12 +58,14 @@ public:
     const uint16_t pressed = held & static_cast<uint16_t>(~held_);
     held_ = held;
     link.beat = static_cast<uint8_t>(link.beat + 1);
-    link.mode = static_cast<uint8_t>(PadMode::ByName);
+    // Written once an update: the app may read the block while the game is inside it.
+    PadMode mode = PadMode::ByName;
     if (guest::read<int32_t>(kSaveContext + kSaveGameMode) != kGameModeNormal ||
         guest::read<int32_t>(kSaveContext + kSaveFileNum) == kFileNumDebug) {
       // The title screen and file select: the next file starts with the game's own buttons.
       lanes_ = {};
       waiting_ = 0;
+      link.mode = static_cast<uint8_t>(mode);
       return;
     }
     auto *store = reinterpret_cast<volatile Store *>(kSaveContext + kSaveUnused);
@@ -78,13 +80,13 @@ public:
     Slots table(store->table);
     const uint32_t first = child ? 0 : kSlotCount;
     if (guest::read<int32_t>(kItemMenuState) != kMenuScreenClosed) {
-      link.mode = static_cast<uint8_t>(PadMode::Assign);
+      mode = PadMode::Assign;
       table.assign(first, kSlotCount, pressed, itemUnderCursor(child));
     } else if (guest::read<int32_t>(kOcarinaScreenState) == kOcarinaScreenSongList) {
-      link.mode = static_cast<uint8_t>(PadMode::Assign);
+      mode = PadMode::Assign;
       table.assign(first, kSlotCount, pressed, songOnShow());
     } else if (guest::read<uint32_t>(kHud + kHudState) == kHudStateGameplay) {
-      link.mode = static_cast<uint8_t>(PadMode::Play);
+      mode = PadMode::Play;
       if (guest::read<uint8_t>(play, kPlayCutscene + kCsState) != 0) {
         // A cutscene can change Link's age.
         restore(kSaveEquips, child);
@@ -93,6 +95,7 @@ public:
       }
     }
     publish(table, first);
+    link.mode = static_cast<uint8_t>(mode);
   }
 
   // A saved file has the layout's own items on the buttons, so it reads the same without the patch.

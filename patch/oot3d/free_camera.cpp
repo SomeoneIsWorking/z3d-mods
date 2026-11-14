@@ -1,10 +1,12 @@
-// Right-stick free camera: after the game's own camera update, the C-stick orbits the eye around
-// the game's look-at point. The game keeps its at, quake, water and setting changes; the orbit
-// holds only while the game runs Link's follow camera, so Z-targeting, first person, talking,
-// climbing, horses, cutscenes and fixed or scripted settings hand control back.
+// Right-stick free camera: after the game's own camera update, the C-stick, and the mouse through
+// the slot link, orbit the eye around the game's look-at point. The game keeps its at, quake,
+// water and setting changes; the orbit holds only while the game runs Link's follow camera, so
+// Z-targeting, first person, talking, climbing, horses, cutscenes and fixed or scripted settings
+// hand control back.
 // It replaces The One Screen's orbit camera, whose hook hooks.s takes back.
 #include "../common/cstick.hpp"
 #include "../common/guest.hpp"
+#include "../common/mouse_look.hpp"
 #include "options.hpp"
 #include "symbols.hpp"
 
@@ -90,14 +92,19 @@ public:
   // `step` is false when the game redoes the update for a draw: the stick moves the orbit once a frame.
   void update(Angles *out, void *camera, bool step) {
     guest::function<CameraUpdateFn>(kCameraUpdate)(out, camera);
+    // Taken every frame, so a turn made while the orbit cannot follow it is dropped.
+    const LookTurn look = step ? takeLook() : LookTurn{};
     StickPosition stick;
     if (!options().freeCamera || !eligible(camera) || !cstick_.read(&stick)) {
       engaged_ = false;
       return;
     }
-    const int32_t x = turn(stick.x, options().freeCameraInvertX != (guest::read<uint8_t>(kSaveContext + kSaveMasterQuest) != 0));
+    // Master Quest's world is mirrored.
+    const bool mirrored = guest::read<uint8_t>(kSaveContext + kSaveMasterQuest) != 0;
+    const int32_t x = turn(stick.x, options().freeCameraInvertX != mirrored);
     const int32_t y = turn(stick.y, options().freeCameraInvertY);
-    const bool moved = x * x + y * y > kDeadzone * kDeadzone;
+    const bool stickMoved = x * x + y * y > kDeadzone * kDeadzone;
+    const bool moved = stickMoved || look.right != 0 || look.down != 0;
     const Vec3 at = readVec(camera, kCamAt);
     const Vec3 gameEye = readVec(camera, kCamEye);
     const float gameDistance = guest::read<float>(camera, kCamDist);
@@ -112,10 +119,12 @@ public:
       reach_ = gameDistance;
     }
     if (step) {
-      if (moved) {
+      if (stickMoved) {
         yaw_ = static_cast<int16_t>(yaw_ - x * kYawSpeed);
         pitch_ = clampPitch(pitch_ + y * kPitchSpeed);
       }
+      yaw_ = static_cast<int16_t>(yaw_ - turn(look.right, mirrored));
+      pitch_ = clampPitch(pitch_ - look.down);
       // The game steers its own radius from our eye toward its setting's range: follow it.
       if (gameDistance >= kDistanceMin && gameDistance <= kDistanceMax) {
         distance_ += (gameDistance - distance_) * kDistanceFollow;

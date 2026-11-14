@@ -22,12 +22,13 @@ class Field:
 
 FIELDS = (
     Field("held", "uint16_t", 2, 1, "app: the slots held now, bit n for slot n"),
-    Field("mode", "uint8_t", 1, 1, "patch: the PadMode the game is in"),
+    Field("mode", "uint8_t", 1, 1, "patch: the PadMode the game is in, written once at the end of an update: the app reads the block while the game runs"),
     Field("items", "uint8_t", 1, SLOTS, "patch: the item each slot holds, kSlotEmpty for none"),
     Field("songs", "uint8_t", 1, SLOTS, "patch: the song each slot plays plus one, 0 for none"),
     Field("lanes", "uint8_t", 1, SLOTS, "patch: the index in the game's button arrays of the item button a slot is on, 0 for none"),
     Field("beat", "uint8_t", 1, 1, "patch: one more every update, so a block nothing updates is seen"),
     Field("charge", "uint8_t", 1, SLOTS, "patch: how far a slot that must be held has been held, kSlotCharged when it plays"),
+    Field("look", "int16_t", 2, 2, "app: the mouse's turn of the free camera not yet taken, right then down, in binary angles; the patch takes it and writes 0"),
 )
 
 # PadMode, in the app's order (app/src/pad_input.hpp).

@@ -180,8 +180,6 @@ void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> 
       if (mouseCaptured_) {
         mouseMotion_.x += event.motion.xrel;
         mouseMotion_.y += event.motion.yrel;
-        mouseTravel_.x += std::abs(event.motion.xrel);
-        mouseTravel_.y += std::abs(event.motion.yrel);
       } else if (touching_) {
         touch({event.motion.x, event.motion.y}, true);
       }
@@ -251,11 +249,7 @@ void GameWindow::captureMouse(bool captured) {
   mouseMotion_ = {};
   if (captured) {
     touchScreen(std::nullopt);
-    mouseTravel_ = {};
-    lucent::info("z3d", "mouse captured for aim");
-    return;
   }
-  lucent::info("z3d", "mouse released after {} by {} counts", mouseTravel_.x, mouseTravel_.y);
 }
 
 void GameWindow::touch(SDL_FPoint at, bool pressed) {

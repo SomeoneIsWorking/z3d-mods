@@ -4,11 +4,14 @@
 
 #include <lucent/json.h>
 
+#include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace z3d::app {
 namespace {
@@ -20,6 +23,9 @@ constexpr float kCharged = 255.0F;
 // Frames without a beat after which nothing updates the block: the games update at 20 a second or
 // more.
 constexpr uint64_t kDeadFrames = 30;
+// The free camera's turn the block can hold, each way.
+constexpr int32_t kLookMin = -32768;
+constexpr int32_t kLookMax = 32767;
 
 uint32_t address(const lucent::json::Value &link, std::string_view field,
                  const std::filesystem::path &manifest) {
@@ -55,7 +61,7 @@ SlotLink::SlotLink(Emulator &emulator, PadInput &pad, const std::filesystem::pat
   layout_ = Layout{address(*link, "held", manifest),  address(*link, "mode", manifest),
                    address(*link, "items", manifest), address(*link, "songs", manifest),
                    address(*link, "lanes", manifest), address(*link, "beat", manifest),
-                   address(*link, "charge", manifest)};
+                   address(*link, "charge", manifest), address(*link, "look", manifest)};
   emulator_.onFrame([this] {
     update();
   });
@@ -63,6 +69,11 @@ SlotLink::SlotLink(Emulator &emulator, PadInput &pad, const std::filesystem::pat
 
 SlotLink::~SlotLink() {
   pad_.setMode(PadMode::ByName);
+}
+
+void SlotLink::look(int32_t right, int32_t down) {
+  look_[0] += right;
+  look_[1] += down;
 }
 
 void SlotLink::update() {
@@ -97,6 +108,20 @@ void SlotLink::update() {
     }
   }
   pad_.setMode(mode_);
+  const std::array<int32_t, 2> turn = std::exchange(look_, {});
+  std::array<uint8_t, sizeof(int16_t) * 2> bytes{};
+  if ((turn[0] == 0 && turn[1] == 0) || !alive_ || !emulator_.read(layout_->look, bytes)) {
+    return;
+  }
+  std::array<int16_t, 2> pending{};
+  std::memcpy(pending.data(), bytes.data(), bytes.size());
+  for (size_t axis = 0; axis < pending.size(); ++axis) {
+    pending[axis] = static_cast<int16_t>(std::clamp(pending[axis] + turn[axis], kLookMin, kLookMax));
+  }
+  std::memcpy(bytes.data(), pending.data(), bytes.size());
+  if (!emulator_.write(layout_->look, bytes)) {
+    look_ = turn;
+  }
 }
 
 } // namespace z3d::app

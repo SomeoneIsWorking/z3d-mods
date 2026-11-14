@@ -23,7 +23,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `input <hex>` / `stick <x> <y>` / `cstick <x> <y>` | held buttons (bits in `Settings::NativeButton` order), circle pad and C-stick (signed 16-bit, y down) |
 | `device <pad\|keyboard>` | which device the held input stands for; the HUD's prompts follow it |
 | `gyro <x> <y> <z>` | the 3DS turning from now on, degrees a second of the game's time on the core's axes (x left along the D-pad, y out of the touch screen, z up along the D-pad) |
-| `mouse <dx> <dy>` | the mouse moved by that many counts (x right, y down) for the aim, as a window's mouse motion does; an error unless the look follows the gyroscope |
+| `mouse <dx> <dy>` | the mouse moved by that many counts (x right, y down) for the aim or the camera, as a window's mouse motion does; an error while the mouse is the stylus |
 | `r <va> <size>` / `w <va> <hex>` | guest memory of the running process: code, `.data`, `.bss`, heap |
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
@@ -120,9 +120,20 @@ counts right turn `focus.rot` 19.995 and 19.990 degrees for 20, 800 left 39.974 
 for 30 with the pitch within 0.005, and a diagonal of 437 by 211 counts 21.846 and 10.547 for
 21.85 and 10.55; `focus.rot` counts in steps of 0.0055 degrees and cuts. 2000 counts down stop
 at the limit, 76.9 degrees, and 100 up after a pause come back 4.999. In a window with real
-mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): the first-person key logs "mouse captured for
-aim", the same four moves show the same views as the harness frames, and leaving first person
-logs "mouse released after 1600 by 600 counts", the travel the test sent.
+mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): the first-person key logs "mouse aim: camera
+took 0 by 0 counts", the same four moves show the same views as the harness frames, and leaving
+first person logs "mouse camera: aim took 1600 by 600 counts", the travel the test sent.
+
+Mouse camera (`mouse_aim`, plans/pc-controls-hud.md): in the rest of play (the pad table in
+`Play` mode, a patch whose link block has `look`) the mouse is held the same way and its motion,
+0.05 degrees a count with the remainder carried, is added to the link block's `look` (right,
+down, binary angles; `SlotLink::look`, clamped to int16). The patch takes it once a frame and
+writes 0 (`patch/common/mouse_look.hpp`): OoT3D's free camera (`free_camera.cpp`) adds it to
+its orbit as a stick turn would start it, mirrored in Master Quest; MM3D turns the game's own
+C-stick camera (`mouse_camera.cpp`, the decomp's `docs/camera.md`). A turn no camera takes
+within a frame is dropped. The log names each change of the mouse's job, "mouse <job>: <old job>
+took <x> by <y> counts" (aim, camera or stylus). In the item screens and menus the mouse is the
+stylus.
 
 SIGTERM and SIGINT (`term_signal`): the window's loop gets SDL's quit event and ends as when
 the window is closed. A loop that cannot take it is ended with the process three seconds later:

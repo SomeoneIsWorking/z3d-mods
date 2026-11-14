@@ -14,6 +14,10 @@ kPlaySaveAtStatue = "Play_SaveAtStatue"
 kPrinterUpdate = "MessagePrinter_Update"
 kSaveStartWrite = "SaveFile_StartWrite"
 kSaveUpdateWrite = "SaveFile_UpdateWrite"
+kCameraFollow = "Camera_Follow"
+kCStickNeutral = "Input_CStickNeutral"
+kVecDiffToGeo = "OLib_Vec3fDiffToVecGeo"
+kVecAddGeo = "OLib_AddVecGeoToVec3f"
 
 [globals]
 kCommonData = "gCommonData"
@@ -72,12 +76,17 @@ kSaveDay = "SaveData.day"
 kSaveTime = "SaveData.time"
 kPlaySaveWriter = "PlayState.saveWriter"
 kSaveWriterState = "SaveWriter.state"
+kCamAt = "Camera.at"
+kCamEyeNext = "Camera.eyeNext"
+kGeoPitch = "VecGeo.pitch"
+kGeoYaw = "VecGeo.yaw"
 
 [sizes]
 kScriptHeaderSize = "CutsceneScript"
 kCsCmdHeaderSize = "CsCmdHeader"
 kCsTextSize = "CsCmdText"
 kCsActorCueSize = "CsCmdActorCue"
+kVecGeoSize = "VecGeo"
 
 [defines]
 kPrinterStatePrinting = "MESSAGE_PRINTER_PRINTING"
