@@ -27,10 +27,16 @@ the map puts the two screens side by side with the map itself on the top one, th
 the top screen. The pad reaches the touch-only buttons through Project Restoration: ZL is View,
 ZR with X is item I and ZR with Y is item II (`mm-zl`, `mm-zr3`).
 
+The Bombers' Notebook (table entry 2) is side by side: its list is on the top screen and the entry
+with Return and Schedule on the touch screen (`mm-pad2`). The ocarina's screen is an inset for as
+long as it is up (`mm-oc3`): the game sets the HUD visibility that hides the main screen while
+Link plays, and only the main screen follows it.
+
 Left:
-- The Bombers' Notebook (table entry 2, side by side until it is looked at), the Song of Soaring
-  map and the Pictograph Box have not been seen in this layout.
-- The ocarina button and the map tabs have no pad button; Start and Select open Gear and Items.
+- The Song of Soaring map and the Pictograph Box have not been seen in this layout.
+- The map tabs have no pad button of their own; Project Restoration opens Items with Select, the
+  notebook with Start, Gear with ZR and Start, the map with ZR and Select and the ocarina with ZR
+  and A (`mm-pad1`).
 - A redrawn HUD (hearts, rupees and buttons as their own elements on the top screen) needs the
   game's layouts drawn by the app or moved by a patch.
 

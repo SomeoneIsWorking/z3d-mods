@@ -70,8 +70,9 @@ def _oot3d(d: symbols.Decomp) -> Layout:
     )
 
 
-# The touch screen is blank, the HUD, a menu of its own, or half of a two-screen view.
-_MM3D_PLACEMENTS = {"UI_SCREEN_BLACK": "top_only", "UI_SCREEN_MAIN": "inset", "UI_SCREEN_OCARINA": "inset",
+# The touch screen is blank, the HUD (an inset the HUD visibility can hide), an inset that always
+# shows, a menu of its own, or half of a two-screen view.
+_MM3D_PLACEMENTS = {"UI_SCREEN_BLACK": "top_only", "UI_SCREEN_MAIN": "hud", "UI_SCREEN_OCARINA": "inset",
                     "UI_SCREEN_GEAR": "menu", "UI_SCREEN_ITEMS": "menu", "UI_SCREEN_MASKS": "menu",
                     "UI_SCREEN_MAP": "split"}
 

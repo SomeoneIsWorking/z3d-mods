@@ -31,12 +31,18 @@ public:
                 const std::filesystem::path &manifest);
 
 private:
+  struct ScreenPlacement {
+    OverlayPlacement placement = OverlayPlacement::Split;
+    // The main screen: left out while the game's HUD visibility hides it.
+    bool followsHud = false;
+  };
+
   struct Screens {
     // Guest addresses of the pointer to the screen that is up and of the table of play's
     // screens, and where the overlay puts the touch screen for each of the table's entries.
     uint32_t active = 0;
     uint32_t table = 0;
-    std::vector<OverlayPlacement> placements;
+    std::vector<ScreenPlacement> placements;
     // The game's 16-bit HUD visibility and its values that blank or dim the main screen.
     uint32_t hud = 0;
     std::vector<uint16_t> hudHidden;

@@ -1,5 +1,5 @@
 {
-  "about": "MM3D (USA rev 1) draws its button prompts as 3DS art; each cell below, in the texture's own pixels [x0, y0, x1, y1], is drawn as port-assets' Xbox pad glyph for the pad button the app binds there (A/B/X/Y by name, L/R the triggers, ZL/ZR the bumpers, START the menu button, the circle pad the left stick). inlay: the prompt sits on a button face, which is filled in under the glyph. scale: no texture pack covers these, so the game's own art is enlarged this much. A texture in a GAR archive is <archive>.gar/<file>.",
+  "about": "MM3D (USA rev 1) draws its button prompts as 3DS art; each cell below, in the texture's own pixels [x0, y0, x1, y1], is drawn as port-assets' Xbox pad glyph for the pad button the app binds there (A/B/X/Y by name, L/R the triggers, ZL/ZR the bumpers, START the menu button, the circle pad the left stick). inlay: the prompt sits on a button face, which is filled in under the glyph. badge: the glyph is drawn over the art, for a touch button the pad reaches (ZL is View). chord: [held, pressed] in one cell, for the touch slots Project Restoration puts on ZR with X and Y. scale: no texture pack covers these, so the game's own art is enlarged this much. A texture in a GAR archive is <archive>.gar/<file>.",
   "scale": 4,
   "layout/US_English/Joker.Main.gar/parts.ctxb": [
     {"glyph": "face_a", "box": [112, 0, 128, 16]},
@@ -23,6 +23,8 @@
     {"glyph": "ls_left", "box": [112, 32, 128, 48]},
     {"glyph": "ls_vertical", "box": [128, 32, 144, 48]},
     {"glyph": "ls_horizontal", "box": [144, 32, 160, 48]},
+    {"chord": ["rb", "face_x"], "box": [160, 32, 176, 48]},
+    {"chord": ["rb", "face_y"], "box": [208, 32, 224, 48]},
     {"glyph": "face_x", "box": [176, 32, 192, 48]},
     {"glyph": "face_y", "box": [192, 32, 208, 48]},
     {"glyph": "lb", "box": [176, 80, 192, 96]},
@@ -39,6 +41,10 @@
   "layout/US_English/Joker.Main.Play.gar/hud_patrs00_action_text.ctxb": [
     {"glyph": "face_a", "box": [22, 0, 34, 12], "inlay": true},
     {"glyph": "face_b", "box": [60, 0, 74, 12], "inlay": true},
+    {"clear": [480, 80, 512, 100]},
+    {"chord": ["rb", "face_x"], "box": [481, 81, 495, 95]},
+    {"chord": ["rb", "face_y"], "box": [497, 81, 511, 95]},
+    {"glyph": "lb", "box": [442, 119, 458, 135], "badge": true},
     {"glyph": "face_x", "box": [482, 100, 494, 112]},
     {"glyph": "face_y", "box": [498, 100, 510, 112]}
   ],

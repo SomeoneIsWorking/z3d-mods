@@ -42,11 +42,21 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
 - Shown in game (`mm-gl2`, South Clock Town): the green A on the action button, the blue X and
   yellow Y on the item slots, the red B on the Gear and Map screens' Return.
 
+- Pad hints for the touch-only buttons (2026-11-14): Project Restoration puts item I on ZR with X
+  and item II on ZR with Y, and ZL opens View. The HUD sheet's I and II labels and the text
+  sheet's I and II cells are drawn as the bumper over the face button (`chord` in the table), and
+  View carries an LB badge (`badge`).
+- Shown in game: a dialog (`mm-gl4`, the owl statue's message set to the Hero's Bow's: "Set it to
+  X, Y, RB over X or RB over Y", and the Mirror Shield's "Press RT" in `mm-texts`), the HUD's LB
+  on View and RB hints on I and II (`mm-gl4`, `mm-pad2`), the Ocarina screen's LT, RT, X, Y, A and
+  the B on Cancel (`mm-oc3`), the Bombers' Notebook's B on Return (`mm-pad2`). ZR with X and ZR
+  with Y play the ocarina from I and from II, ZL looks around (`mm-pad1`, `mm-pad2`).
+
 ## Still open
-- MM3D, not seen in game yet: the text prompt sheet in a dialog, the Bombers' Notebook, the world
-  map's zoom prompts, the Ocarina screen's note letters, the save prompts.
+- MM3D, not seen in game yet: the world map's zoom prompts, a notebook entry's A and X buttons
+  (the notebook was empty).
 - MM3D: only the English sheets are covered; French and Spanish keep the 3DS prompts.
-- MM3D: the I and II slots keep their touch labels. Project Restoration uses them with ZR+X and
-  ZR+Y and adds pad shortcuts for Gear, Map, Items, Masks and the pages, which the game's art
-  does not show; hints for those are not drawn.
+- MM3D: Project Restoration's other shortcuts (Start the notebook, Select Items, ZR with Start
+  Gear, ZR with Select the map, ZR with A the ocarina; all seen working in `mm-pad1`) have no hint
+  on the buttons they open.
 - The Gossip Stone model's button texture (not in a layout archive) is not looked at.

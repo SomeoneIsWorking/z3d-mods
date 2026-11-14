@@ -46,9 +46,13 @@ std::optional<uint32_t> readPointer(const Emulator &emulator, uint32_t address) 
   return value;
 }
 
+// "hud" is the game's main touch screen: an inset the game's HUD visibility can hide.
+constexpr std::string_view kHudScreen = "hud";
+
 OverlayPlacement parsePlacement(std::string_view name) {
   constexpr std::array kNames{std::pair{std::string_view("split"), OverlayPlacement::Split},
                               std::pair{std::string_view("inset"), OverlayPlacement::Inset},
+                              std::pair{kHudScreen, OverlayPlacement::Inset},
                               std::pair{std::string_view("menu"), OverlayPlacement::Menu},
                               std::pair{std::string_view("top_only"), OverlayPlacement::TopOnly}};
   for (const auto &[text, placement] : kNames) {
@@ -144,7 +148,8 @@ ScreenOverlay::ScreenOverlay(GameWindow &window, Emulator &emulator, const GameS
     found.hudHidden.push_back(static_cast<uint16_t>(*entry.integer()));
   }
   for (const lucent::json::Value &entry : *placements->array()) {
-    found.placements.push_back(parsePlacement(entry.string() != nullptr ? *entry.string() : std::string()));
+    const std::string name = entry.string() != nullptr ? *entry.string() : std::string();
+    found.placements.push_back({parsePlacement(name), name == kHudScreen});
   }
   screens_ = found;
   emulator_.onFrame([this] { update(); });
@@ -157,8 +162,8 @@ OverlayPlacement ScreenOverlay::placement() const {
   }
   for (size_t i = 0; i < screens_->placements.size(); ++i) {
     if (readPointer(emulator_, screens_->table + static_cast<uint32_t>(i * sizeof(uint32_t))) == active) {
-      const OverlayPlacement placement = screens_->placements[i];
-      return placement == OverlayPlacement::Inset && hudHidden() ? OverlayPlacement::TopOnly : placement;
+      const ScreenPlacement &screen = screens_->placements[i];
+      return screen.followsHud && hudHidden() ? OverlayPlacement::TopOnly : screen.placement;
     }
   }
   return OverlayPlacement::Split;

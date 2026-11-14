@@ -165,6 +165,21 @@ def _glyph(size: tuple[int, int], svg: Path, dimmed: bool) -> Image.Image:
     return layer
 
 
+# A chord's held button takes this much of the cell's height, above the pressed one.
+CHORD_HELD = 0.5
+
+
+def _chord(size: tuple[int, int], held: Path, pressed: Path) -> Image.Image:
+    """Two glyphs in one cell: the held button across the top, the pressed one under it."""
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    top = round(size[1] * CHORD_HELD)
+    # A bumper's pill is half as tall as its cell, so the full-width glyph is cropped to its middle.
+    wide = _glyph((size[0], size[0]), held, False)
+    layer.alpha_composite(wide.crop((0, (size[0] - top) // 2, size[0], (size[0] - top) // 2 + top)), (0, 0))
+    layer.alpha_composite(_glyph((size[0], size[1] - top), pressed, False), (0, top))
+    return layer
+
+
 def _inlay_ground(image: Image.Image, box: tuple[int, int, int, int], scale: int) -> Image.Image:
     """The art under a prompt drawn on a button face: each row of `box` blended between the
     art just left and just right of it."""
@@ -213,7 +228,7 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
     draw = ImageDraw.Draw(covered)
     clear = (0, 0, 0, 0)
     for edit in edits:
-        kind = next(k for k in ("keep", "copy", "clear", "label", "relabel", "shell", "dpad", "glyph")
+        kind = next(k for k in ("keep", "copy", "clear", "label", "relabel", "shell", "dpad", "glyph", "chord")
                     if k in edit)
         box = edit["box"] if "box" in edit else edit[kind]
         draw.rectangle((box[0], box[1], box[2] - 1, box[3] - 1), fill=255)
@@ -250,9 +265,13 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
         elif kind == "glyph":
             if edit.get("inlay", False):
                 out.paste(_inlay_ground(texture.hires, (x0, y0, x1, y1), scale), (x0, y0))
-            else:
+            elif not edit.get("badge", False):
                 out.paste(clear, (x0, y0, x1, y1))
             out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)), (x0, y0))
+        elif kind == "chord":
+            held, pressed = edit["chord"]
+            out.paste(clear, (x0, y0, x1, y1))
+            out.alpha_composite(_chord(size, glyphs / f"{held}.svg", glyphs / f"{pressed}.svg"), (x0, y0))
         elif kind == "dpad":
             colour = _dominant(texture.modded.crop(tuple(box)))
             out.paste(clear, (x0, y0, x1, y1))
