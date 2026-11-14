@@ -9,6 +9,7 @@
 - `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
 - `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, ETC1, ETC1A4) and Azahar's custom-texture file name, by either of its hashes.
 - `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
+- `tools/z3dmods/source_check.py`: the digest of a third-party file or folder, and the refusal of one that is not the copy a set names.
 - `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by the hash its `pack.json` names.
 - `tools/z3dmods/ctxb.py`: CTXB menu texture bundles.
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).

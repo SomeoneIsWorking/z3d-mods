@@ -6,7 +6,12 @@
     "root": "downloads/the-one-screen-891b60e364cc660b2d1edfd7916ec01e3bb0cadf/x/load/mods/0004000000033500",
     "code_patch": "exefs/code.ips",
     "exheader": "exheader.bin",
-    "romfs": "romfs"
+    "romfs": "romfs",
+    "sha256": {
+      "exefs/code.ips": "10cf910aceb3f7d6fdaf138d53fa813a2f63d4040fdb2dc4ea8a3a514a3a8026",
+      "exheader.bin": "81d21ba83495f6226b6955eda6fd9be7ae44aefdf3585b3ae789285a51208740",
+      "romfs": "b2a859edbc14bafe635acb7e35bfe2ad9dff8fb009b0dea1dd0361aef3a056e8"
+    }
   },
   "patch": "oot3d",
   "screen_layout": "single_screen",
@@ -14,7 +19,8 @@
   "hud": "hud/the-one-screen-891b60e.json",
   "textures": {
     "name": "Henriko Magnifico OoT3D 4K 5.0a, 1080p variant (free, no licence stated)",
-    "root": "downloads/henriko-oot3d-5.0a-1080p/x/OOT3D 4K 5.0a (1080p)/user/load/textures/0004000000033500"
+    "root": "downloads/henriko-oot3d-5.0a-1080p/x/OOT3D 4K 5.0a (1080p)/user/load/textures/0004000000033500",
+    "sha256": "06102c372abf4e315fd7095cc36744b8f06e4d76eab358080e46521895793c85"
   },
   "azahar_global": {
     "Utility": {

@@ -5,7 +5,11 @@
     "name": "Project Restoration v1.5.9 v110/citra (leoetlino, GPL-2.0)",
     "root": "downloads/project-restoration-v1.5.9/x/v110/citra",
     "code_patch": "code.bps",
-    "exheader": "exheader.bin"
+    "exheader": "exheader.bin",
+    "sha256": {
+      "code.bps": "972972f445d61e24c87c97c29c2057dff9461647492307cb3ac6d65385db7258",
+      "exheader.bin": "1da15cfe8b1878bd0e3005e55e7caef643b31e345128ed75aea88fdec482996c"
+    }
   },
   "patch": "mm3d",
   "screen_layout": "overlay",
@@ -13,7 +17,8 @@
   "hud": "hud/mm3d-usa-rev1.json",
   "textures": {
     "name": "Henriko Magnifico MM3D 4K 3.0b-1, 1080p variant (free, no licence stated)",
-    "root": "downloads/henriko-mm3d-4k-3.0b-1/x/MM3D 4K 3.0b (1080p)/user/load/textures/0004000000125500"
+    "root": "downloads/henriko-mm3d-4k-3.0b-1/x/MM3D 4K 3.0b (1080p)/user/load/textures/0004000000125500",
+    "sha256": "a837fac3fc34c381cc4f0051aaa6cd67d69f7b4f0910c01a13d861c065daf544"
   },
   "azahar_global": {
     "Utility": {

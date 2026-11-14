@@ -37,10 +37,26 @@ own patches and of texture packs.
 - The loaders that exist are the core's: `exheader.bin`, `code.bin`, one `code.ips` or
   `code.bps`, `romfs/` and its layers, texture packs of either hash. The app adds none of its
   own; hotswap reuses the core's loader and IPS reader.
-- Not built: the app checking a player's third-party files against a set's hashes and baking
-  the base mod itself. `z3dmods install` (Python) still does both, so a shipped app would need
-  that step in the app or the tools shipped with it. Hotswap of `romfs/` files and of a pack
-  changed on disk needs the core to drop what it listed at load.
+- Each set names the SHA-256 of every third-party input it reads (`"sha256"` under `base` and
+  `textures`; a folder's is the digest of its file listing, `tools/z3dmods/source_check.py`), and
+  `z3dmods install` refuses a copy that differs before it touches the install. Shown: a file added
+  to the MM3D pack's folder stops the install and leaves the installed set as it was.
+- The base mod is baked by `z3dmods install` (`install._layer`: the base patch into `code.bin`,
+  ours on top as `code.ips`), not by the app. What an install makes from the player's files is
+  more than that bake: the stepped rooms (`stairs.py`), the menu textures (`hud.py`), the grown
+  exheader and the check of every hook's original word. All of it is Python on game data, so
+  none of it can ship prebuilt.
+
+## To decide
+A fresh install from the app alone needs that work reachable from the app. Two ways:
+- The app ships the tools (the locked Python environment and `z3dmods`) and runs the install on
+  first launch, from a folder picker for the ROM and the mods. Nothing is written twice; the
+  package grows by a Python runtime.
+- The install is rewritten in C++ inside the app (BPS and IPS, CMB and ZSI rewriting, the HUD
+  composition with font and SVG rendering) and the Python is deleted. Months of work with nothing
+  new for the player's own install.
+Neither is started. Hotswap of `romfs/` files and of a pack changed on disk needs the core to drop
+what it listed at load; not built.
 
 ## Open
 - Hidden-window mode for tools (the current harness is already that).

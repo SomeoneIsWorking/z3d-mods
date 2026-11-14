@@ -9,7 +9,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, hud, ips, lzs, options, patch_build, stairs, zsi
+from z3dmods import azahar_config, bps, ctr, hud, ips, lzs, options, patch_build, source_check, stairs, zsi
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -46,6 +46,18 @@ class GameSet:
         return cls(raw["title_id"], raw["code_sha256"], raw["base"], raw.get("textures"),
                    raw.get("azahar_global", {}), raw.get("patch"), raw.get("screen_layout", "default"),
                    raw.get("stairs"), raw.get("hud"))
+
+
+def _check_sources(cfg: Config, game: GameSet) -> None:
+    """Every third-party file the install reads is the copy the set names (source_check.py)."""
+    root = cfg.env_assets / game.base["root"]
+    used = {game.base[key] for key in ("code_patch", "exheader", "romfs") if key in game.base}
+    if used != set(game.base["sha256"]):
+        raise RuntimeError(f"{game.title_id}: the set's base hashes do not cover exactly {sorted(used)}")
+    for name, expected in game.base["sha256"].items():
+        source_check.check(root / name, expected)
+    if game.textures:
+        source_check.check(cfg.env_assets / game.textures["root"], game.textures["sha256"])
 
 
 def _sha(path: Path) -> str:
@@ -139,6 +151,7 @@ def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str,
 
 
 def install(cfg: Config, game: GameSet) -> Path:
+    _check_sources(cfg, game)
     root = cfg.env_assets / game.base["root"]
     code_patch = root / game.base["code_patch"]
     rom = ctr.open_cci(cfg.rom(game.title_id))
