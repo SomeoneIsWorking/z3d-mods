@@ -56,7 +56,8 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
 
 - On the pack (2026-11-14, `mm-hires`): the HUD, the Ocarina screen, Items and the map draw the
   pack's art with our glyphs; `textures:off` in the same run shows the game's I, II, X, Y and
-  yellow A again.
+  yellow A again. A dialog's prompts (`mm-hires-text`, the Hero's Bow message) are the pack's sheet
+  with ours on it.
 
 ## Still open
 - MM3D, not seen in game yet: the world map's zoom prompts, a notebook entry's A and X buttons
