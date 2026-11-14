@@ -21,7 +21,6 @@ constexpr float kHeadingWidthShare = 1.0F / 16.0F;
 constexpr float kRowWidthShare = 1.0F / 27.0F;
 constexpr float kMargin = 0.06F;
 constexpr float kRowPitch = 1.9F;
-constexpr float kStickPress = 0.5F;
 
 struct Held {
   bool up = false;
@@ -31,15 +30,8 @@ struct Held {
   bool change = false;
   bool back = false;
 
-  static Held from(const PadState &pad) {
-    const auto &circle = pad.sticks[Settings::NativeAnalog::CirclePad];
-    const auto &buttons = pad.buttons;
-    return {buttons[Settings::NativeButton::Up] || circle[1] > kStickPress,
-            buttons[Settings::NativeButton::Down] || circle[1] < -kStickPress,
-            buttons[Settings::NativeButton::Left] || circle[0] < -kStickPress,
-            buttons[Settings::NativeButton::Right] || circle[0] > kStickPress,
-            static_cast<bool>(buttons[Settings::NativeButton::A]),
-            buttons[Settings::NativeButton::B] || buttons[Settings::NativeButton::X]};
+  static Held from(const MenuPad &pad) {
+    return {pad.up, pad.down, pad.left, pad.right, pad.a, pad.b || pad.x};
   }
 };
 
@@ -58,12 +50,12 @@ void OptionsMenu::step(int direction) {
 
 void OptionsMenu::run() {
   (void)window_.takeMenuRequest();
-  Held before = Held::from(pad_.state());
+  Held before = Held::from(pad_.menu());
   lucent::info("menu", "options: open for {}", title_);
   select(selected_);
   while (!window_.closeRequested()) {
     (void)window_.pollMenu();
-    const Held now = Held::from(pad_.state());
+    const Held now = Held::from(pad_.menu());
     const size_t count = options_.items().size();
     if (now.up && !before.up) {
       select((selected_ + count - 1) % count);

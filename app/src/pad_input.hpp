@@ -65,6 +65,21 @@ struct ChordLayout {
   std::array<ChordSlot, 4> slots;
 };
 
+// What the picker and menus read: the host's buttons by their names on an Xbox pad, and the
+// keys that stand for them, before any game's own translation (its chord, a set's X/Y trade).
+struct MenuPad {
+  // The D-pad, the left stick or the arrow keys.
+  bool up = false;
+  bool down = false;
+  bool left = false;
+  bool right = false;
+  bool a = false;
+  bool b = false;
+  bool x = false;
+  bool y = false;
+  bool start = false;
+};
+
 // What the player last pressed something on.
 enum class HostDevice : uint8_t { Pad, Keyboard };
 
@@ -119,7 +134,7 @@ public:
   // What presses an item button of the bound game: on a pad its face button under the chord, on
   // the keyboard 1 to 4 for the first page and 5 to 8 for the second.
   [[nodiscard]] Prompt itemPrompt(ItemButton item, bool secondPage) const;
-  // A game option (game_options.hpp); the picker and menus read the stick as held.
+  // A game option (game_options.hpp).
   void invertCStick(bool x, bool y) {
     state_->cStickInverted = {x, y};
   }
@@ -127,9 +142,14 @@ public:
   [[nodiscard]] const PadState &state() const {
     return *state_;
   }
+  // As readHost last found the host.
+  [[nodiscard]] const MenuPad &menu() const {
+    return menu_;
+  }
 
 private:
   std::shared_ptr<PadState> state_;
+  MenuPad menu_;
   std::vector<SDL_Gamepad *> pads_;
   const ChordLayout *chord_ = nullptr;
   HostDevice lastDevice_ = HostDevice::Pad;

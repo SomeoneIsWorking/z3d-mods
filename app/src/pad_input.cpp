@@ -68,6 +68,39 @@ constexpr std::array kPadButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, Settings::NativeButton::Right},
 };
 
+struct MenuKey {
+  SDL_Scancode key;
+  bool MenuPad::*held;
+};
+
+// kKeys' face buttons and D-pad by name, and the arrow keys.
+constexpr std::array kMenuKeys{
+    MenuKey{SDL_SCANCODE_A, &MenuPad::a},        MenuKey{SDL_SCANCODE_S, &MenuPad::b},
+    MenuKey{SDL_SCANCODE_Z, &MenuPad::x},        MenuKey{SDL_SCANCODE_X, &MenuPad::y},
+    MenuKey{SDL_SCANCODE_M, &MenuPad::start},    MenuKey{SDL_SCANCODE_T, &MenuPad::up},
+    MenuKey{SDL_SCANCODE_G, &MenuPad::down},     MenuKey{SDL_SCANCODE_F, &MenuPad::left},
+    MenuKey{SDL_SCANCODE_H, &MenuPad::right},    MenuKey{SDL_SCANCODE_UP, &MenuPad::up},
+    MenuKey{SDL_SCANCODE_DOWN, &MenuPad::down},  MenuKey{SDL_SCANCODE_LEFT, &MenuPad::left},
+    MenuKey{SDL_SCANCODE_RIGHT, &MenuPad::right},
+};
+
+struct MenuButton {
+  SDL_GamepadButton pad;
+  bool MenuPad::*held;
+};
+
+constexpr std::array kMenuButtons{
+    MenuButton{SDL_GAMEPAD_BUTTON_SOUTH, &MenuPad::a},
+    MenuButton{SDL_GAMEPAD_BUTTON_EAST, &MenuPad::b},
+    MenuButton{SDL_GAMEPAD_BUTTON_WEST, &MenuPad::x},
+    MenuButton{SDL_GAMEPAD_BUTTON_NORTH, &MenuPad::y},
+    MenuButton{SDL_GAMEPAD_BUTTON_START, &MenuPad::start},
+    MenuButton{SDL_GAMEPAD_BUTTON_DPAD_UP, &MenuPad::up},
+    MenuButton{SDL_GAMEPAD_BUTTON_DPAD_DOWN, &MenuPad::down},
+    MenuButton{SDL_GAMEPAD_BUTTON_DPAD_LEFT, &MenuPad::left},
+    MenuButton{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, &MenuPad::right},
+};
+
 constexpr uint32_t bit(Button button) {
   return 1U << button;
 }
@@ -265,6 +298,10 @@ void PadInput::readHost() {
       state.buttons[button] = state.buttons[button] || ((held >> button) & 1U) != 0;
     }
   }
+  MenuPad menu;
+  for (const MenuKey &binding : kMenuKeys) {
+    menu.*binding.held = menu.*binding.held || keys[binding.key];
+  }
   bool padHeld = false;
   auto &circle = state.sticks[Settings::NativeAnalog::CirclePad];
   circle[0] = (keys[SDL_SCANCODE_RIGHT] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_LEFT] ? 1.0F : 0.0F);
@@ -301,7 +338,15 @@ void PadInput::readHost() {
     cStick[1] = stronger(cStick[1], -axis(pad, SDL_GAMEPAD_AXIS_RIGHTY));
     padHeld = padHeld || std::abs(axis(pad, SDL_GAMEPAD_AXIS_LEFTX)) > kStickMoved ||
               std::abs(axis(pad, SDL_GAMEPAD_AXIS_LEFTY)) > kStickMoved;
+    for (const MenuButton &binding : kMenuButtons) {
+      menu.*binding.held = menu.*binding.held || SDL_GetGamepadButton(pad, binding.pad);
+    }
+    menu.left = menu.left || axis(pad, SDL_GAMEPAD_AXIS_LEFTX) < -kStickMoved;
+    menu.right = menu.right || axis(pad, SDL_GAMEPAD_AXIS_LEFTX) > kStickMoved;
+    menu.up = menu.up || axis(pad, SDL_GAMEPAD_AXIS_LEFTY) < -kStickMoved;
+    menu.down = menu.down || axis(pad, SDL_GAMEPAD_AXIS_LEFTY) > kStickMoved;
   }
+  menu_ = menu;
   // The keyboard wins a frame both are held in: it is the one in the player's hands last.
   if (keyHeld) {
     lastDevice_ = HostDevice::Keyboard;

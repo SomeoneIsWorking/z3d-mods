@@ -145,6 +145,13 @@ class Session:
             time.sleep(0.05)
         raise RuntimeError(f"the app did not log {text!r} within {seconds}s; see {log}")
 
+    def quiet(self, text: str, seconds: float) -> None:
+        """Lets `seconds` pass and refuses a line holding `text` logged in them."""
+        self.wait(seconds)
+        data = (self.out / "gamescope.log").read_bytes()[self._log_read:].decode(errors="replace")
+        if text in data:
+            raise RuntimeError(f"the app logged {text!r}; see {self.out / 'gamescope.log'}")
+
     def shot(self, label: str) -> Path:
         self._shots += 1
         path = self.out / f"{self._shots:02d}-{label}.png"
@@ -462,6 +469,32 @@ def _aim_mm3d(session: Session, pad: Gamepad) -> None:
     _aim_released(session)
 
 
+def _menu_pad(session: Session, pad: Gamepad) -> None:
+    """The menus read the pad by its own button names whatever game was played last: after
+    OoT3D, whose set trades X and Y on their way to the game, X still opens the options and
+    closes them, and Y does neither."""
+    session.expect("picker: on Ocarina")
+    session.wait(2)
+    pad.button("a")
+    session.expect("booting")
+    session.wait(15)
+    pad.button("guide")
+    session.expect("picker: on Ocarina")
+    session.wait(2)
+    pad.button("y")
+    session.quiet("options: open", 2)
+    pad.button("x")
+    session.expect("options: open", 5)
+    session.wait(1)
+    session.shot("options-by-x")
+    pad.button("y")
+    session.quiet("options: closed", 2)
+    pad.button("x")
+    session.expect("options: closed", 5)
+    session.wait(1)
+    session.shot("picker-by-x")
+
+
 def _hotswap(session: Session, pad: Gamepad) -> None:
     """MM3D's mods swapped while it runs: F7 turns the textures off and on, F6 takes the patch out
     and puts it back, F5 reads it again; the game runs on (the log names each swap)."""
@@ -572,7 +605,7 @@ DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d", "aim":
 PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "aim": _oot3d_chord_file,
            "aim-mm3d": _mm3d_chord_file, "setup": _without_set}
 # Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.
-PICKER = {"setup": _setup}
+PICKER = {"menu-pad": _menu_pad, "setup": _setup}
 SCENARIOS = {**DIRECT, **PICKER, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 

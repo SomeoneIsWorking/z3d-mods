@@ -34,8 +34,6 @@ constexpr float kTileShare = 0.42F;
 constexpr float kTileLift = 0.06F;
 // A line of text wraps at this share of the window's width.
 constexpr float kTextWidth = 0.9F;
-// Stick deflection that counts as a press.
-constexpr float kStickPress = 0.5F;
 
 struct Rgb {
   uint8_t r;
@@ -69,19 +67,15 @@ SDL_FPoint textSize(TTF_Text *text) {
   return {static_cast<float>(w), static_cast<float>(h)};
 }
 
-// Pad buttons that move or choose, as held now.
+// What moves or chooses, as held now.
 struct Held {
   bool left = false;
   bool right = false;
   bool choose = false;
   bool options = false;
 
-  static Held from(const PadState &pad) {
-    const auto &circle = pad.sticks[Settings::NativeAnalog::CirclePad];
-    return {pad.buttons[Settings::NativeButton::Left] || circle[0] < -kStickPress,
-            pad.buttons[Settings::NativeButton::Right] || circle[0] > kStickPress,
-            pad.buttons[Settings::NativeButton::A] || pad.buttons[Settings::NativeButton::Start],
-            static_cast<bool>(pad.buttons[Settings::NativeButton::X])};
+  static Held from(const MenuPad &pad) {
+    return {pad.left, pad.right, pad.a || pad.start, pad.x};
   }
 };
 
@@ -159,7 +153,7 @@ void TitlePicker::select(size_t index) {
 std::optional<size_t> TitlePicker::run() {
   (void)window_.takeMenuRequest();
   // What is held when the picker opens (the A that chose it, say) is not a press.
-  Held before = Held::from(pad_.state());
+  Held before = Held::from(pad_.menu());
   select(selected_);
   while (!window_.closeRequested()) {
     const std::vector<SDL_FPoint> clicks = window_.pollMenu();
@@ -171,7 +165,7 @@ std::optional<size_t> TitlePicker::run() {
         chosen = index;
       }
     }
-    const Held now = Held::from(pad_.state());
+    const Held now = Held::from(pad_.menu());
     const size_t count = library_.games().size();
     if (now.left && !before.left) {
       select((selected_ + count - 1) % count);
@@ -186,7 +180,7 @@ std::optional<size_t> TitlePicker::run() {
       if (!install_.wanted(library_.games()[*chosen].setup) || setUp(*chosen)) {
         return chosen;
       }
-      before = Held::from(pad_.state());
+      before = Held::from(pad_.menu());
       select(*chosen);
       continue;
     }
@@ -196,7 +190,7 @@ std::optional<size_t> TitlePicker::run() {
           .run();
       // The menu left the font at its own size.
       textHeight_ = 0.0F;
-      before = Held::from(pad_.state());
+      before = Held::from(pad_.menu());
       select(selected_);
       continue;
     }
@@ -284,16 +278,16 @@ bool TitlePicker::setUp(size_t index) {
   if (install_.succeeded()) {
     return true;
   }
-  lucent::error("menu", "picker: setting up {} failed: {}", game.title, install_.lastLine());
-  Held before = Held::from(pad_.state());
+  lucent::error("menu", "picker: setting up {} failed", game.title);
+  Held before = Held::from(pad_.menu());
   while (!window_.closeRequested()) {
     (void)window_.pollMenu();
-    const Held now = Held::from(pad_.state());
+    const Held now = Held::from(pad_.menu());
     if ((now.choose && !before.choose) || window_.takeMenuRequest()) {
       break;
     }
     before = now;
-    drawSetUp(kSetUpFailed, install_.lastLine());
+    drawSetUp(kSetUpFailed, install_.failure());
   }
   return false;
 }
@@ -307,13 +301,16 @@ void TitlePicker::drawSetUp(const std::string &heading, const std::string &line)
   TTF_Text *top = makeText(engine_, font_, heading, kText);
   TTF_SetTextWrapWidth(top, static_cast<int>(current.width * kTextWidth));
   const SDL_FPoint topSize = textSize(top);
-  TTF_DrawRendererText(top, (current.width - topSize.x) / 2.0F, current.height * 0.45F - topSize.y);
-  TTF_DestroyText(top);
   TTF_SetFontSize(font_, current.height * kTitleShare);
   TTF_Text *bottom = makeText(engine_, font_, line, kDim);
   TTF_SetTextWrapWidth(bottom, static_cast<int>(current.width * kTextWidth));
   const SDL_FPoint bottomSize = textSize(bottom);
-  TTF_DrawRendererText(bottom, (current.width - bottomSize.x) / 2.0F, current.height * 0.5F);
+  // The two together sit in the middle, however many lines the lower one takes.
+  const float gap = current.height * 0.05F;
+  const float y = (current.height - topSize.y - gap - bottomSize.y) / 2.0F;
+  TTF_DrawRendererText(top, (current.width - topSize.x) / 2.0F, y);
+  TTF_DestroyText(top);
+  TTF_DrawRendererText(bottom, (current.width - bottomSize.x) / 2.0F, y + topSize.y + gap);
   TTF_DestroyText(bottom);
   SDL_RenderPresent(renderer_);
 }
