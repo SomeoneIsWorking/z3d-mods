@@ -65,8 +65,9 @@ GameWindow::GameWindow(const AppConfig &config, PadInput &pad) : pad_(pad), hidd
   }
   const Layout::FramebufferLayout shape =
       Layout::FrameLayoutFromResolutionScale(hidden_ ? config.resolution : 1);
-  SDL_WindowFlags flags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-  flags |= hidden_ ? SDL_WINDOW_HIDDEN : SDL_WINDOW_RESIZABLE;
+  // A hidden window's pixels are the frame's, whatever the display's scale.
+  SDL_WindowFlags flags = SDL_WINDOW_VULKAN;
+  flags |= hidden_ ? SDL_WINDOW_HIDDEN : SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
   window_ = SDL_CreateWindow(config.title.c_str(), static_cast<int>(shape.width),
                              static_cast<int>(shape.height), flags);
   if (window_ == nullptr) {
