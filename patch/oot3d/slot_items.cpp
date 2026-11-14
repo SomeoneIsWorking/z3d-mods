@@ -62,6 +62,7 @@ public:
         guest::read<int32_t>(kSaveContext + kSaveFileNum) == kFileNumDebug) {
       // The title screen and file select: the next file starts with the game's own buttons.
       lanes_ = {};
+      waiting_ = 0;
       return;
     }
     auto *store = reinterpret_cast<volatile Store *>(kSaveContext + kSaveUnused);
@@ -175,6 +176,10 @@ private:
       }
     }
     uint32_t buttonsPressed = 0;
+    if (waiting_ != 0 && handsEmpty(play)) {
+      buttonsPressed = waiting_;
+      waiting_ = 0;
+    }
     for (uint32_t slot = 0; slot < kSlotCount; ++slot) {
       if (((pressed >> slot) & 1U) == 0 || itemOf(table, first + slot) == kItemNone) {
         continue;
@@ -182,7 +187,12 @@ private:
       const uint32_t lane = lanes_.take(static_cast<uint8_t>(slot), busy);
       if (lane != kLaneCount) {
         busy |= 1U << lane;
-        buttonsPressed |= kLanes[lane].button;
+        if (inHandFrom(play, lane, itemOf(table, first + slot))) {
+          // The game puts the lane's last item away first and drops a press until it has.
+          waiting_ |= kLanes[lane].button;
+        } else {
+          buttonsPressed |= kLanes[lane].button;
+        }
         if (const uint8_t value = table.get(first + slot); value >= kFirstSong) {
           playSong(static_cast<uint8_t>(value - kFirstSong));
         }
@@ -204,6 +214,42 @@ private:
     lanesChild_ = child;
     guest::write<uint32_t>(play, kPlayInputHeld, guest::read<uint32_t>(play, kPlayInputHeld) | buttonsHeld);
     guest::write<uint32_t>(play, kPlayInputPressed, guest::read<uint32_t>(play, kPlayInputPressed) | buttonsPressed);
+  }
+
+  static uintptr_t playerOf(void *play) {
+    return guest::read<uintptr_t>(
+        play, kPlayActorCtx + kActorCtxLists + kActorCatPlayer * kActorListEntrySize + kActorListHead);
+  }
+
+  // The item in Link's hand; none without one.
+  static uint8_t itemInHand(void *play) {
+    const uintptr_t player = playerOf(play);
+    return player != 0 ? guest::read<uint8_t>(player + kPlayerHeldItemId) : static_cast<uint8_t>(kItemNone);
+  }
+
+  // Whether Link's hands are empty and done putting an item away.
+  static bool handsEmpty(void *play) {
+    const uintptr_t player = playerOf(play);
+    return player == 0 || (guest::read<uint8_t>(player + kPlayerHeldItemId) == kItemNone &&
+                           guest::read<int8_t>(player + kPlayerItemAction) == kPlayerItemActionNone);
+  }
+
+  // Whether `item` on this lane takes the item in Link's hand off its last button.
+  static bool inHandFrom(void *play, uint32_t lane, uint8_t item) {
+    const uint8_t inHand = itemInHand(play);
+    if (inHand == kItemNone || inHand == item) {
+      return false;
+    }
+    const auto *items = reinterpret_cast<const volatile uint8_t *>(kSaveContext + kSaveEquips + kEquipsItems);
+    bool here = false;
+    bool elsewhere = false;
+    for (uint32_t button = 0; button < kEquipsSlots - kEquipsItems; ++button) {
+      if (items[button] == inHand) {
+        here = here || button == kLanes[lane].equipsItem;
+        elsewhere = elsewhere || button != kLanes[lane].equipsItem;
+      }
+    }
+    return here && !elsewhere;
   }
 
   // The inventory slot a slot value uses: its own, or the ocarina's for a song.
@@ -260,6 +306,8 @@ private:
   // The age whose equips the lanes were written into.
   bool lanesChild_ = false;
   uint16_t held_ = 0;
+  // Lane buttons to press in the next update.
+  uint32_t waiting_ = 0;
 };
 
 constinit SlotItems slotItems;
