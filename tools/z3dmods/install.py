@@ -12,7 +12,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, source_check, stairs, symbols, text, zsi
+from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, set_inputs, source_check, stairs, symbols, text, zsi
 from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
@@ -161,8 +161,9 @@ def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: 
     (mods / "code.bin").write_bytes(code)
     (mods / "code.ips").write_bytes(ips.build(ours.records))
     (mods / "exheader.bin").write_bytes(bytes(grown))
+    inputs = set_inputs.digest(cfg.repo, game.patch, AppKeys(cfg).listing)
     (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start, layers,
-                                                              ours.link))
+                                                              ours.link, inputs))
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: TexturePack | None,

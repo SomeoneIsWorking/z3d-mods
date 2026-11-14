@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 
 from z3dmods import app, ctr, set_inputs
+from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -44,6 +45,7 @@ def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> 
     """The picker's games (app/src/game_library.hpp) as `folder`/library.json; `rom_folder` puts the
     ROMs, under their own names, in another machine's ROM folder."""
     entries = []
+    keys = AppKeys(cfg).listing if cfg.packaged else ""
     for name in TITLES:
         game = GameSet.named(cfg.repo, name)
         if game.title_id not in cfg.roms:
@@ -55,7 +57,7 @@ def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> 
                  "options": str(app.options_manifest(game))}
         if cfg.packaged:
             # The picker sets a game up again when its set was made from something else.
-            entry[set_inputs.KEY] = set_inputs.digest(cfg.repo, name)
+            entry[set_inputs.KEY] = set_inputs.digest(cfg.repo, name, keys)
         entries.append(entry)
     path = folder / "library.json"
     path.write_text(json.dumps(entries, indent=2) + "\n")

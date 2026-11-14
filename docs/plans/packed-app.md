@@ -144,7 +144,8 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
 ### A set made by another package
 - `set_inputs.py` digests what of ours a set is made from: `sets/`, the patch
   (`patch/<game>`, `patch/common`, and in a package `prebuilt/<game>`), the drawn glyphs and
-  the tools. The install writes it into the options manifest as `"inputs"`.
+  the tools, and the app's key bindings (`z3d --keys`), which the text's key caps are drawn
+  from. The install writes it into the options manifest as `"inputs"`.
 - A package's launcher writes the digest it would get now into each library entry. The picker
   compares the two (`SetInstall::state`): a set with another digest, or none, reads "A  Set up
   again for this version" and A makes it again over the old one. The saves are not touched.

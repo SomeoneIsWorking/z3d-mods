@@ -68,17 +68,17 @@ def generate(repo: Path, game: str, out: Path) -> Path:
     return header
 
 
-def manifest(repo: Path, game: str, address: int, layers: set[str], link: int | None) -> str:
+def manifest(repo: Path, game: str, address: int, layers: set[str], link: int | None, inputs: str) -> str:
     """`address` is the block's guest address: the payload's start. `layers` are the layer folders
     this install wrote; a layer switch without its folder is left out. "screens" tells the app's
-    overlay layout (app/src/screen_overlay.hpp) which touch screen is up; "inputs" is what the
-    set was made from (set_inputs.py). `link` is where the patch keeps the item slots' block
+    overlay layout (app/src/screen_overlay.hpp) which touch screen is up; "inputs" is `inputs`, what
+    the set was made from (set_inputs.py). `link` is where the patch keeps the item slots' block
     (slot_link.py)."""
     items = [{"id": o.id, "label": o.label, "default": o.default} | ({"pad": o.pad} if o.pad else {})
              | ({"layer": o.layer} if o.layer else {})
              for o in load(repo, game) if o.layer is None or o.layer in layers]
     document: dict[str, object] = {"address": address, "options": items,
-                                   set_inputs.KEY: set_inputs.digest(repo, game)}
+                                   set_inputs.KEY: inputs}
     layout = games.layout(repo, game)
     if layout.active_screen is not None:
         document["screens"] = {"active": layout.active_screen, "table": layout.screens,

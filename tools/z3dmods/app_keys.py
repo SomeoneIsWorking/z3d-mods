@@ -26,6 +26,7 @@ class AppKeys:
     def __init__(self, cfg: Config) -> None:
         listing = subprocess.run([str(app.binary(cfg)), "--keys"], env=cfg.app_env(), check=True,
                                  capture_output=True, text=True).stdout
+        self.listing = listing
         self._bindings: dict[tuple[str, str], list[str]] = {}
         for line in listing.splitlines():
             table, name, key = line.split("\t")
