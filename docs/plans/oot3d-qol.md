@@ -52,6 +52,9 @@ Both go into the same MIT `code.ips` as the cutscene skip ([cutscene-skip.md](cu
   once more (count 6 to 8) with three hearts, and that file loads (`oot-as9r`).
   A long session with the stairs off (`oot-as17`): 36 scene changes, 34 writes (the first two
   came while the one before was still fading in), no stop; the file loads.
-- Open: with the stepped stairs on as well, the game stops on entering Kakariko after six or
-  seven autosaves ([issues/oot3d-autosave-stairs-stop.md](../issues/oot3d-autosave-stairs-stop.md)).
+  With the stepped stairs on (`oot-k6`): 17 scene changes between Kakariko and Kokiri Forest,
+  17 writes, no stop. Before the write request was freed the game stopped there on the fourth
+  entry ([issues/oot3d-autosave-stairs-stop.md](../issues/oot3d-autosave-stairs-stop.md)).
+- The write request is ours to free: autosave polls `Sram_IsWriteDone` and calls
+  `Sram_FinishWrite`, and starts no save while one is being written.
 - The save runs on the game's own thread while play goes on, where the pause screen waits for it.

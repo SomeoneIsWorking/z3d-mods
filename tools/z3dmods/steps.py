@@ -5,7 +5,9 @@ poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or pl
 walk:<x>,<z>[,<s>] (harness: the circle pad steered until the player stands at x, z, printing the way), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
-cs (print the cutscene context and script header).
+cs (print the cutscene context and script header),
+arena:<addr>[,<name>] (walk a game arena's blocks: used, free and the largest free block; with a
+name, the block list goes to <name>.arena.txt).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
 keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y down),
 cstick:<x>,<y>,<s> (the New 3DS C-stick, the same way),
@@ -111,6 +113,32 @@ def _wait_script(session: Session, layout: Layout, script: int, button: str,
     raise RuntimeError(f"cutscene script 0x{script:08X} did not start within {timeout}s")
 
 
+ARENA_NODE_MAGIC = 0x7373
+ARENA_NODE_LIMIT = 100000
+
+
+def _arena(session: Session, arena: int, listing: Path | None) -> str:
+    """An arena's totals from its block list (decomp/oot3d docs/notes/arena.md)."""
+    node = session.u32(arena)
+    used = free = largest = blocks = 0
+    lines = []
+    while node and blocks < ARENA_NODE_LIMIT:
+        magic, is_free, size, following, _ = struct.unpack("<HHIII", session.read(node, 16))
+        if magic != ARENA_NODE_MAGIC:
+            return f"block 0x{node:08X} has no magic after {blocks} blocks"
+        blocks += 1
+        lines.append(f"0x{node:08X} 0x{size:X} {'free' if is_free else 'used'}")
+        if is_free:
+            free += size
+            largest = max(largest, size)
+        else:
+            used += size
+        node = following
+    if listing is not None:
+        listing.write_text("\n".join(lines) + "\n")
+    return f"{blocks} blocks, used 0x{used:X}, free 0x{free:X}, largest free 0x{largest:X}"
+
+
 WALK_SAMPLE = 0.1
 WALK_ARRIVED = 4.0
 # The pad eases off inside this distance, down to the weakest push that still moves the player.
@@ -164,6 +192,11 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             where, size = arg.split(",")
             address = _address(session, layout, where)
             log(f"peek 0x{address:08X} {session.read(address, int(size, 0)).hex()}")
+        elif kind == "arena":
+            where, _, name = arg.partition(",")
+            address = _address(session, layout, where)
+            totals = _arena(session, address, out / f"{name}.arena.txt" if name else None)
+            log(f"arena 0x{address:08X} {totals}")
         elif kind == "poke":
             where, data = arg.split(",")
             address = _address(session, layout, where)

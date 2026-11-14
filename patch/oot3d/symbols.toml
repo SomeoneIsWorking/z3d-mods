@@ -15,6 +15,8 @@ kGameplayDraw = "Gameplay_Draw"
 kGameplayUpdate = "Gameplay_Update"
 kHudSetItemButton = "Hud_SetItemButton"
 kSramWriteSave = "Sram_WriteSave"
+kSramIsWriteDone = "Sram_IsWriteDone"
+kSramFinishWrite = "Sram_FinishWrite"
 
 [globals]
 kSaveContext = "gSaveContext"
