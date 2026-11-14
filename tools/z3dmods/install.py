@@ -9,7 +9,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bgcheck, bps, ctr, hud, ips, lzs, options, patch_build, source_check, stairs, symbols, zsi
+from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, source_check, stairs, symbols, zsi
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -194,6 +194,10 @@ def install(cfg: Config, game: GameSet) -> Path:
         shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
     if base_romfs:
         _copy_tree(base_romfs, mods / "romfs")
+    for item, png in (hud_icons.build(cfg.repo, game.patch, rom.romfs(), pack, code) if game.patch else {}).items():
+        target = mods / games.HUD_ICONS / f"{item}.png"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(png)
     for path, data in rooms.items():
         target = mods / stairs_layer / path
         target.parent.mkdir(parents=True, exist_ok=True)

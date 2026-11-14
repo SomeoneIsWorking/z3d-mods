@@ -156,13 +156,20 @@ frame (`Settings::values.overlay_image`, `overlay_quads`). It reads the game aft
 through `Emulator::read`, and draws only while the overlay's layout is play's (`hud = true` in
 `overlay.toml`). While the chord is held (`PadInput::chord()`), a button shows the face button
 that presses it; with the keyboard last used it shows a key cap instead (1 to 4, or 5 to 8 on
-the second page). An item's icon is `<mods>/z3d-hud-icons/<item id>.png`.
+the second page). An item's icon is `<mods>/z3d-hud-icons/<item id>.png`, cut at install from the game's icon sheet
+(the pack's copy when it has one) by the game's own table of a frame per item (`hud_icons.py`,
+`[icons]` in `hud.toml`). A button also draws its item's count and dims a disabled item; a meter
+can wait for a flag and double its length.
 
 Seen (MM3D, `mm-hud2` at scale 3, `mm-hud3` at scale 5): three hearts and 0 rupees on a fresh
 file; `healthCapacity` 0xA0, `health` 0x68 and `rupees` 123 written, and the next frame has ten
 hearts with six and a half red and the counter at 123; the chord held puts A and B on the I and
 II buttons; `device:keyboard` turns the glyphs into caps 1 to 4, and 5 to 8 with the chord. The
 same crops at both sizes have clean edges.
+`mm-hud4`: the bow, a bomb, the powder keg and the fire arrow written onto X, Y, I and II draw
+their icons (the pack's) with the counts from `SaveData.ammo`, the half-full magic meter shows
+once `magicAcquired` is set, and after Y pulls a bomb that goes off in Link's hands the hearts
+read two and a half.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`

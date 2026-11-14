@@ -121,11 +121,14 @@ draw in the app only what that cannot reach.
 ## Status
 - Chord + ABXY: bindings built, not yet seen in a run with a real pad.
 - HUD (MM3D): the owner, the atlas and the core's pass are built (docs/app.md, "HUD"). Drawn from
-  state: hearts, rupees, the X, Y, I and II buttons with their prompts, the chord page's prompts,
-  key caps (`mm-hud2`, `mm-hud3`). The cut-out touch-screen pieces are gone from play.
-- Missing from MM3D's HUD: the items' icons and ammo, a button's dimmed state, magic, the wallet,
-  the A button's label and View; the game's own A ring and clock still draw (the clock is Project
-  Restoration's and may stay). Each needs its field named in the decomp first (`docs/hud.md`).
+  state: hearts, magic, rupees, the X, Y, I and II buttons with their items' icons and counts,
+  their prompts, the chord page's prompts, key caps (`mm-hud2` to `mm-hud4`). The cut-out
+  touch-screen pieces are gone from play.
+- Missing from MM3D's HUD: the wallet's colour and capacity, the A button's label (the number is
+  found, its mapping to a label is not), View, the minimap (what decides it is not found), the
+  ice and light arrows' and the powder keg's counts. The dimmed state is read but was seen in the
+  game only once (decomp `docs/hud.md`). The game's own A ring and clock still draw: hiding the
+  A button's widget is found, the clock alone is not, and no code patch has been built yet.
 - OoT3D: nothing drawn yet; its inventory is being written into `decomp/oot3d`.
 - Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
   command, not with real keys in a window.

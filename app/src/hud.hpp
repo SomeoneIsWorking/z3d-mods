@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace z3d::app {
@@ -49,6 +50,10 @@ private:
     uint32_t unit = 0;
     uint32_t columns = 0;
     uint32_t full = 0;
+    // Meter: drawn only while this reads nonzero (if set), and twice as long and as full while
+    // `longer` does.
+    GuestValue shown;
+    GuestValue longer;
     // Counter: the port-assets hud glyph before the number.
     std::string icon;
     // Button: its frame (hud set), the 3DS button that presses it (if one does), the item
@@ -57,12 +62,18 @@ private:
     std::optional<Settings::NativeButton::Values> button;
     std::optional<ItemButton> itemButton;
     uint32_t none = 0;
+    // Button: the game's array of counts, the index in it of each item that has one, and the
+    // button's status with the value that dims it.
+    GuestValue ammo;
+    std::vector<std::pair<uint32_t, uint32_t>> ammoIndex;
+    GuestValue status;
+    uint32_t disabled = 0;
   };
 
   [[nodiscard]] std::optional<uint32_t> read(const GuestValue &value) const;
   void update();
   void draw(const Element &element);
-  void quad(const HudSprite &sprite, const OverlayRect &at, float share = 1.0F);
+  void quad(const HudSprite &sprite, const OverlayRect &at, float share = 1.0F, float opacity = 1.0F);
   // The pad glyph or key cap of what presses a button element, on its top left corner.
   void prompt(const Element &element, const OverlayRect &box);
 

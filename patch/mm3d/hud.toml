@@ -1,6 +1,16 @@
 # Our play HUD (app/src/hud.hpp): each element's place on the top screen's 400x240 pixels and the
 # guest memory it reads. `at` is a sum: a global of the decomp, `Struct.field` offsets, defines and
-# numbers (decomp/mm3d docs/hud.md names them).
+# numbers (decomp/mm3d docs/hud.md names them). `ammo_index` is [item id, index in SaveData.ammo]
+# for the items seen drawing a count; the fire arrow draws the bow's.
+
+[icons]
+sheet = "layout/Joker.Main.gar/icon_item_menu00.ctxb"
+frames = "sItemIconFrames"
+count = "ITEM_ICON_COUNT"
+none = "ITEM_ICON_NONE"
+frame = [42, 42]
+columns = 12
+icons = 108
 
 [[element]]
 kind = "hearts"
@@ -9,6 +19,15 @@ unit = 0x10
 columns = 10
 value = { at = ["gCommonData", "CommonData.save", "SaveData.health"], bytes = 2 }
 capacity = { at = ["gCommonData", "CommonData.save", "SaveData.healthCapacity"], bytes = 2 }
+
+# 0x30 fills the meter; the doubled meter's 0x60 is inferred from its length.
+[[element]]
+kind = "meter"
+rect = [8, 32, 63, 7]
+full = 0x30
+value = { at = ["gCommonData", "CommonData.save", "SaveData.magic"], bytes = 1 }
+shown = { at = ["gCommonData", "CommonData.save", "SaveData.magicAcquired"], bytes = 1 }
+longer = { at = ["gCommonData", "CommonData.save", "SaveData.doubleMagicAcquired"], bytes = 1 }
 
 [[element]]
 kind = "counter"
@@ -23,6 +42,10 @@ button = "X"
 item_button = "X"
 rect = [316, 200, 26, 26]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_X"], bytes = 1 }
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_X"], bytes = 1 }
+disabled = 0xFF
 
 [[element]]
 kind = "button"
@@ -31,6 +54,10 @@ button = "Y"
 item_button = "Y"
 rect = [338, 172, 26, 26]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_Y"], bytes = 1 }
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_Y"], bytes = 1 }
+disabled = 0xFF
 
 [[element]]
 kind = "button"
@@ -38,6 +65,10 @@ frame = "slot"
 item_button = "I"
 rect = [370, 164, 24, 24]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_I"], bytes = 1 }
+disabled = 0xFF
 
 [[element]]
 kind = "button"
@@ -45,3 +76,7 @@ frame = "slot"
 item_button = "II"
 rect = [370, 136, 24, 24]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_II"], bytes = 1 }
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_II"], bytes = 1 }
+disabled = 0xFF

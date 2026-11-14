@@ -26,6 +26,9 @@ constexpr float kKeyLabelShare = 0.6F;
 // Shares of a button's size: the item icon in its middle and the glyph on its top left corner.
 constexpr float kIconShare = 0.68F;
 constexpr float kGlyphShare = 0.46F;
+// An item's count against its button, and a disabled item's opacity.
+constexpr float kCountShare = 0.36F;
+constexpr float kDimmed = 0.4F;
 // A counter's digits against its icon's height, and the gap before them.
 constexpr float kDigitShare = 0.8F;
 constexpr float kCounterGap = 0.25F;
@@ -152,6 +155,21 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
     element.button = nativeButton(text(entry, "button"));
     element.itemButton = itemButton(text(entry, "item_button"));
     element.none = integer(entry, "none", 0xFF);
+    element.shown = guest(entry, "shown");
+    element.longer = guest(entry, "longer");
+    element.ammo = guest(entry, "ammo");
+    element.status = guest(entry, "status");
+    element.disabled = integer(entry, "disabled", 0xFF);
+    if (const lucent::json::Value *indices = entry.find("ammo_index"); indices != nullptr && indices->array() != nullptr) {
+      for (const lucent::json::Value &pair : *indices->array()) {
+        if (pair.array() == nullptr || pair.array()->size() != 2 || !(*pair.array())[0].integer() ||
+            !(*pair.array())[1].integer()) {
+          throw std::runtime_error(manifest.string() + ": hud ammo_index holds [item, index] pairs");
+        }
+        element.ammoIndex.emplace_back(static_cast<uint32_t>(*(*pair.array())[0].integer()),
+                                       static_cast<uint32_t>(*(*pair.array())[1].integer()));
+      }
+    }
     elements_.push_back(std::move(element));
   }
   icons_ = manifest.parent_path() / text(*hud, "icons");
@@ -197,11 +215,11 @@ void Hud::update() {
 }
 
 // `sprite`, or its left `share`, drawn at `at` window pixels.
-void Hud::quad(const HudSprite &sprite, const OverlayRect &at, float share) {
+void Hud::quad(const HudSprite &sprite, const OverlayRect &at, float share, float opacity) {
   if (sprite.w <= 0.0F || share <= 0.0F) {
     return;
   }
-  quads_.push_back({sprite.x, sprite.y, sprite.w * share, sprite.h, at.x, at.y, at.w * share, at.h, 1.0F});
+  quads_.push_back({sprite.x, sprite.y, sprite.w * share, sprite.h, at.x, at.y, at.w * share, at.h, opacity});
 }
 
 void Hud::draw(const Element &element) {
@@ -234,11 +252,12 @@ void Hud::draw(const Element &element) {
   }
   case Kind::Meter: {
     const std::optional<uint32_t> value = read(element.value);
-    const uint32_t full = element.full != 0 ? element.full : read(element.capacity).value_or(0);
-    if (!value || full == 0) {
+    const uint32_t lengths = read(element.longer).value_or(0) != 0 ? 2 : 1;
+    const uint32_t full = (element.full != 0 ? element.full : read(element.capacity).value_or(0)) * lengths;
+    if (!value || full == 0 || (element.shown.bytes != 0 && read(element.shown).value_or(0) == 0)) {
       return;
     }
-    box.w = std::round(box.h * kMeterAspect);
+    box.w = std::round(box.h * kMeterAspect * static_cast<float>(lengths));
     quad(sized(kHudSet, "bar", box.w, box.h), box);
     quad(sized(kHudSet, "bar_fill", box.w, box.h), box,
          std::min(1.0F, static_cast<float>(*value) / static_cast<float>(full)));
@@ -265,8 +284,25 @@ void Hud::draw(const Element &element) {
     if (item && *item != element.none) {
       const float size = std::round(box.w * kIconShare);
       const float inset = std::round((box.w - size) / 2.0F);
+      const bool dimmed = element.status.bytes != 0 && read(element.status) == element.disabled;
       quad(atlas_->image(icons_ / (std::to_string(*item) + ".png"), static_cast<int>(size), static_cast<int>(size)),
-           {box.x + inset, box.y + inset, size, size});
+           {box.x + inset, box.y + inset, size, size}, 1.0F, dimmed ? kDimmed : 1.0F);
+      const auto counted = std::ranges::find(element.ammoIndex, *item, &std::pair<uint32_t, uint32_t>::first);
+      const std::optional<uint32_t> count =
+          counted != element.ammoIndex.end()
+              ? read({element.ammo.address + counted->second * element.ammo.bytes, element.ammo.bytes})
+              : std::nullopt;
+      if (count) {
+        // Right-aligned on the button's bottom edge.
+        const float digit = std::round(box.w * kCountShare);
+        float x = box.x + box.w;
+        const std::string digits = std::to_string(*count);
+        for (auto character = digits.rbegin(); character != digits.rend(); ++character) {
+          const HudSprite sprite = atlas_->text(std::string(1, *character), static_cast<int>(digit), false);
+          x -= sprite.w;
+          quad(sprite, {x, box.y + box.h - sprite.h, sprite.w, sprite.h});
+        }
+      }
     }
     prompt(element, box);
     return;
