@@ -6,6 +6,7 @@
 #include <lucent/json.h>
 #include <lucent/log.h>
 
+#include <algorithm>
 #include <array>
 #include <format>
 #include <fstream>
@@ -19,6 +20,12 @@ namespace {
 
 constexpr const char *kLayoutId = "layout";
 constexpr const char *kTexturesId = "textures";
+constexpr const char *kHudSizeId = "hud_size";
+constexpr const char *kHudOpacityId = "hud_opacity";
+// The HUD's sizes and opacities, the default of each its 1; past 1.5 the D-pad meets the keys.
+constexpr std::array kHudSizes{0.5, 0.75, 1.0, 1.25, 1.5};
+constexpr std::array kHudOpacities{0.25, 0.5, 0.75, 1.0};
+constexpr double kPercent = 100.0;
 constexpr std::string_view kCStickInvertX = "cstick_invert_x";
 constexpr std::string_view kCStickInvertY = "cstick_invert_y";
 constexpr std::string_view kMouseScale = "mouse_scale";
@@ -49,7 +56,9 @@ std::optional<lucent::json::Value> readJson(const std::filesystem::path &path) {
 GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &manifest,
                          std::filesystem::path stored)
     : setup_(setup), stored_(std::move(stored)) {
+  bool hud = false;
   if (const auto document = readJson(manifest)) {
+    hud = document->find("hud") != nullptr;
     const lucent::json::Value *address = document->find("address");
     const lucent::json::Value *options = document->find("options");
     if (address == nullptr || !address->integer() || options == nullptr || options->array() == nullptr) {
@@ -108,6 +117,26 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
                     {},
                     {},
                     {}});
+  if (hud) {
+    Option size;
+    size.id = kHudSizeId;
+    size.label = "HUD size";
+    for (const double scale : kHudSizes) {
+      size.scales.push_back(scale);
+      size.choices.push_back(std::format("{}x", scale));
+    }
+    size.value = static_cast<uint8_t>(std::ranges::find(kHudSizes, 1.0) - kHudSizes.begin());
+    items_.push_back(std::move(size));
+    Option opacity;
+    opacity.id = kHudOpacityId;
+    opacity.label = "HUD opacity";
+    for (const double share : kHudOpacities) {
+      opacity.scales.push_back(share);
+      opacity.choices.push_back(std::format("{}%", share * kPercent));
+    }
+    opacity.value = static_cast<uint8_t>(kHudOpacities.size() - 1);
+    items_.push_back(std::move(opacity));
+  }
   if (setup_.customTextures) {
     items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}, {}, {}});
   }
@@ -155,6 +184,18 @@ GameSetup GameOptions::setup() const {
     }
   }
   return result;
+}
+
+HudLook GameOptions::hudLook() const {
+  HudLook look;
+  for (const Option &item : items_) {
+    if (item.id == kHudSizeId) {
+      look.size = static_cast<float>(item.scales.at(item.value));
+    } else if (item.id == kHudOpacityId) {
+      look.opacity = static_cast<float>(item.scales.at(item.value));
+    }
+  }
+  return look;
 }
 
 void GameOptions::apply(Emulator &emulator, PadInput &pad) const {

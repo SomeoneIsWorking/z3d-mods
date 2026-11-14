@@ -83,7 +83,7 @@ limit = { at = ["gUpgradeCapacities", 32], bytes = 2 }
 [[element]]
 kind = "counter"
 icon = "key"
-rect = [8, 180, 40, 13]
+rect = [8, 183, 40, 13]
 none = 0xFF
 value = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.dungeonKeys"], bytes = 1 }
 index = { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2 }
@@ -92,10 +92,10 @@ when = [
   { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2, most = 18 },
 ]
 
-# Play, top right: the pad's diamond, RB at its corner and the D-pad's cross beside it. A is the
-# action with its word (the cell of its DO_ACTION_*, [words]) and X the sword; Y, B, RB and the
-# D-pad are item slots (app/src/pad_input.hpp numbers them), and with the chord held the diamond
-# shows the chord's four.
+# Play: the pad's diamond and RB at its corner top right, the D-pad's cross under the hearts.
+# A is the action with its word (the cell of its DO_ACTION_*, [words]) and X the sword; Y, B,
+# RB and the D-pad are item slots (app/src/pad_input.hpp numbers them), and with the chord held
+# the diamond shows the chord's four.
 
 [[element]]
 kind = "button"
@@ -139,12 +139,13 @@ frame = "ring"
 slot = 2
 rect = [377, 3, 20, 20]
 
-# The D-pad's cross: one glyph in its middle, and a slot's place says which way.
+# The D-pad's cross under the hearts and magic: one glyph in its middle, and a slot's place says
+# which way.
 [[element]]
 kind = "prompt"
 device = "pad"
 glyph = "dpad"
-rect = [263, 31, 16, 16]
+rect = [29, 65, 16, 16]
 
 [[element]]
 kind = "button"
@@ -152,7 +153,7 @@ device = "pad"
 frame = "ring"
 bare = true
 slot = 3
-rect = [262, 10, 18, 18]
+rect = [28, 44, 18, 18]
 
 [[element]]
 kind = "button"
@@ -160,7 +161,7 @@ device = "pad"
 frame = "ring"
 bare = true
 slot = 4
-rect = [282, 30, 18, 18]
+rect = [48, 64, 18, 18]
 
 [[element]]
 kind = "button"
@@ -168,7 +169,7 @@ device = "pad"
 frame = "ring"
 bare = true
 slot = 5
-rect = [262, 50, 18, 18]
+rect = [28, 84, 18, 18]
 
 [[element]]
 kind = "button"
@@ -176,10 +177,10 @@ device = "pad"
 frame = "ring"
 bare = true
 slot = 6
-rect = [242, 30, 18, 18]
+rect = [8, 64, 18, 18]
 
-# The keyboard's own, top right: a bar of the eight number keys' slots, under it Shift's three,
-# then the mouse's sword and the action on E with its word.
+# The keyboard's own, top right: a bar of the eight number keys' slots, and under its
+# right end the mouse's sword and the action on E with its word.
 
 [[element]]
 kind = "button"
@@ -236,33 +237,6 @@ device = "keyboard"
 frame = "ring"
 slot = 7
 rect = [374, 8, 20, 20]
-
-[[element]]
-kind = "prompt"
-device = "keyboard"
-chord = true
-rect = [206, 44, 18, 12]
-
-[[element]]
-kind = "button"
-device = "keyboard"
-frame = "ring"
-slot = 8
-rect = [230, 40, 20, 20]
-
-[[element]]
-kind = "button"
-device = "keyboard"
-frame = "ring"
-slot = 9
-rect = [254, 40, 20, 20]
-
-[[element]]
-kind = "button"
-device = "keyboard"
-frame = "ring"
-slot = 10
-rect = [278, 40, 20, 20]
 
 [[element]]
 kind = "button"
@@ -407,7 +381,8 @@ assign = true
 slot = 7
 rect = [351, 204, 20, 20]
 
-# The keyboard's slots on the same panel: the number keys down one column, Shift's three beside it.
+# The keyboard's slots on the same panel: the number keys down one column. The slots behind the
+# pad's chord have no key.
 
 [[element]]
 kind = "button"
@@ -473,33 +448,3 @@ assign = true
 slot = 7
 rect = [338, 206, 20, 20]
 
-[[element]]
-kind = "prompt"
-device = "keyboard"
-assign = true
-chord = true
-rect = [366, 14, 18, 12]
-
-[[element]]
-kind = "button"
-device = "keyboard"
-frame = "ring"
-assign = true
-slot = 8
-rect = [368, 38, 20, 20]
-
-[[element]]
-kind = "button"
-device = "keyboard"
-frame = "ring"
-assign = true
-slot = 9
-rect = [368, 66, 20, 20]
-
-[[element]]
-kind = "button"
-device = "keyboard"
-frame = "ring"
-assign = true
-slot = 10
-rect = [368, 94, 20, 20]

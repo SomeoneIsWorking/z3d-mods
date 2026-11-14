@@ -4,6 +4,7 @@
 // game's own text prompts follow the same device: the texture pack's keyboard variant.
 #pragma once
 
+#include "game_options.hpp"
 #include "hud_atlas.hpp"
 #include "pad_input.hpp"
 #include "screen_overlay.hpp"
@@ -24,9 +25,10 @@ class GameWindow;
 
 class Hud {
 public:
-  // Draws nothing without `assets` (a port-assets copy) or without "hud" in `manifest`.
+  // Draws nothing without `assets` (a port-assets copy) or without "hud" in `manifest`; `options`
+  // say its size and opacity as it draws.
   Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const SlotLink &link,
-      const ScreenOverlay &overlay, const std::filesystem::path &assets,
+      const ScreenOverlay &overlay, const GameOptions &options, const std::filesystem::path &assets,
       const std::filesystem::path &manifest);
   ~Hud();
   Hud(const Hud &) = delete;
@@ -141,6 +143,8 @@ private:
   const PadInput &pad_;
   const SlotLink &link_;
   const ScreenOverlay &overlay_;
+  const GameOptions &options_;
+  HudLook look_;
   std::optional<HudAtlas> atlas_;
   std::vector<Element> elements_;
   // A game without an overlay table (screen_overlay.hpp) is in play while all of these hold.

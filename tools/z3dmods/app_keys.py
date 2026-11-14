@@ -1,8 +1,7 @@
 """The app's key and mouse bindings, read from the app itself.
 
 `z3d --keys` prints one "<table>\\t<name>\\t<key>" line per binding (app/src/pad_input.hpp
-`listKeys`, app/src/game_window.hpp); a key is SDL's name for it, and a slot behind the chord is
-"<chord key>+<key>". Here each becomes the X keysyms to hold, in order.
+`listKeys`, app/src/game_window.hpp); a key is SDL's name for it. Here each becomes the X keysym to hold.
 """
 
 from __future__ import annotations
@@ -13,7 +12,7 @@ from z3dmods import app
 from z3dmods.config import Config
 
 # SDL's names that are not the X keysym: every other key is its name, a letter in lower case.
-KEYSYMS = {"Space": "space", "Backspace": "BackSpace", "Left Shift": "Shift_L", "Right Shift": "Shift_R"}
+KEYSYMS = {"Space": "space", "Backspace": "BackSpace"}
 # The table of mouse buttons: its "keys" are SDL's button numbers, which are X's too.
 MOUSE = "mouse"
 
@@ -47,7 +46,7 @@ class AppKeys:
 
     def keysyms(self, table: str, name: str) -> list[str]:
         """The keys to hold for `name` of `table`, by its first binding."""
-        return [_keysym(key) for key in self._first(table, name).split("+")]
+        return [_keysym(self._first(table, name))]
 
     def mouse_button(self, name: str) -> int:
         """The mouse button of the play verb `name`."""

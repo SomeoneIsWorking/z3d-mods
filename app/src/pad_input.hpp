@@ -93,18 +93,17 @@ struct MenuPad {
 enum class HostDevice : uint8_t { Pad, Keyboard };
 
 // The host inputs that press something, for whoever draws a prompt: a pad button (with the
-// chord held or not), and a key (with Shift or not) or a mouse button (SDL_BUTTON_*).
+// chord held or not), and a key or a mouse button (SDL_BUTTON_*).
 struct Prompt {
   std::optional<SDL_GamepadButton> pad;
   bool chord = false;
   std::optional<SDL_Scancode> key;
-  bool shift = false;
   std::optional<uint8_t> mouse;
 };
 
 class PadInput {
 public:
-  // The pad button that is the chord, and the keys that are.
+  // The pad button that is the chord.
   static constexpr SDL_GamepadButton kChord = SDL_GAMEPAD_BUTTON_LEFT_SHOULDER;
 
   // Registers the engine; the core's devices made from profile() read this pad until destruction.
@@ -144,7 +143,7 @@ public:
   [[nodiscard]] uint16_t slotsHeld() const {
     return slots_;
   }
-  // Whether the chord is held: the pad's or, on the keyboard, Shift.
+  // Whether the pad's chord is held.
   [[nodiscard]] bool chordHeld() const {
     return chord_;
   }

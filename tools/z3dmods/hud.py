@@ -177,15 +177,6 @@ CAP_LABEL_WIDTH = 0.7
 CAP_INK = (40, 40, 40)
 
 
-def _shift_symbol(side: int) -> Image.Image:
-    """The keyboard's shift legend, an upward arrow, `side` pixels square."""
-    big = side * SUPERSAMPLE
-    arrow = [(0.5, 0.0), (1.0, 0.5), (0.72, 0.5), (0.72, 1.0), (0.28, 1.0), (0.28, 0.5), (0.0, 0.5)]
-    layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
-    ImageDraw.Draw(layer).polygon([(x * big, y * big) for x, y in arrow], fill=(*CAP_INK, 255))
-    return layer.resize((side, side), Image.LANCZOS)
-
-
 def _backspace_symbol(side: int) -> Image.Image:
     """The keyboard's backspace legend, a left-pointing tag with a cross cut out, `side` pixels square."""
     big = side * SUPERSAMPLE
@@ -200,7 +191,7 @@ def _backspace_symbol(side: int) -> Image.Image:
 
 
 # Keys whose names are too long for a cell, drawn as the legend keyboards print on them.
-KEY_SYMBOLS = {"Left Shift": _shift_symbol, "Right Shift": _shift_symbol, "Backspace": _backspace_symbol}
+KEY_SYMBOLS = {"Backspace": _backspace_symbol}
 # Keys whose names are too long for a cell, by the short name keyboards print.
 KEY_SHORT = {"Escape": "Esc"}
 # A symbol's share of the cap's height.
@@ -214,14 +205,14 @@ CAP_ROW_GAP = 0.06
 
 def _key_cap(size: tuple[int, int], cell: dict, keys: AppKeys, glyph_set: Path, font: Path) -> Image.Image:
     """The cap of the app's key for a prompt cell, or its mouse button, as large as fits `size`.
-    A slot behind the chord is its key alone: the text names the chord with a cell of its own."""
+"""
     bindings = [line.split(" ") for line in cell["key"]]
     caps = glyph_set.parent / KEY_SET
     dimmed = cell.get("dimmed", False)
     if keys.is_mouse(bindings[0][0]):
         return _glyph(size, caps / f"{MOUSE_CAPS[keys.key(*bindings[0])]}.svg", dimmed)
     layer = _glyph(size, caps / "cap.svg", dimmed)
-    names = [KEY_SHORT.get(key, key) for key in (keys.key(table, name).split("+")[-1] for table, name in bindings)]
+    names = [KEY_SHORT.get(key, key) for key in (keys.key(table, name) for table, name in bindings)]
     label = "".join(names)
     side = min(size)
     if len(names) == FOUR_KEYS and all(len(name) == 1 for name in names):
@@ -358,7 +349,7 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
                 out.paste(_inlay_ground(texture.hires, (x0, y0, x1, y1), scale), (x0, y0))
             elif not edit.get("badge", False):
                 out.paste(clear, (x0, y0, x1, y1))
-            if keys is not None:
+            if keys is not None and "key" in edit:
                 out.alpha_composite(_key_cap(size, edit, keys, glyphs, font), (x0, y0))
             elif isinstance(edit["glyph"], list):
                 out.alpha_composite(_face_buttons(size, glyphs, edit["glyph"]), (x0, y0))
@@ -422,8 +413,8 @@ def _keyed(cells: list[dict]) -> bool:
     """Whether a texture's prompt cells name their keys; some but not all is a table error."""
     prompts = [cell for cell in cells if "glyph" in cell]
     named = [cell for cell in prompts if "key" in cell]
-    if named and len(named) != len(prompts):
-        raise ValueError("some of its prompt cells name a key and some do not")
+    if named and len(named) + sum(cell.get("pad_only", False) for cell in prompts) != len(prompts):
+        raise ValueError("some of its prompt cells name a key and some are neither keyed nor pad_only")
     return bool(named)
 
 

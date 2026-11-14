@@ -179,7 +179,10 @@ is the row that asks for the folders again (Setup above). `GameOptions` owns the
   `Settings::values.romfs_layers` and the core stacks it over `romfs/` when the game loads
   (OoT3D's stepped stairs). The manifest leaves the switch out when the install wrote no such
   folder. Standalone Azahar never loads a layer.
-- The app's own rows follow: the screen layout, and the texture pack when the set has one.
+- The app's own rows follow: the screen layout, the HUD's size and opacity when the set has a
+  HUD (`GameOptions::hudLook`, read by `Hud` every frame: size grows each element about the top
+  screen's corner nearest its middle, so each corner's group stays put; opacity multiplies every
+  quad's), and the texture pack when the set has one.
 - Choices are kept per game in `<user>/options/<rom name>.json`. The tools (`--hidden`) keep none
   and run every game on its defaults; a run changes one with the `option` command
   (`option:<id>,<value>` step), or before boot with `--option <id>=<value>`
@@ -295,8 +298,8 @@ a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can 
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
 a `limit` (the game's table by tier, `gUpgradeCapacities` in both games).
 
-The buttons are the same in both games, top right: the pad's diamond, RB's ring beside Y and
-the D-pad's cross. A shows the game's own word for its action under it (`label`, the action's
+The buttons are the same in both games: the pad's diamond and RB's ring beside Y top right,
+the D-pad's cross under the hearts and magic. A shows the game's own word for its action under it (`label`, the action's
 number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's patch hides the
 game's own A button, `patch/mm3d/base_hud.cpp`), X the sword, and Y, B, RB and the cross's four
 rings their slots' items from `SlotLink`, a note for a slot with a song, and a gold arc over
@@ -311,7 +314,9 @@ release and a 3-frame re-press (`txt-flip-oot2b`, `txt-flip-oot4b`, `txt-flip-mm
 `txt-flip-mm4b`: X with the sword and A with Check turn, empty Y and B stay). Each ring's prompt is what `PadInput::slotPrompt` or
 `verbPrompt` says presses it, drawn by `prompt_art`: the pad's glyph, or with the keyboard last
 used the key's cap (the mouse's button for the sword). While a screen assigns slots (`PadMode::
-Assign`) a panel beside it shows all eleven. The game's own text prompts follow the same
+Assign`) a panel beside it shows all eleven. The keyboard has no chord: it has a layout of its
+own (an element's `device`), its number keys 1 to 8 slots 1 to 8, and the four slots behind LB are
+the pad's alone. The game's own text prompts follow the same
 device: each frame `Hud` selects the texture pack's `keyboard` variant while the keyboard was
 last used, where the install put the text's prompt sheet with key caps (`tools/z3dmods/hud.py`).
 

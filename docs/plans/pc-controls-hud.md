@@ -37,7 +37,7 @@ prints the keyboard's and the mouse's.
 | Right mouse | Shield |
 | Q or middle mouse | Target / recenter |
 | F | First person |
-| 1 to 8, then Shift+1 to 3 | Item slots 1 to 11 |
+| 1 to 8 | Item slots 1 to 8; 9 to 11, behind LB, are the pad's alone |
 | R | Ocarina |
 | Tab | Item screen; M map; Esc pause |
 
@@ -91,13 +91,17 @@ RE based instead of copying patches of bottom screen".
 
 ### The buttons on the HUD
 - Top right, the same in both games: the pad's diamond (A with the action's word, X the sword, Y
-  and B their slots), RB's slot beside it and the D-pad's cross with its four slots. While LB is
+  and B their slots) and RB's slot beside it; the D-pad's cross with its four slots under the
+  hearts and magic ("d-pad HUD can be moved under the hearts"). While LB is
   held the diamond shows slots 8 to 11. A slot with a song shows a note.
 - The keyboard has its own layout in the same corner ("I think keyboard needs its own HUD"): a bar
-  of slots 1 to 8 under their number caps, below it a Shift cap with its three slots, then the
-  sword on the left mouse button and the action on E with its word. The item screen's panel lists
-  the number keys' slots in a column and Shift's three beside it. An element's `device` (`pad` or
-  `keyboard`, both without it) says which layout it belongs to.
+  of slots 1 to 8 under their number caps, then the sword on the left mouse button and the action
+  on E with its word. The item screen's panel lists the number keys' slots in a column. The
+  keyboard has no chord ("we don't need chords for keyboard"): Shift+1 to 3 are gone. An
+  element's `device` (`pad` or `keyboard`, both without it) says which layout it belongs to.
+- Options: "HUD size" (0.5x to 1.5x, each element grown about the top screen's corner nearest its
+  middle) and "HUD opacity" (25% to 100%), the app's own rows for a set with a HUD ("need options
+  for HUD size and opacity").
 - User: "Just show A B X Y only always and when cord is held it shows the alt versions", then the
   layout above added RB and the D-pad.
 - Counts sit on a dark plate that hangs below the ring, off the icon ("numbers overlap the icons
@@ -241,8 +245,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   the notebook (`patch/mm3d/notebook.cpp`, the screen Start opens from play; decomp
   `docs/ui.md`). Seen with the pad's View and the keyboard's M, B back to play each time
   (`gap-nbin1`).
-- The chord is a prompt cell, drawn as LB or the chord's key cap: OoT3D's unused +Control Pad
-  cell 0x02 (0x1036); OoT3D's song list
+- The chord is a prompt cell, drawn as LB: OoT3D's unused +Control Pad
+  cell 0x02 (0x1036; the pad's alone); OoT3D's song list
   is cell 0x03, drawn as RB or the key R (0x10C7). Seen through a sign and a statue
   (`gap-txt1`, `gap-txt2`).
 - Layout gaps the text exposed, closed: the keyboard's R is ZR by name (the song list, with the
@@ -257,8 +261,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   with the pad and the keys (`map-zoom-mm3d`: Town and Field zoomed in, out again). The earlier
   "mouse only" came from files without the region's map, where the game shows no loupe.
 - The chord's four slots are one cell, OoT3D's unused 0x05: the face buttons where they sit on
-  the pad, their keys alone on the keyboard (0x1036: "Hold Shift, and 8 1 2 3 are four more
-  slots"). Shift and Backspace caps are their keyboard legends, an arrow and a tag; four
+  the pad. The keyboard has no chord, so that cell and the chord's (0x1036) are `pad_only`: its
+  sheet keeps the pad's glyphs there. The Backspace cap is its keyboard legend, a tag; four
   one-letter keys are two rows. Seen at 1x and 4x (`gap-cap1`, `gap-cap1b`, `gap-cap4`): the
   arrow and tag read at 1x, a cell of four keys reads at 4x only.
 - Saving names Pause in one cell, OoT3D's unused 0x0E: LB held over Menu on the pad, Esc on the

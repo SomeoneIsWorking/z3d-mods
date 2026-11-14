@@ -75,10 +75,9 @@ constexpr std::array kPlayMouse{PlayMouse{SDL_BUTTON_LEFT, Verb::Sword},
                                 PlayMouse{SDL_BUTTON_RIGHT, Verb::Shield},
                                 PlayMouse{SDL_BUTTON_MIDDLE, Verb::Target}};
 
-// 1 to 8 are slots 0 to 7; with Shift, 1 to 3 are slots 8 to 10 and the others stay.
+// 1 to 8 are slots 0 to 7; the slots behind the pad's chord have no key.
 constexpr std::array kSlotKeys{SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
                                SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7, SDL_SCANCODE_8};
-constexpr size_t kShiftSlots = kSlotCount - kSlotKeys.size();
 
 struct KeyBinding {
   SDL_Scancode key;
@@ -197,7 +196,6 @@ constexpr std::array kStickKeys{
     StickKey{SDL_SCANCODE_D, "right", 0, 1.0F},
 };
 
-constexpr std::array kChordKeys{SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT};
 // What the core's names of the 3DS buttons (Settings::NativeButton::mapping) all start with.
 constexpr std::string_view kButtonPrefix = "button_";
 
@@ -364,9 +362,6 @@ void PadInput::readHost() {
     held |= leaves ? game_->leave : game_->buttons[static_cast<size_t>(verb)];
   };
   const bool *keys = SDL_GetKeyboardState(nullptr);
-  const bool shift = std::ranges::any_of(kChordKeys, [keys](SDL_Scancode key) {
-    return keys[key];
-  });
   bool keyHeld = false;
   if (play) {
     for (const PlayKey &binding : kPlayKeys) {
@@ -378,7 +373,7 @@ void PadInput::readHost() {
     for (size_t i = 0; i < kSlotKeys.size(); ++i) {
       if (keys[kSlotKeys[i]]) {
         keyHeld = true;
-        slots |= static_cast<uint16_t>(1U << (shift && i < kShiftSlots ? kSlotKeys.size() + i : i));
+        slots |= static_cast<uint16_t>(1U << i);
       }
     }
     // A screen that assigns slots keeps the left button as the stylus.
@@ -422,7 +417,7 @@ void PadInput::readHost() {
     }
   }
   bool padHeld = false;
-  bool chord = play && shift;
+  bool chord = false;
   auto &cStick = state.sticks[Settings::NativeAnalog::CStick];
   for (SDL_Gamepad *pad : pads_) {
     const bool padChord = play && SDL_GetGamepadButton(pad, kChord);
@@ -518,8 +513,9 @@ Prompt PadInput::slotPrompt(size_t slot) {
       prompt.chord = true;
     }
   }
-  prompt.shift = slot >= kSlotKeys.size();
-  prompt.key = kSlotKeys[prompt.shift ? slot - kSlotKeys.size() : slot];
+  if (slot < kSlotKeys.size()) {
+    prompt.key = kSlotKeys[slot];
+  }
   return prompt;
 }
 
@@ -585,18 +581,11 @@ void PadInput::listKeys(std::ostream &out) {
              .substr(kButtonPrefix.size()),
          std::to_string(binding.mouse));
   }
-  for (size_t slot = 0; slot < kSlotCount; ++slot) {
-    // A slot behind the chord is "<chord key>+<key>".
-    const Prompt by = slotPrompt(slot);
-    line("slot", std::to_string(slot),
-         (by.shift ? std::string(SDL_GetScancodeName(kChordKeys.front())) + "+" : std::string()) +
-             SDL_GetScancodeName(*by.key));
+  for (size_t slot = 0; slot < kSlotKeys.size(); ++slot) {
+    line("slot", std::to_string(slot), SDL_GetScancodeName(kSlotKeys[slot]));
   }
   for (const StickKey &binding : kStickKeys) {
     line("stick", binding.name, SDL_GetScancodeName(binding.key));
-  }
-  for (const SDL_Scancode key : kChordKeys) {
-    line("chord", "chord", SDL_GetScancodeName(key));
   }
 }
 

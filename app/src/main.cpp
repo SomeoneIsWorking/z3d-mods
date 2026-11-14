@@ -66,7 +66,8 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   options.apply(emulator, pad);
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
   SlotLink link(emulator, pad, config.userDir / game.options);
-  const Hud hud(window, emulator, pad, link, overlay, config.assets, config.userDir / game.options);
+  const Hud hud(window, emulator, pad, link, overlay, options, config.assets,
+                config.userDir / game.options);
   ModSwap mods(emulator, (config.userDir / game.options).parent_path(), options.blockAddress());
   MouseAim aim(window, emulator, pad, link, config.userDir / game.options);
   if (config.hidden) {
@@ -128,7 +129,7 @@ int picker(const AppConfig &config, PadInput &pad) {
       const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
                                   config.userDir / game.setup.options);
       SlotLink link(emulator, pad, config.userDir / game.setup.options);
-      const Hud hud(window, emulator, pad, link, overlay, config.assets,
+      const Hud hud(window, emulator, pad, link, overlay, options[*chosen], config.assets,
                     config.userDir / game.setup.options);
       ModSwap mods(emulator, (config.userDir / game.setup.options).parent_path(),
                    options[*chosen].blockAddress());

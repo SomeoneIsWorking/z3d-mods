@@ -24,8 +24,6 @@ namespace {
 constexpr const char *kHudSet = "hud";
 // A key's capital against its cap.
 constexpr float kKeyLabelShare = 0.45F;
-// A word on a cap against a single capital there.
-constexpr float kWordShare = 0.7F;
 // Shares of a button's size: the item icon in its middle and the glyph on its top left corner.
 constexpr float kIconShare = 0.68F;
 constexpr float kGlyphShare = 0.46F;
@@ -77,8 +75,6 @@ std::string wordsPrefix(const lucent::json::Value &hud, uint8_t language) {
   return kWordArt + std::to_string(chosen) + "_";
 }
 
-// What stands for the chord on the keyboard.
-constexpr const char *kChordKey = "Shift";
 // A song's note (hud set), white for the song's colour to tint.
 constexpr const char *kNote = "note";
 // How many arcs a filling hold is drawn in.
@@ -101,12 +97,21 @@ std::optional<Verb> verbNamed(const std::string &name) {
   return std::nullopt;
 }
 
+// `rect` grown by `size` about the top screen's corner nearest its middle, so a corner's group
+// stays in its corner.
+OverlayRect aboutCorner(const OverlayRect &rect, float size) {
+  const float x = rect.x + rect.w / 2.0F <= kOverlayWidth / 2.0F ? 0.0F : kOverlayWidth;
+  const float y = rect.y + rect.h / 2.0F <= kOverlayHeight / 2.0F ? 0.0F : kOverlayHeight;
+  return {x + (rect.x - x) * size, y + (rect.y - y) * size, rect.w * size, rect.h * size};
+}
+
 } // namespace
 
 Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const SlotLink &link,
-         const ScreenOverlay &overlay, const std::filesystem::path &assets,
-         const std::filesystem::path &manifest)
-    : window_(window), emulator_(emulator), pad_(pad), link_(link), overlay_(overlay) {
+         const ScreenOverlay &overlay, const GameOptions &options,
+         const std::filesystem::path &assets, const std::filesystem::path &manifest)
+    : window_(window), emulator_(emulator), pad_(pad), link_(link), overlay_(overlay),
+      options_(options) {
   std::ifstream file(manifest);
   if (assets.empty() || !file) {
     return;
@@ -321,7 +326,6 @@ void Hud::requireArt() {
   if (buttons) {
     atlas_->requireSvg(kHudSet, kNote);
     atlas_->requireSvg(kKeySet, kKeyCap);
-    atlas_->requireSvg(kKeySet, kWideCap);
     for (const auto &[pad, glyph] : kPadGlyphs) {
       atlas_->requireSvg(kPadSet, std::string(glyph));
     }
@@ -394,11 +398,13 @@ void Hud::update() {
   const bool assign = link_.mode() == PadMode::Assign;
   if (assign || overlay_.hudShown() || (!show_.empty() && hold(show_))) {
     const auto [width, height] = window_.pixelSize();
-    if (width != width_ || height != height_) {
+    const HudLook look = options_.hudLook();
+    if (width != width_ || height != height_ || look.size != look_.size) {
       width_ = width;
       height_ = height;
       atlas_->clear();
     }
+    look_ = look;
     const HostDevice device = pad_.lastDevice();
     for (const Element &element : elements_) {
       if (element.assign == assign && element.device.value_or(device) == device &&
@@ -418,7 +424,8 @@ void Hud::quad(const HudSprite &sprite, const OverlayRect &at, float opacity) {
   if (sprite.w <= 0.0F) {
     return;
   }
-  quads_.push_back({sprite.x, sprite.y, sprite.w, sprite.h, at.x, at.y, at.w, at.h, opacity});
+  quads_.push_back(
+      {sprite.x, sprite.y, sprite.w, sprite.h, at.x, at.y, at.w, at.h, opacity * look_.opacity});
 }
 
 HudSprite Hud::art(const std::string &name, float width, float height) {
@@ -427,7 +434,7 @@ HudSprite Hud::art(const std::string &name, float width, float height) {
 
 void Hud::draw(const Element &element) {
   // Whole window pixels, so a sprite is drawn pixel for pixel.
-  OverlayRect box = overlayWindowRect(width_, height_, element.rect);
+  OverlayRect box = overlayWindowRect(width_, height_, aboutCorner(element.rect, look_.size));
   box = {std::round(box.x), std::round(box.y), std::round(box.w), std::round(box.h)};
   const auto sized = [&](const char *set, const std::string &name, float w, float h) {
     return atlas_->svg(set, name, static_cast<int>(w), static_cast<int>(h));
@@ -511,16 +518,6 @@ void Hud::draw(const Element &element) {
     Prompt by = element.verb ? PadInput::verbPrompt(*element.verb) : Prompt{};
     if (element.chord) {
       by.pad = PadInput::kChord;
-    }
-    if (pad_.lastDevice() == HostDevice::Keyboard && element.chord) {
-      // The chord's key is a word on a wide cap.
-      const float width = std::round(box.h * kWideCapAspect);
-      quad(sized(kKeySet, kWideCap, width, box.h), {box.x, box.y, width, box.h});
-      const float capital = std::round(box.h * kKeyLabelShare * kWordShare);
-      const HudSprite word = atlas_->text(kChordKey, static_cast<int>(capital), HudInk::Dark);
-      quad(word, {box.x + std::round((width - word.w) / 2.0F),
-                  box.y + std::round((box.h + capital) / 2.0F) - word.base, word.w, word.h});
-      return;
     }
     prompt(by, box.x, box.y, box.h);
     return;
