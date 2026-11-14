@@ -175,16 +175,69 @@ CAP_LABEL_WIDTH = 0.7
 CAP_INK = (40, 40, 40)
 
 
+def _shift_symbol(side: int) -> Image.Image:
+    """The keyboard's shift legend, an upward arrow, `side` pixels square."""
+    big = side * SUPERSAMPLE
+    arrow = [(0.5, 0.0), (1.0, 0.5), (0.72, 0.5), (0.72, 1.0), (0.28, 1.0), (0.28, 0.5), (0.0, 0.5)]
+    layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).polygon([(x * big, y * big) for x, y in arrow], fill=(*CAP_INK, 255))
+    return layer.resize((side, side), Image.LANCZOS)
+
+
+def _backspace_symbol(side: int) -> Image.Image:
+    """The keyboard's backspace legend, a left-pointing tag with a cross cut out, `side` pixels square."""
+    big = side * SUPERSAMPLE
+    tag = [(0.0, 0.5), (0.32, 0.12), (1.0, 0.12), (1.0, 0.88), (0.32, 0.88)]
+    layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    draw.polygon([(x * big, y * big) for x, y in tag], fill=(*CAP_INK, 255))
+    stroke = max(1, big // 9)
+    for start, end in (((0.45, 0.3), (0.82, 0.7)), ((0.45, 0.7), (0.82, 0.3))):
+        draw.line([(start[0] * big, start[1] * big), (end[0] * big, end[1] * big)], fill=(0, 0, 0, 0), width=stroke)
+    return layer.resize((side, side), Image.LANCZOS)
+
+
+# Keys whose names are too long for a cell, drawn as the legend keyboards print on them.
+KEY_SYMBOLS = {"Left Shift": _shift_symbol, "Right Shift": _shift_symbol, "Backspace": _backspace_symbol}
+# Keys whose names are too long for a cell, by the short name keyboards print.
+KEY_SHORT = {"Escape": "Esc"}
+# A symbol's share of the cap's height.
+CAP_SYMBOL = 0.55
+# A cell of four one-letter keys (WASD, the D-pad's slots) letters them in two rows: each row's
+# share of the cap's height and the gap between them.
+FOUR_KEYS = 4
+CAP_ROW_HEIGHT = 0.3
+CAP_ROW_GAP = 0.06
+
+
 def _key_cap(size: tuple[int, int], cell: dict, keys: AppKeys, glyph_set: Path, font: Path) -> Image.Image:
-    """The cap of the app's key for a prompt cell, or its mouse button, as large as fits `size`."""
+    """The cap of the app's key for a prompt cell, or its mouse button, as large as fits `size`.
+    A slot behind the chord is its key alone: the text names the chord with a cell of its own."""
     bindings = [line.split(" ") for line in cell["key"]]
     caps = glyph_set.parent / KEY_SET
     dimmed = cell.get("dimmed", False)
     if keys.is_mouse(bindings[0][0]):
         return _glyph(size, caps / f"{MOUSE_CAPS[keys.key(*bindings[0])]}.svg", dimmed)
     layer = _glyph(size, caps / "cap.svg", dimmed)
-    label = "".join(keys.key(table, name) for table, name in bindings)
+    names = [KEY_SHORT.get(key, key) for key in (keys.key(table, name).split("+")[-1] for table, name in bindings)]
+    label = "".join(names)
     side = min(size)
+    if len(names) == FOUR_KEYS and all(len(name) == 1 for name in names):
+        # Four letters in a row are too small to read in a cell; two rows of two are not.
+        row = (round(side * CAP_LABEL_WIDTH), round(side * CAP_ROW_HEIGHT))
+        for index, text in enumerate((label[:2], label[2:])):
+            lettering = _lettering(row, text, font, CAP_INK, 0)
+            if dimmed:
+                lettering.putalpha(lettering.getchannel("A").point(lambda v: int(v * DIMMED)))
+            top = size[1] // 2 - row[1] - round(side * CAP_ROW_GAP / 2) if index == 0 else size[1] // 2 + round(side * CAP_ROW_GAP / 2)
+            layer.alpha_composite(lettering, ((size[0] - row[0]) // 2, top))
+        return layer
+    if label in KEY_SYMBOLS:
+        symbol = KEY_SYMBOLS[label](round(side * CAP_SYMBOL))
+        if dimmed:
+            symbol.putalpha(symbol.getchannel("A").point(lambda v: int(v * DIMMED)))
+        layer.alpha_composite(symbol, ((size[0] - symbol.width) // 2, (size[1] - symbol.height) // 2))
+        return layer
     room = (round(side * CAP_LABEL_WIDTH), round(side * CAP_LABEL_HEIGHT))
     text = _lettering(room, label, font, CAP_INK, 0)
     if dimmed:
@@ -205,6 +258,17 @@ def _chord(size: tuple[int, int], held: Path, pressed: Path) -> Image.Image:
     wide = _glyph((size[0], size[0]), held, False)
     layer.alpha_composite(wide.crop((0, (size[0] - top) // 2, size[0], (size[0] - top) // 2 + top)), (0, 0))
     layer.alpha_composite(_glyph((size[0], size[1] - top), pressed, False), (0, top))
+    return layer
+
+
+def _face_buttons(size: tuple[int, int], glyph_set: Path, names: list[str]) -> Image.Image:
+    """Four glyphs as the pad's face buttons sit: `names` top, left, right, bottom."""
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    half = (size[0] // 2, size[1] // 2)
+    spots = ((size[0] // 4, 0), (0, size[1] // 4), (size[0] - half[0], size[1] // 4),
+             (size[0] // 4, size[1] - half[1]))
+    for name, spot in zip(names, spots, strict=True):
+        layer.alpha_composite(_glyph(half, glyph_set / f"{name}.svg", False), spot)
     return layer
 
 
@@ -294,6 +358,8 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
                 out.paste(clear, (x0, y0, x1, y1))
             if keys is not None:
                 out.alpha_composite(_key_cap(size, edit, keys, glyphs, font), (x0, y0))
+            elif isinstance(edit["glyph"], list):
+                out.alpha_composite(_face_buttons(size, glyphs, edit["glyph"]), (x0, y0))
             else:
                 out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)),
                                     (x0, y0))
@@ -301,7 +367,10 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
             held, pressed = edit["chord"]
             if not edit.get("badge", False):
                 out.paste(clear, (x0, y0, x1, y1))
-            out.alpha_composite(_chord(size, glyphs / f"{held}.svg", glyphs / f"{pressed}.svg"), (x0, y0))
+            if keys is not None and "key" in edit:
+                out.alpha_composite(_key_cap(size, edit, keys, glyphs, font), (x0, y0))
+            else:
+                out.alpha_composite(_chord(size, glyphs / f"{held}.svg", glyphs / f"{pressed}.svg"), (x0, y0))
         elif kind == "dpad":
             colour = _dominant(texture.modded.crop(tuple(box)))
             out.paste(clear, (x0, y0, x1, y1))

@@ -16,7 +16,7 @@
           "1036"
         ],
         "find": "(?s)\\A.+\\Z",
-        "put": "{24:1e}, {24:1f}, {24:1c}, and each direction of {24:1d}\nare your {1D:43}item slots{1D:00}.{01}\nTo use an item you've found, first press {24:0c}\nto open the {1D:43}Items subscreen{1D:00}. Move to the\nitem, and then press a slot's button to\nassign it. It's as easy as that!{01}\nTo use the item, press its slot's button.{01}\nHold {24:02}, and {24:06}, {24:07}, {24:08}, and {24:09} are four\nmore slots, so every item can have a\nbutton. You'll find it pretty handy!{00}"
+        "put": "{24:1e}, {24:1f}, {24:1c}, and each direction of {24:1d}\nare your {1D:43}item slots{1D:00}.{01}\nTo use an item you've found, first press {24:0c}\nto open the {1D:43}Items subscreen{1D:00}. Move to the\nitem, and then press a slot's button to\nassign it. It's as easy as that!{01}\nTo use the item, press its slot's button.{01}\nHold {24:02}, and {24:05} are four more\nslots, so every item can have a\nbutton. You'll find it pretty handy!{00}"
       },
       {
         "why": "The sword is X. B stays where the pad is read by name: the ocarina.",
@@ -24,8 +24,7 @@
           "004A",
           "086E",
           "087C",
-          "08A0",
-          "1036"
+          "08A0"
         ],
         "find": "\\{24:07\\}",
         "put": "{24:08}"
@@ -200,20 +199,20 @@
         "put": "at the\ntop right!"
       },
       {
-        "why": "Saving is the pause screen: LB (icon 0x02) and Menu.",
+        "why": "Saving is the pause screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
         "only": [
           "103B"
         ],
         "find": "if you want to \\{1D:41\\}save\\{1D:00\\},\npress \\{1D:41\\}START\\{1D:00\\}\\. Don't forget to save before\nyou quit!",
-        "put": "if you want to {1D:41}save{1D:00},\nhold {24:02} and press {24:0c}. Don't forget to\nsave before you quit!"
+        "put": "if you want to {1D:41}save{1D:00},\npress {24:0e}. Don't forget to save before\nyou quit!"
       },
       {
-        "why": "Saving is the pause screen: LB (icon 0x02) and Menu.",
+        "why": "Saving is the pause screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
         "only": [
           "010F"
         ],
         "find": "be sure to press\\{1D:00\\}\nSTART\\{1D:44\\} and save your progress before\nquitting!",
-        "put": "be sure to hold{1D:00}\n{24:02} and press {24:0c}{1D:44} to save your\nprogress before quitting!"
+        "put": "be sure to press{1D:00}\n{24:0e}{1D:44} to save your progress before\nquitting!"
       }
     ]
   }

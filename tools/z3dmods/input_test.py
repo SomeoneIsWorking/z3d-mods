@@ -323,10 +323,10 @@ MM3D_BAGS = 0x00120000 | 0x1 | 0x8
 MM3D_ITEMS = ("BOW", "BOMB")
 
 
-def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False) -> None:
+def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False, maps: bool = False) -> None:
     """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle,
-    the Bunny Hood, every song and, with `notebook`, the Bombers' Notebook, written by the game's
-    own save there."""
+    the Bunny Hood, every song, with `notebook` the Bombers' Notebook and with `maps` every
+    region's map, written by the game's own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
     items = save + symbols.offset(d, "SaveData.items")
@@ -344,6 +344,9 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False)
                f"poke:{save + symbols.offset(d, 'SaveData.questItems'):#x},{songs.to_bytes(4, 'little').hex()}",
                f"poke:{save + symbols.offset(d, 'SaveData.upgrades'):#x},{MM3D_BAGS.to_bytes(4, 'little').hex()}",
                "wait:1"]
+    if maps:
+        regions = save + symbols.offset(d, 'SaveData.weekEventReg') + d.define('WEEK_EVENT_REGION_MAPS')
+        script.insert(-1, f"poke:{regions:#x},{(1 << d.define('REGION_MAP_COUNT')) - 1:02x}")
     _copy_file(_harness_file(cfg, "mm3d", script + MM3D_SAVE, out), user)
 
 
@@ -673,6 +676,39 @@ def _notebook_mm3d(session: Session, pad: Gamepad) -> None:
         pad.button("b")
         session.wait(3)
         session.shot(f"{name}-play")
+
+
+def _map_zoom_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D with every region's map: on the Map screen the pad's X zooms in at the loupe and out
+    again, the left stick moves the loupe; the same with the keyboard's X by name and its stick
+    keys, the prompts shown as caps."""
+    _mm3d_file_1(session)
+    pad.button("select")
+    session.wait(3)
+    session.shot("pad-map")
+    pad.stick(0, -20000, 0.4)
+    session.wait(1)
+    session.shot("pad-loupe-up")
+    pad.button("x")
+    session.wait(3)
+    session.shot("pad-zoom-in")
+    pad.button("x")
+    session.wait(3)
+    session.shot("pad-zoom-out")
+    pad.button("b")
+    session.wait(3)
+    session.key("play", "map")
+    session.wait(3)
+    session.shot("key-map")
+    session.key("stick", "down", 0.4)
+    session.wait(1)
+    session.shot("key-loupe-down")
+    session.key("name", "x")
+    session.wait(3)
+    session.shot("key-zoom-in")
+    session.key("name", "x")
+    session.wait(3)
+    session.shot("key-zoom-out")
 
 
 SETUP_GAME = "mm3d"
@@ -1108,11 +1144,11 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
-               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "masks-mm3d": "mm3d",
+               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
                "autosave-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
@@ -1120,6 +1156,7 @@ SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-mm3d": _mm3d_slots_file,
            "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file, "masks-mm3d": _mm3d_slots_file, "gaps": _oot3d_slots_file,
            "notebook-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, notebook=True),
+           "map-zoom-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, maps=True),
            "autosave-mm3d": _mm3d_autosave_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,

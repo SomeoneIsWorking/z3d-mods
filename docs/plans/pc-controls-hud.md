@@ -237,25 +237,36 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   `docs/ui.md`). Seen with the pad's View and the keyboard's M, B back to play each time
   (`gap-nbin1`).
 - The chord is a prompt cell, drawn as LB or the chord's key cap: OoT3D's unused +Control Pad
-  cell 0x02 (0x1036, 0x103B, 0x010F) and MM3D's ZL cell 0x34 (0x0270); OoT3D's song list
+  cell 0x02 (0x1036) and MM3D's ZL cell 0x34 (0x0270); OoT3D's song list
   is cell 0x03, drawn as RB or the key R (0x10C7). Seen through a sign and a statue
-  (`gap-txt1`, `gap-txt2`); the Left Shift cap is too small to read.
+  (`gap-txt1`, `gap-txt2`).
 - Layout gaps the text exposed, closed: the keyboard's R is ZR by name (the song list, with the
   ocarina out), and the right and middle mouse buttons are R and L by name and on a screen that
   assigns slots (OoT3D's Gear page); seen in `gap-gaps1` (right button to Gear, middle back to
   Items, R to the song list). OoT3D's View in a dungeon opens the dungeon map on the harness
   (3DS Select, `gap-map2` to `gap-map4`) and in the window (the pad's View and M in the Deku
   Tree, `gap-gaps1`); not reproduced.
-- Left: MM3D's map zoom is the touch screen's only (the mouse at the right of the split
-  layout); a touch on the map did not zoom it (`gap-zoom1`, `gap-zoom2`), so a pad input
-  waits on the map screen's zoom state in the decomp (`MenuMapState`, code near 0x5975AC).
+- MM3D's map zoom is the game's own X by name (the pad's X, the keyboard's 4), at the loupe the
+  left stick (WASD) moves, once the region's map is owned (decomp `docs/ui.md`, "Map screen");
+  the map screen's X and A prompts are keyed, so the keyboard shows 4 and E. Seen in the window
+  with the pad and the keys (`map-zoom-mm3d`: Town and Field zoomed in, out again). The earlier
+  "mouse only" came from files without the region's map, where the game shows no loupe.
+- The chord's four slots are one cell, OoT3D's unused 0x05: the face buttons where they sit on
+  the pad, their keys alone on the keyboard (0x1036: "Hold Shift, and 8 1 2 3 are four more
+  slots"). Shift and Backspace caps are their keyboard legends, an arrow and a tag; four
+  one-letter keys are two rows. Seen at 1x and 4x (`gap-cap1`, `gap-cap1b`, `gap-cap4`): the
+  arrow and tag read at 1x, a cell of four keys reads at 4x only.
+- Saving names Pause in one cell, OoT3D's unused 0x0E: LB held over Menu on the pad, Esc on the
+  keyboard (0x103B, 0x010F; `gap-pause4`), where "hold the chord and press Menu" read Shift
+  and Tab on the keyboard, which do not pause. MM3D's 0x0270 (Gear) still names the chord and
+  Menu: it waits on a free MM3D icon cell for Pause.
 - Prompts by device, seen with the same box swapped live by `device:` (`txt-oot-k3`: 0x00A4
   shows Menu, RT, A, then Tab, the right mouse button, E, then the pad's again; 0x1036 and
   0x0066 with caps; `txt-mm-k2`: 0x0078's Menu, LT, Y, B, RB, D-pad become Tab, Q, 1, 2, 3,
   4567, and back; 0x026B and 0x003E with caps). A cell names one meaning: OoT3D's plain B is
   Backspace (its slot B has its own cell), MM3D's B is slot 2, so MM3D's few "B to cancel"
-  prompts show 2. Long key names (Backspace, Left Shift) are too small to read in a cell, and
-  a cell of several keys (WASD, 4567) is small.
+  prompts show 2. A cell of four keys (WASD, 4567) is lettered in two rows, readable at 4x
+  but not at 1x.
 - Not done: the fonts' characters the outline font lacks
   keep the game's bitmap, enlarged (MM3D's Greek and Cyrillic sheets, the US text uses none).
   sys8.qbf is not redrawn.
