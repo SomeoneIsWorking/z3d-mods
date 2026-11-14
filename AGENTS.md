@@ -37,10 +37,11 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   one game directly; its saves live in `~/.local/share/z3d-mods/`, apart from standalone Azahar's.
   `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker); `--host ally` builds the
   package and installs it in `~/Games/z3d` on the Ally with its own shortcuts; the player's data there stays.
-- `uv run --frozen z3dmods package`: the Linux package folder, `build/package/z3d` ([docs/plans/packed-app.md](docs/plans/packed-app.md)).
-- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|chord|chord-mm3d|aim|aim-mm3d|setup|setup-wrong-dump|setup-missing-mod|setup-different-mod|menu-pad>`: the
+- `uv run --frozen z3dmods package`: the Linux package, `build/package/z3d` (a folder) and
+  `build/package/z3d-x86_64.AppImage` ([docs/plans/packed-app.md](docs/plans/packed-app.md)).
+- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|chord|chord-mm3d|aim|aim-mm3d|setup|setup-wrong-dump|setup-missing-mod|setup-different-mod|setup-archive|menu-pad|first-run|first-run-appimage>`: the
   windowed app's input path with real key, mouse and pad events, off the player's desktop; `picker`
-  runs the installed shortcut's Exec line. Shots in `scratch/input-test/<scenario>/`.
+  runs the installed shortcut's Exec line, `first-run` the package `z3dmods package` built. Shots in `scratch/input-test/<scenario>/`.
 
 The OoT3D save in slot 1 is the player's: load it, never save over it. Check
 `sdmc/.../title/00040000/00033500/data/00000001/` against the backup after a run.

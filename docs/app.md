@@ -39,15 +39,25 @@ Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
 `<user>/Azahar/dump/textures/<title id>/`; `z3dmods run ... --harness --dump-textures`).
 `tools/z3dmods/app.py` derives a game's from its set: its `screen_layout`, textures when it has a
 pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
-`<user>/library.json`, an array of `{"rom", "layout", "textures", "options"}` per set, and takes the font from
-fontconfig (`Noto Sans:bold`).
+`<user>/library.json`, an array of `{"rom", "layout", "textures", "options"}` per set (and
+`"inputs"` in a package), and takes the font from fontconfig (`Noto Sans:bold`).
 
-Setup: with `--installer <program> [<argument>]...` (the rest of the command line) the picker
-sets up a game whose options manifest is missing from the user folder: `SetInstall`
-(`src/set_install`) runs the installer with the dump's path added and the picker shows its last
-printed line until it ends, then boots the game; when it fails the picker shows the installer's
-refusal (its lines that start with "! "), shrunk until it fits, until A. `play.py` passes
-`z3dmods setup --user <user> --mods <the player's mod downloads>` (plans/packed-app.md).
+Setup: `--tools <program> [<argument>]...` (the rest of the command line) is the tools as the
+picker runs them (`play.py` passes `Config.tool_command`), each run a child process whose
+printed lines it reads (`src/tool_process`); a tool's refusal is its lines that start with "! ".
+- `<tools> setup --user <user> <dump>` makes a game's set. `SetInstall` (`src/set_install`) asks
+  for it when the options manifest is missing from the user folder, or when its `"inputs"` is
+  not the library entry's (a set made by another package, plans/packed-app.md). The picker shows
+  the setup's last line until it ends, then boots the game; when it fails it shows the refusal,
+  shrunk until it fits, until A.
+- `<tools> folders --user <user> --roms <folder>` and `--mods <folder>` take the player's
+  folders. With an empty library the picker opens `FolderSetup` (`src/folder_setup`) first: the
+  shared setup screen (`shared/setup-ui`, drawn with the picker's renderer and fed the window's
+  events) asks for the dump folder, then the mods folder. Its button opens `FolderBrowser`
+  (`src/folder_browser`): the folders of one place as rows with its files listed under them; Up
+  and Down pick a row, A opens it, B goes to the parent, X or Start takes the folder shown, a
+  click opens a row, Escape gives up. A folder the tools refuse (no dump of either game in it)
+  stays on the screen with the reason.
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
@@ -309,8 +319,8 @@ objects. Rebuild the app: `ninja -C build/app`.
   `Repl`. With the picker: `GameLibrary` and a `GameOptions` per game, then per game `TitlePicker`
   (and its `OptionsMenu`), `applyGameSettings`, `GameWindow::boot` (title and the layout's window
   shape), a new `Emulator`, `GameOptions::apply` and `Player`.
-- The picker draws with an SDL renderer (Vulkan driver) and SDL3_ttf text on the game window, and
-  destroys it before the core's renderer takes the window; the core shuts down
+- The picker and its screens draw with an SDL renderer (Vulkan driver) and SDL3_ttf text on the
+  game window (`MenuCanvas`), which is destroyed before the core's renderer takes the window; the core shuts down
   (`System::Shutdown`) before the picker opens again.
 - Rendering: the core's own Vulkan renderer presents to the window's native surface (Wayland or
   X11, from SDL3's window properties). A frame ends when the renderer calls
@@ -350,6 +360,14 @@ it on that machine instead (`tools/z3dmods/host_install.py`): `~/Games/z3d/` is 
 app's saves (copied from here only when the host has none). `user/` without the sets and the
 downloads is copied to `~/Games/z3d-backups/user-<time>.tar` first. Its menu and Desktop entries
 run the package's launcher. Re-run it after a change.
+
+- First run, 2026-11-14, `z3dmods inputtest first-run` (the package's launcher on an empty data
+  folder, a pad, a key and a click) and `first-run-appimage` (the same from the AppImage): the
+  screen asks "Where are your 3DS games?"; A opens the browser on the home folder; an empty
+  folder taken with X comes back as "No dump of Ocarina of Time 3D or Majora's Mask 3D is in
+  ..." in red; ROM/3DS shows the two dumps under its rows and is taken; the mods question
+  follows, answered with Return, the stick and a click on "Use this folder"; the picker then
+  shows both games, each "A  Set up from your game". `folders.json` holds both folders.
 
 - Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the

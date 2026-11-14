@@ -73,34 +73,41 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
 3. Built: our patch ships prebuilt, so the player's machine needs no ARM compiler.
 4. Built: the package folder (`z3dmods package`), installed on the Ally by
    `z3dmods shortcut --host ally`.
-5. Not built: the folders asked for in the window. Today the dump folder and the mods folder
-   are given once on the command line (`z3d --roms <folder> --mods <folder>`) and kept in
-   `<user>/folders.json`; without a dump folder the launcher stops with a line on the terminal,
-   which a desktop start never shows. Next: the picker's own first-run screen
-   (`first-run-setup`), a folder dialog for each.
-6. Not built: the menu textures' glyphs are rasterized by ImageMagick (`hud.py` `_glyph`), the
-   one program a setup still needs from the system; it refuses with the install command when
-   `magick` is missing. Next: rasterize them in the tools.
-7. Not built: a set made by an older package is kept as it is: the picker asks for a setup
-   only when the options manifest is missing, so a package with a changed patch runs the old
-   one until the set is removed. Next: the install writes the package's revision into the
-   manifest and `SetInstall::wanted` compares it with the one the launcher passes.
-8. Not built: an AppImage. The folder is the package; the desktop's own libraries serve
-   everything but the core, SDL3 and plutosvg (freetype, harfbuzz, png, Vulkan).
+5. Built: the first run asks for the dump folder and the mods folder in the window.
+6. Built: the menu textures' glyphs ship drawn, so a setup needs no ImageMagick.
+7. Built: a set made by another package is made again.
+8. Built: the AppImage of the package folder.
 
 ### The picker's setup
-- `app/src/set_install`: a game's set is missing when its options manifest
-  (`Azahar/load/mods/<title id>/z3d-options.json`) is not in the user folder. The app is told
-  the installer with `--installer <program> [<argument>]...` (the rest of the command line) and
-  runs it with the dump's path added, as a child process whose printed lines it reads.
-- The picker's bottom line for such a game reads "A  Set up from your game". A opens a
-  screen of its own, "Setting up <title>" over the installer's last line; when the installer
-  ends with the manifest in place the game boots with its options read again, otherwise the
-  screen says "Setup failed" over the installer's refusal (its lines that start with "! ")
+- The app is told the tools with `--tools <program> [<argument>]...` (the rest of the command
+  line) and runs them as child processes whose printed lines it reads (`app/src/tool_process`).
+- `app/src/set_install`: a game wants a setup when its options manifest
+  (`Azahar/load/mods/<title id>/z3d-options.json`) is missing from the user folder, or names
+  other inputs than the library does ("A set made by another package" below). It runs
+  `<tools> setup --user <folder> <dump>`.
+- The picker's bottom line for such a game reads "A  Set up from your game", or "A  Set up
+  again for this version". A opens a screen of its own, "Setting up <title>" over the setup's
+  last line; when it ends with the set in place the game boots with its options read again,
+  otherwise the screen says "Setup failed" over the refusal (the lines that start with "! ")
   until A.
-- `z3dmods setup --user <folder> --mods <folder> <dump>` (`tools/z3dmods/setup.py`) is that
-  installer: it finds the set by the dump's title ID and runs `install` on that dump into
-  `<folder>/Azahar/load`. `z3dmods play` passes it to the picker.
+- `z3dmods setup --user <folder> <dump>` (`tools/z3dmods/setup.py`) finds the set by the dump's
+  title ID and runs `install` on that dump into `<folder>/Azahar/load`.
+
+### The first run
+- A package's launcher lists the dumps in the folder `<user>/folders.json` names. With none
+  (no file yet, an empty or unplugged folder) the library it writes is empty and the picker
+  opens the folder questions instead of its tiles (`app/src/folder_setup`): the dump folder,
+  then the mods folder.
+- Each is the shared setup screen (`shared/setup-ui`, one requirement, the player's own
+  location adopted) drawn with the picker's renderer; its button opens the app's folder browser
+  (`app/src/folder_browser`), which a pad, the keyboard or the mouse walks. No system dialog,
+  no terminal.
+- The tools take the answer: `<tools> folders --user <folder> --roms <folder>` refuses a
+  folder without a dump of either game, and otherwise keeps it in `folders.json` and writes the
+  library; `--mods <folder>` keeps the mods folder. The app then reads the library and opens
+  the picker.
+- `z3d --roms <folder> --mods <folder>` still sets them from a terminal, for a maintainer.
+- Not built: changing a folder later from the window (delete `folders.json`, or use the flags).
 
 ### The player's mod downloads
 - A set names each third-party source by what it is, where to get it and its SHA-256 (`"from"`
@@ -109,8 +116,8 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
   entry has the set's digest, the texture pack the folder named after the title ID with the
   set's digest. A `.zip` or `.tar` left in the folder is unpacked beside itself first; a `.7z`
   or `.rar` is named for the player to unpack.
-- The folder is `env-assets/downloads` in a checkout, and in a package `<user>/mods` or the
-  one given with `--mods`.
+- The folder is `env-assets/downloads` in a checkout, and in a package the one the first run
+  asked for (`"mods"` in `folders.json`), `<user>/mods` without one.
 - Refusals are written for the player: a file that is not a decrypted dump, a dump of another
   revision ("It needs Majora's Mask 3D (USA) (Rev 1)"), a mod that is missing, a mod with a
   file that differs.
@@ -128,26 +135,67 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
   which is still private: publish it, or cut the table to the names the tools read, before a
   package goes public.
 
+### The drawn glyphs
+- `hud.py` draws port-assets' pad glyphs over the 3DS button prompts of the menu textures.
+  `glyphs.py` gives it each glyph as a 1024-pixel image, which it scales down: a checkout has
+  ImageMagick draw the SVG on first use (`build/glyphs/`), `z3dmods package` draws the whole
+  set into `prebuilt/glyphs/`, and a package reads those. One drawing path; the player's
+  machine runs no ImageMagick.
+
+### A set made by another package
+- `set_inputs.py` digests what of ours a set is made from: `sets/`, the patch
+  (`patch/<game>`, `patch/common`, and in a package `prebuilt/<game>`), the drawn glyphs and
+  the tools. The install writes it into the options manifest as `"inputs"`.
+- A package's launcher writes the digest it would get now into each library entry. The picker
+  compares the two (`SetInstall::state`): a set with another digest, or none, reads "A  Set up
+  again for this version" and A makes it again over the old one. The saves are not touched.
+- A checkout's library names no digest: its sets are the maintainer's to install.
+
 ### The package
-`z3dmods package` makes `build/package/z3d` (`tools/z3dmods/package.py`, 160 MB):
-- `z3d`, the launcher; `bin/z3d`; `lib/` (the core, SDL3, SDL3_ttf, SDL3_image, plutosvg);
+`z3dmods package` makes `build/package/z3d` (`tools/z3dmods/package.py`, 171 MB) and
+`build/package/z3d-x86_64.AppImage` (53 MB):
+- `z3d`, the launcher; `bin/z3d`; `lib/`: the core and every library the app links (SDL3,
+  SDL3_ttf, SDL3_image, plutosvg, freetype, harfbuzz, png and what they need) but the C and C++
+  runtimes. Vulkan is the desktop's loader, which the core opens itself;
 - `python/`, uv's relocatable CPython 3.12 with the locked wheels (Pillow) in its
   site-packages, and `tools/z3dmods/` on its path: no system Python, no uv;
-- `sets/`, `patch/<game>/*.toml`, `prebuilt/<game>/`, `assets/` (port-assets' sets and key
-  typeface), `fonts/` (the picker's), `LICENSE`, `SOURCE.txt` (the GPL's source offer);
-- `package.json`, which tells `config.py` this is a package. The player's data is `user/`
-  inside the folder when that exists (the Ally), else `~/.local/share/z3d`.
+- `sets/`, `patch/<game>/*.toml`, `prebuilt/<game>/`, `prebuilt/glyphs/`, `assets/`
+  (port-assets' sets and key typeface), `fonts/` (the picker's), `LICENSE`, `SOURCE.txt` (the
+  GPL's source offer);
+- `AppRun` (a link to the launcher), `z3d.desktop` and `z3d.svg`, which make the folder an
+  AppDir;
+- `package.json`, which tells `config.py` this is a package.
 The launcher runs `python -I -m z3dmods.packed play`: it lists the dumps in the player's
-folder that a set is made for, writes the library and starts the app with
-`z3dmods.packed setup` as its installer.
+folder that a set is made for, writes the library and starts the app with `z3dmods.packed` as
+its tools.
+
+The two forms are the same files:
+- The folder keeps the player's data in `user/` inside it when that exists, so one folder
+  holds everything (the Ally's install, which `z3dmods shortcut --host ally` updates with
+  rsync, sending only what changed).
+- The AppImage is the folder as a squashfs image behind the AppImage runtime
+  (`AppImage/type2-runtime` release 20251108, pinned by SHA-256, kept under
+  `<dependencies>/appimage-runtime/`): one file to download and start. It is read-only, so the
+  player's data is `~/.local/share/z3d`. It needs FUSE on the desktop (fusermount3), or
+  `--appimage-extract-and-run`.
+- Neither runs on a desktop older than the one that built it: the app and the core link that
+  machine's glibc and libstdc++ (Fedora 44 here). A release for other distributions is built
+  on an older base in CI, which is not set up.
 
 ### Seen (2026-11-14)
-- The Ally, the package installed by `z3dmods shortcut --host ally`, its launcher in a headless
-  Gamescope with real keys, the sets moved out of `user/` first: both tiles read "A  Set up
-  from your game"; A on Majora's Mask 3D shows "Setting up", the installer ends after 32 s and
-  the game boots to its title with the 4K pack; A on Ocarina of Time 3D, 26 s, and Start
-  reaches file select with the player's "Link" file; the picker then reads "A  Play" for both.
-  That machine has no clang, no uv and no checkout.
+- The first run (`z3dmods inputtest first-run`, the package's launcher on an empty data folder,
+  and `first-run-appimage`, the AppImage): docs/app.md, "Checking it".
+- The Ally, `pk-ally2`: the package installed by `z3dmods shortcut --host ally` over sets an
+  older package made, The One Screen left in its mods folder as the `.tar.gz` its site gives,
+  the launcher started in a headless Gamescope with only `dirname` and `readlink` on its PATH
+  (no ImageMagick, no clang, no uv), real keys. Both tiles read "A  Set up again for this
+  version". A on Ocarina of Time 3D shows "Unpacking the-one-screen-...tar.gz", the setup ends
+  after 25 s and Start reaches file select with the player's "Link" file; A on Majora's Mask
+  3D, 28 s, and its title with the 4K pack. Back on the picker the Ocarina tile reads "A  Play",
+  and each game's manifest holds its library entry's `"inputs"`.
+- The glyph textures of that run against the ones the older package made with ImageMagick on
+  the Ally (16 files under `z3dmods-hud/` differ in bytes): MM3D's and OoT3D's HUD sheets side
+  by side show the same pad glyphs in the same places.
 - The failure screen (`z3dmods inputtest setup-wrong-dump`, `setup-missing-mod`,
   `setup-different-mod`): "Setup failed" over "... is not the dump this setup was made for /
   It needs Majora's Mask 3D (USA) (Rev 1)"; over "Project Restoration ... is missing from your

@@ -1,12 +1,12 @@
 // The in-window title picker: each game's icon and title from the player's dump, chosen with the
 // pad (left and right, A or Start) or a click; X opens the selected game's options. A game whose
-// set is missing is set up from the player's dump first (set_install.hpp). It owns an SDL
-// renderer on the game window only while it runs; the core's Vulkan renderer takes the window
-// after it is gone.
+// set is missing is set up from the player's dump first (set_install.hpp). It draws on the
+// canvas it is given (menu_canvas.hpp).
 #pragma once
 
 #include "game_library.hpp"
 #include "game_options.hpp"
+#include "menu_canvas.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -14,12 +14,7 @@
 #include <string>
 #include <vector>
 
-struct SDL_Renderer;
 struct SDL_Texture;
-struct SDL_FRect;
-struct TTF_Font;
-struct TTF_Text;
-struct TTF_TextEngine;
 
 namespace z3d::app {
 
@@ -30,8 +25,8 @@ class SetInstall;
 class TitlePicker {
 public:
   // `options` holds one entry per game of the library, in its order.
-  TitlePicker(GameWindow &window, const PadInput &pad, const GameLibrary &library,
-              std::vector<GameOptions> &options, SetInstall &install, const std::filesystem::path &font);
+  TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad, const GameLibrary &library,
+              std::vector<GameOptions> &options, SetInstall &install);
   ~TitlePicker();
   TitlePicker(const TitlePicker &) = delete;
   TitlePicker &operator=(const TitlePicker &) = delete;
@@ -55,14 +50,14 @@ private:
   [[nodiscard]] bool setUp(size_t index);
   void drawSetUp(const std::string &heading, const std::string &line);
 
+  const MenuCanvas &canvas_;
+  SDL_Renderer *renderer_;
+  TTF_Font *font_;
   GameWindow &window_;
   const PadInput &pad_;
   const GameLibrary &library_;
   std::vector<GameOptions> &options_;
   SetInstall &install_;
-  SDL_Renderer *renderer_ = nullptr;
-  TTF_TextEngine *engine_ = nullptr;
-  TTF_Font *font_ = nullptr;
   std::vector<SDL_Texture *> icons_;
   std::vector<TTF_Text *> titles_;
   TTF_Text *heading_ = nullptr;

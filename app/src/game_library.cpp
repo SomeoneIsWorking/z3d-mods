@@ -72,11 +72,11 @@ GameLibrary GameLibrary::load(const std::filesystem::path &path) {
     if (const lucent::json::Value *options = entry.find("options"); options != nullptr && options->string() != nullptr) {
       game.setup.options = *options->string();
     }
+    if (const lucent::json::Value *inputs = entry.find("inputs"); inputs != nullptr && inputs->string() != nullptr) {
+      game.setup.inputs = *inputs->string();
+    }
     readSmdh(game);
     library.games_.push_back(std::move(game));
-  }
-  if (library.games_.empty()) {
-    throw std::runtime_error("library " + path.string() + " names no games");
   }
   return library;
 }

@@ -37,7 +37,7 @@ def install(cfg: Config, host: str) -> list[Path]:
     home = Path(_ssh(host, "echo $HOME"))
     root = home / FOLDER
     user = root / "user"
-    built = package.build(cfg, cfg.repo / "build" / "package" / "z3d")
+    built = package.build(cfg, package.folder(cfg))
     backup = home / BACKUPS / f"user-{time.strftime('%Y%m%d-%H%M%S')}.tar"
     excluded = " ".join(f"--exclude={shlex.quote(name)}" for name in DERIVED)
     _ssh(host, f"mkdir -p {shlex.quote(str(user / 'Azahar'))} {shlex.quote(str(backup.parent))} "

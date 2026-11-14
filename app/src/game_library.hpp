@@ -22,7 +22,8 @@ struct Game {
 
 class GameLibrary {
 public:
-  // `path` is a JSON array of {"rom", "layout", "textures", "options"} objects (tools/z3dmods/play.py).
+  // `path` is a JSON array of {"rom", "layout", "textures", "options", "inputs"} objects (tools/z3dmods/play.py);
+  // it is empty until the player has said where their dumps are (folder_setup.hpp).
   static GameLibrary load(const std::filesystem::path &path);
 
   [[nodiscard]] const std::vector<Game> &games() const {

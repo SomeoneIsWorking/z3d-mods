@@ -20,9 +20,16 @@ std::runtime_error sdlError(const char *what) {
   return std::runtime_error(std::string(what) + ": " + SDL_GetError());
 }
 
+constexpr Rgb kBackground = kMenuBackground;
+constexpr Rgb kTile = kMenuTile;
+constexpr Rgb kSelected = kMenuSelected;
+constexpr Rgb kText = kMenuText;
+constexpr Rgb kDim = kMenuDim;
+
 constexpr const char *kHeading = "z3d";
 constexpr const char *kHint = "A  Play    X  Options    Esc or Guide  Back";
 constexpr const char *kSetUpHint = "A  Set up from your game    X  Options";
+constexpr const char *kUpdateHint = "A  Set up again for this version    X  Options";
 constexpr const char *kSetUpHeading = "Setting up ";
 constexpr const char *kSetUpStarting = "Reading your game";
 constexpr const char *kSetUpFailed = "Setup failed    A  Back";
@@ -39,38 +46,6 @@ constexpr float kTextWidth = 0.9F;
 constexpr float kTextHeight = 0.9F;
 constexpr float kShrink = 0.9F;
 constexpr float kSmallestShare = 1.0F / 60.0F;
-
-struct Rgb {
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-};
-constexpr Rgb kBackground{18, 20, 26};
-constexpr Rgb kTile{34, 38, 48};
-constexpr Rgb kSelected{224, 186, 72};
-constexpr Rgb kText{236, 238, 242};
-constexpr Rgb kDim{150, 156, 170};
-
-void fill(SDL_Renderer *renderer, Rgb color, const SDL_FRect &rect) {
-  SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
-  SDL_RenderFillRect(renderer, &rect);
-}
-
-TTF_Text *makeText(TTF_TextEngine *engine, TTF_Font *font, const std::string &text, Rgb color) {
-  TTF_Text *made = TTF_CreateText(engine, font, text.c_str(), text.size());
-  if (made == nullptr) {
-    throw sdlError("TTF_CreateText");
-  }
-  TTF_SetTextColor(made, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
-  return made;
-}
-
-SDL_FPoint textSize(TTF_Text *text) {
-  int w = 0;
-  int h = 0;
-  TTF_GetTextSize(text, &w, &h);
-  return {static_cast<float>(w), static_cast<float>(h)};
-}
 
 // What moves or chooses, as held now.
 struct Held {
@@ -93,23 +68,10 @@ struct TitlePicker::Layout {
   float iconInset;
 };
 
-TitlePicker::TitlePicker(GameWindow &window, const PadInput &pad, const GameLibrary &library,
-                         std::vector<GameOptions> &options, SetInstall &install,
-                         const std::filesystem::path &font)
-    : window_(window), pad_(pad), library_(library), options_(options), install_(install) {
-  renderer_ = SDL_CreateRenderer(window_.sdlWindow(), "vulkan");
-  if (renderer_ == nullptr) {
-    throw sdlError("SDL_CreateRenderer");
-  }
-  SDL_SetRenderVSync(renderer_, 1);
-  if (!TTF_Init()) {
-    throw sdlError("TTF_Init");
-  }
-  engine_ = TTF_CreateRendererTextEngine(renderer_);
-  font_ = TTF_OpenFont(font.c_str(), 1.0F);
-  if (engine_ == nullptr || font_ == nullptr) {
-    throw sdlError("TTF_OpenFont");
-  }
+TitlePicker::TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad,
+                         const GameLibrary &library, std::vector<GameOptions> &options, SetInstall &install)
+    : canvas_(canvas), renderer_(canvas.renderer()), font_(canvas.font()), window_(window), pad_(pad),
+      library_(library), options_(options), install_(install) {
   TTF_SetFontWrapAlignment(font_, TTF_HORIZONTAL_ALIGN_CENTER);
   for (const Game &game : library_.games()) {
     SDL_Texture *icon = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_ABGR8888,
@@ -121,10 +83,10 @@ TitlePicker::TitlePicker(GameWindow &window, const PadInput &pad, const GameLibr
                       game.iconSize * static_cast<int>(sizeof(uint32_t)));
     SDL_SetTextureScaleMode(icon, SDL_SCALEMODE_PIXELART);
     icons_.push_back(icon);
-    titles_.push_back(makeText(engine_, font_, game.title, kText));
+    titles_.push_back(canvas_.text(game.title, kText));
   }
-  heading_ = makeText(engine_, font_, kHeading, kText);
-  hint_ = makeText(engine_, font_, hint(), kDim);
+  heading_ = canvas_.text(kHeading, kText);
+  hint_ = canvas_.text(hint(), kDim);
 }
 
 TitlePicker::~TitlePicker() {
@@ -136,16 +98,19 @@ TitlePicker::~TitlePicker() {
   for (SDL_Texture *icon : icons_) {
     SDL_DestroyTexture(icon);
   }
-  TTF_CloseFont(font_);
-  if (engine_ != nullptr) {
-    TTF_DestroyRendererTextEngine(engine_);
-  }
-  TTF_Quit();
-  SDL_DestroyRenderer(renderer_);
+  TTF_SetFontWrapAlignment(font_, TTF_HORIZONTAL_ALIGN_LEFT);
 }
 
 std::string TitlePicker::hint() const {
-  return install_.wanted(library_.games()[selected_].setup) ? kSetUpHint : kHint;
+  switch (install_.state(library_.games()[selected_].setup)) {
+  case SetInstall::State::Missing:
+    return kSetUpHint;
+  case SetInstall::State::Outdated:
+    return kUpdateHint;
+  case SetInstall::State::Ready:
+    break;
+  }
+  return kHint;
 }
 
 void TitlePicker::select(size_t index) {
@@ -190,7 +155,7 @@ std::optional<size_t> TitlePicker::run() {
       continue;
     }
     if (now.options && !before.options) {
-      OptionsMenu(renderer_, engine_, font_, window_, pad_, options_[selected_],
+      OptionsMenu(renderer_, canvas_.engine(), font_, window_, pad_, options_[selected_],
                   library_.games()[selected_].title)
           .run();
       // The menu left the font at its own size.
@@ -231,13 +196,13 @@ void TitlePicker::fitText(float height) {
   textHeight_ = height;
   TTF_SetFontSize(font_, height * kHeadingShare);
   TTF_DestroyText(heading_);
-  heading_ = makeText(engine_, font_, kHeading, kText);
+  heading_ = canvas_.text(kHeading, kText);
   TTF_SetFontSize(font_, height * kTitleShare);
   TTF_DestroyText(hint_);
-  hint_ = makeText(engine_, font_, hint(), kDim);
+  hint_ = canvas_.text(hint(), kDim);
   for (size_t i = 0; i < titles_.size(); ++i) {
     TTF_DestroyText(titles_[i]);
-    titles_[i] = makeText(engine_, font_, library_.games()[i].title, kText);
+    titles_[i] = canvas_.text(library_.games()[i].title, kText);
   }
 }
 
@@ -251,10 +216,10 @@ void TitlePicker::draw(const Layout &layout) {
     const SDL_FRect &tile = layout.tiles[i];
     if (i == selected_) {
       const float ring = layout.iconInset * 0.35F;
-      fill(renderer_, kSelected,
+      canvas_.fill(kSelected,
            {tile.x - ring, tile.y - ring, tile.w + 2 * ring, tile.h + 2 * ring});
     }
-    fill(renderer_, kTile, tile);
+    canvas_.fill(kTile, tile);
     const float inset = layout.iconInset;
     const SDL_FRect icon{tile.x + inset, tile.y + inset, tile.w - 2 * inset, tile.h - 2 * inset};
     SDL_RenderTexture(renderer_, icons_[i], nullptr, &icon);
@@ -303,7 +268,7 @@ void TitlePicker::drawSetUp(const std::string &heading, const std::string &line)
   SDL_SetRenderDrawColor(renderer_, kBackground.r, kBackground.g, kBackground.b, SDL_ALPHA_OPAQUE);
   SDL_RenderClear(renderer_);
   TTF_SetFontSize(font_, current.height * kHeadingShare);
-  TTF_Text *top = makeText(engine_, font_, heading, kText);
+  TTF_Text *top = canvas_.text(heading, kText);
   TTF_SetTextWrapWidth(top, static_cast<int>(current.width * kTextWidth));
   const SDL_FPoint topSize = textSize(top);
   // The two together sit in the middle; the lower one shrinks until its lines fit under the other.
@@ -318,7 +283,7 @@ void TitlePicker::drawSetUp(const std::string &heading, const std::string &line)
       size *= kShrink;
     }
     TTF_SetFontSize(font_, size);
-    bottom = makeText(engine_, font_, line, kDim);
+    bottom = canvas_.text(line, kDim);
     TTF_SetTextWrapWidth(bottom, static_cast<int>(current.width * kTextWidth));
     bottomSize = textSize(bottom);
   } while (bottomSize.y > room && size > current.height * kSmallestShare);

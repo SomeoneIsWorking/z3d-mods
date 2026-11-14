@@ -13,7 +13,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import games
+from z3dmods import games, set_inputs
 
 # The manifest's name inside a game's installed mod folder.
 MANIFEST = "z3d-options.json"
@@ -71,11 +71,13 @@ def generate(repo: Path, game: str, out: Path) -> Path:
 def manifest(repo: Path, game: str, address: int, layers: set[str]) -> str:
     """`address` is the block's guest address: the payload's start. `layers` are the layer folders
     this install wrote; a layer switch without its folder is left out. "screens" tells the app's
-    overlay layout (app/src/screen_overlay.hpp) which touch screen is up."""
+    overlay layout (app/src/screen_overlay.hpp) which touch screen is up; "inputs" is what the
+    set was made from (set_inputs.py)."""
     items = [{"id": o.id, "label": o.label, "default": o.default} | ({"pad": o.pad} if o.pad else {})
              | ({"layer": o.layer} if o.layer else {})
              for o in load(repo, game) if o.layer is None or o.layer in layers]
-    document: dict[str, object] = {"address": address, "options": items}
+    document: dict[str, object] = {"address": address, "options": items,
+                                   set_inputs.KEY: set_inputs.digest(repo, game)}
     layout = games.layout(repo, game)
     if layout.active_screen is not None:
         document["screens"] = {"active": layout.active_screen, "table": layout.screens,

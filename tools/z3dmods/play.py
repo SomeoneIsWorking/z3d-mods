@@ -11,7 +11,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from z3dmods import app, ctr
+from z3dmods import app, ctr, set_inputs
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -51,32 +51,32 @@ def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> 
         rom = cfg.rom(game.title_id)
         if rom_folder is not None:
             rom = rom_folder / rom.name
-        entries.append({"rom": str(rom), "layout": game.screen_layout, "textures": app.uses_textures(game),
-                        "options": str(app.options_manifest(game))})
+        entry = {"rom": str(rom), "layout": game.screen_layout, "textures": app.uses_textures(game),
+                 "options": str(app.options_manifest(game))}
+        if cfg.packaged:
+            # The picker sets a game up again when its set was made from something else.
+            entry[set_inputs.KEY] = set_inputs.digest(cfg.repo, name)
+        entries.append(entry)
     path = folder / "library.json"
     path.write_text(json.dumps(entries, indent=2) + "\n")
     return path
 
 
 def picker_args(binary: Path, library: Path, font: Path, assets: Path, user: Path,
-                installer: list[str] | None = None) -> list[str]:
-    """`assets` is a port-assets copy, which the play HUD draws from; `installer` is the command
-    the picker runs on a dump whose set is missing from `user`."""
+                tools: tuple[str, ...] = ()) -> list[str]:
+    """`assets` is a port-assets copy, which the play HUD draws from; `tools` is this program as
+    the picker runs it, to set up a game whose set is missing from `user` (`setup`) and to take
+    the player's folders (`folders`)."""
     args = [str(binary), "--library", str(library), "--font", str(font), "--assets", str(assets), "--user", str(user),
             "--resolution", str(RESOLUTION), "--app-id", DESKTOP_ID]
-    return args + ["--installer", *installer] if installer else args
-
-
-def installer(cfg: Config, user: Path) -> list[str]:
-    """`z3dmods setup` on the user folder `user` and the config's mod downloads, as the app runs it."""
-    return [*cfg.tool_command, "setup", "--user", str(user), "--mods", str(cfg.mod_sources)]
+    return args + ["--tools", *tools] if tools else args
 
 
 def launch_args(cfg: Config, name: str | None, user: Path) -> list[str]:
     """The windowed app as the player runs it on the user folder `user`: game `name`, or the picker."""
     if name is None:
         return picker_args(app.binary(cfg), write_library(cfg, user), cfg.ui_font(), cfg.port_assets, user,
-                           installer(cfg, user))
+                           cfg.tool_command)
     return app.launch_args(cfg, GameSet.named(cfg.repo, name), user, RESOLUTION) + [
         "--title", TITLES[name], "--app-id", DESKTOP_ID]
 

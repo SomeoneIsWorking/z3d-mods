@@ -34,7 +34,7 @@ def install_set(args: argparse.Namespace) -> None:
 
 
 def setup_game(args: argparse.Namespace) -> None:
-    setup.setup(config.load(), args.rom, args.user, args.mods)
+    setup.setup(config.load(), args.rom, args.user)
 
 
 def run_steps(args: argparse.Namespace) -> None:
@@ -65,7 +65,9 @@ def input_check(args: argparse.Namespace) -> None:
 
 def build_package(args: argparse.Namespace) -> None:
     cfg = config.load()
-    print(package.build(cfg, args.out or cfg.repo / "build" / "package" / "z3d"))
+    built = package.build(cfg, args.out or package.folder(cfg))
+    print(built)
+    print(package.appimage(cfg, built))
 
 
 def install_shortcuts(args: argparse.Namespace) -> None:
@@ -86,7 +88,6 @@ def main() -> None:
     inst.set_defaults(run=install_set)
     made = commands.add_parser("setup", help="install the set of a dump's game into a z3d app user folder; the app's picker runs this")
     made.add_argument("--user", type=Path, required=True, help="the app's user folder (holds Azahar/)")
-    made.add_argument("--mods", type=Path, help="the player's mod downloads; env-assets/downloads without it")
     made.add_argument("rom", type=Path)
     made.set_defaults(run=setup_game)
     run = commands.add_parser("run", help="run the player's Azahar headless through scripted steps")
@@ -108,7 +109,7 @@ def main() -> None:
     app = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
     app.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
     app.set_defaults(run=play_game)
-    packed = commands.add_parser("package", help="build the z3d package folder for Linux")
+    packed = commands.add_parser("package", help="build the z3d package for Linux: its folder, and the AppImage of it")
     packed.add_argument("--out", type=Path, help="the folder to make; build/package/z3d without it")
     packed.set_defaults(run=build_package)
     probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key, mouse and pad events")

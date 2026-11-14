@@ -2,6 +2,7 @@
 
 - `tools/z3dmods/cli.py`: the `z3dmods` commands; composes the modules below.
 - `tools/z3dmods/config.py`: the one reader of the environment and the local settings: a checkout's `env-assets/local.json`, or a package's layout and the player's `folders.json`.
+- `shared/setup-ui` (beside this repo's parent, consumed by `app/CMakeLists.txt` like Lucent): the first-run screen every port shows; RmlUi from the `RmlUi` checkout beside it.
 - `tools/z3dmods/ctr.py`: decrypted CCI/NCCH/exheader/ExeFS/RomFS reading and `.code` LZ decompression.
 - `tools/z3dmods/zsi.py`: OoT3D and MM3D room files: header commands, their CMB models, replacing a model and moving what follows. Scene files: the collision's vertices and triangles, read and written.
 - `tools/z3dmods/cmb.py`: CMB models, OoT3D's version 6 and MM3D's 10: textures, materials, meshes, vertices; rewriting one shape's geometry.
@@ -28,10 +29,12 @@
 - `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad; the picker scenario runs the installed shortcut.
 - `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.
 - `tools/z3dmods/shortcut.py`: the per-machine desktop shortcut that runs `z3dmods play`.
-- `tools/z3dmods/setup.py`: `z3dmods setup --user <folder> <dump>`: the set of a dump's game installed into an app user folder; the app's picker runs it.
+- `tools/z3dmods/setup.py`: `z3dmods setup --user <folder> <dump>`: the set of a dump's game installed into an app user folder; the app's picker runs it. How a refusal is printed for the app.
+- `tools/z3dmods/set_inputs.py`: the digest of what of ours a set is made from (set, tables, patch, glyphs, tools), which the install writes into the options manifest and a package's library names.
+- `tools/z3dmods/glyphs.py`: port-assets' pad glyphs drawn large by ImageMagick, once per checkout or into a package (`prebuilt/glyphs/`), for the menu textures.
 - `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the package in another machine's `~/Games/z3d`, the player's data there kept and copied aside, with its shortcuts.
-- `tools/z3dmods/package.py`: `z3dmods package`: the Linux package folder: app, core and SDL3 libraries, a relocatable Python with the locked wheels, the tools, sets, prebuilt patches and assets.
-- `tools/z3dmods/packed.py`: the package's entry point (`python -m z3dmods.packed`): `play` over the player's dump folder, and `setup`.
+- `tools/z3dmods/package.py`: `z3dmods package`: the Linux package folder (an AppDir): app, every library it links but the C and C++ runtimes, a relocatable Python with the locked wheels, the tools, sets, prebuilt patches and glyphs, assets; and the AppImage of that folder.
+- `tools/z3dmods/packed.py`: the package's entry point (`python -m z3dmods.packed`): `play` over the player's dump folder, and what the picker runs: `folders` (takes a folder the player chose, keeps it in `folders.json`, writes the library) and `setup`.
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants; in a package, reads the table saved from it (`prebuilt/<game>/symbols.json`).
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld; saves a build for a package and reads it back there (`prebuilt/<game>/code.ips`, `hooks.json`).
@@ -53,10 +56,14 @@
   - `screen_overlay`: the overlay layout: pieces of the touch screen drawn on the top screen from the game's table of layouts (`patch/<game>/overlay.toml`) by which touch screen is up, and the mouse mapped back through them.
   - `hud`: the play HUD for every game: element kinds (hearts, meter, counter, button) read from guest memory by the game's table (`patch/<game>/hud.toml`) and drawn as quads of the atlas.
   - `hud_atlas`: port-assets SVGs, lettering and item icons rasterized at the window's size into the image the core draws.
-  - `set_install`: whether a game's set is in the user folder, and the tools' installer run on the player's dump as a child process when it is not.
+  - `tool_process`: one run of the tools as a child process: its printed lines and its refusal.
+  - `set_install`: whether a game's set in the user folder is the one the tools make now (missing, or made from other inputs), and the tools' setup run on the player's dump when it is not.
+  - `menu_canvas`: the SDL renderer and outline font the picker and its screens draw with between games.
+  - `folder_setup`: the first run's questions (dump folder, mods folder) on the shared setup screen (`shared/setup-ui`), answered in the folder browser and taken by the tools.
+  - `folder_browser`: the in-window folder chooser, by pad, keys or mouse.
   - `mod_swap`: the running game's patch put in, taken out or read again from disk, and its texture pack turned on and off.
   - `options_menu`: the picker's options screen for one game.
-  - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.
+  - `title_picker`: the in-window title picker (SDL3_ttf outline text on the menu canvas), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
   - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`).

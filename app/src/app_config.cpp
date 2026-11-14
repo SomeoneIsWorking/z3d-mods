@@ -12,7 +12,7 @@ constexpr std::string_view kUsage =
     "side_by_side|overlay] [--textures] [--options <json>] [--option <id>=<value>]... | "
     "--library <json> --font <ttf>) [--title <text>] "
     "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures] "
-    "[--installer <program> [<argument>]...]";
+    "[--tools <program> [<argument>]...]";
 
 constexpr std::array kLayouts{
     std::pair{std::string_view("default"), ScreenLayout::Default},
@@ -64,10 +64,10 @@ AppConfig AppConfig::parse(int argc, char **argv) {
       config.dumpTextures = true;
       continue;
     }
-    if (flag == "--installer") {
-      config.installer.assign(argv + i + 1, argv + argc);
-      if (config.installer.empty()) {
-        throw std::invalid_argument("--installer wants a program");
+    if (flag == "--tools") {
+      config.tools.assign(argv + i + 1, argv + argc);
+      if (config.tools.empty()) {
+        throw std::invalid_argument("--tools wants a program");
       }
       break;
     }

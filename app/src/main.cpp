@@ -5,10 +5,12 @@
 #include "core_log.hpp"
 #include "core_settings.hpp"
 #include "emulator.hpp"
+#include "folder_setup.hpp"
 #include "game_library.hpp"
 #include "game_options.hpp"
 #include "game_window.hpp"
 #include "hud.hpp"
+#include "menu_canvas.hpp"
 #include "mod_swap.hpp"
 #include "mouse_aim.hpp"
 #include "pad_input.hpp"
@@ -67,17 +69,28 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
 }
 
 int picker(const AppConfig &config, PadInput &pad) {
-  const GameLibrary library = GameLibrary::load(config.library);
+  GameWindow window(config, pad);
+  GameLibrary library = GameLibrary::load(config.library);
+  if (library.games().empty()) {
+    // The tools know no dump yet: the player says where theirs are, and the tools list them.
+    if (!config.tools.empty() && !FolderSetup(window, pad, config).run()) {
+      return 0;
+    }
+    library = GameLibrary::load(config.library);
+  }
+  if (library.games().empty()) {
+    throw std::runtime_error("library " + config.library.string() + " names no games");
+  }
   std::vector<GameOptions> options;
   for (const Game &game : library.games()) {
     options.push_back(loadOptions(config, game.setup));
   }
-  GameWindow window(config, pad);
-  SetInstall install(config.installer, config.userDir);
+  SetInstall install(config.tools, config.userDir);
   while (true) {
     std::optional<size_t> chosen;
     {
-      TitlePicker picker(window, pad, library, options, install, config.font);
+      const MenuCanvas canvas(window, config.font);
+      TitlePicker picker(canvas, window, pad, library, options, install);
       chosen = picker.run();
     }
     if (!chosen) {

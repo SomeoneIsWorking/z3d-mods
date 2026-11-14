@@ -86,12 +86,12 @@ GameWindow::~GameWindow() {
 
 void GameWindow::PollEvents() {
   ++frames_;
-  pump(true);
+  pump(true, {});
 }
 
-std::vector<SDL_FPoint> GameWindow::pollMenu() {
+std::vector<SDL_FPoint> GameWindow::pollMenu(const std::function<void(const SDL_Event &)> &each) {
   clicks_.clear();
-  pump(false);
+  pump(false, each);
   return std::exchange(clicks_, {});
 }
 
@@ -116,9 +116,12 @@ void GameWindow::boot(const std::string &title) {
   updateLayout();
 }
 
-void GameWindow::pump(bool inGame) {
+void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> &each) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
+    if (each) {
+      each(event);
+    }
     switch (event.type) {
     case SDL_EVENT_QUIT:
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:

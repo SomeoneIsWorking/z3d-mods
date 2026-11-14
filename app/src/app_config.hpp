@@ -23,6 +23,9 @@ struct GameSetup {
   bool customTextures = false;
   // The installed patch's z3d-options.json (game_options.hpp), relative to the user folder.
   std::filesystem::path options;
+  // What the tools would make the set from now (tools/z3dmods/set_inputs.py); empty for a set
+  // that is kept as it is.
+  std::string inputs;
   // Folders beside the game's mods romfs/ that are layered over it (the core's romfs_layers).
   std::vector<std::string> romfsLayers;
 };
@@ -35,9 +38,10 @@ struct AppConfig {
   // The tools' list of games (game_library.hpp) and the picker's outline font.
   std::filesystem::path library;
   std::filesystem::path font;
-  // The tools' installer for a game whose set is missing (set_install.hpp); the dump's path is
-  // added after it. Everything after --installer on the command line.
-  std::vector<std::string> installer;
+  // The tools' program and arguments (tools/z3dmods), which the picker runs to set up a game
+  // whose set is missing (set_install.hpp) and to take the player's folders (folder_setup.hpp).
+  // Everything after --tools on the command line.
+  std::vector<std::string> tools;
   // A port-assets copy (sets/, fonts/), which the play HUD draws from; none draws no HUD.
   std::filesystem::path assets;
   // Holds Azahar/ in the core's user layout (nand, sdmc, sysdata, load).
@@ -54,7 +58,7 @@ struct AppConfig {
 
   // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... | --library <json> --font <ttf>)
   //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
-  //     [--installer <program> [<argument>]...]
+  //     [--tools <program> [<argument>]...]
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
 };
 

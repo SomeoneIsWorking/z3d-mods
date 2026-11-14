@@ -11,12 +11,14 @@
 #include <SDL3/SDL_rect.h>
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 struct SDL_Window;
+union SDL_Event;
 
 namespace z3d::app {
 
@@ -38,8 +40,9 @@ public:
 
   // Called by the renderer at the end of every emulated frame.
   void PollEvents() override;
-  // The picker's pump: no touch; left clicks come back in window pixels.
-  [[nodiscard]] std::vector<SDL_FPoint> pollMenu();
+  // The picker's pump: no touch; left clicks come back in window pixels. `each` is also given
+  // every event, for a screen that reads them itself.
+  [[nodiscard]] std::vector<SDL_FPoint> pollMenu(const std::function<void(const SDL_Event &)> &each = {});
   // A game's title on the window and the window in its layout's shape (core_settings.hpp).
   void boot(const std::string &title);
 
@@ -81,7 +84,7 @@ public:
   }
 
 private:
-  void pump(bool inGame);
+  void pump(bool inGame, const std::function<void(const SDL_Event &)> &each);
   void fitToDisplay();
   void updateLayout();
   // Window coordinates to framebuffer pixels.

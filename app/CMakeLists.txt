@@ -12,6 +12,9 @@ add_subdirectory("${LUCENT_ROOT}" "${CMAKE_BINARY_DIR}/lucent" EXCLUDE_FROM_ALL)
 find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3-shared)
 find_package(SDL3_ttf REQUIRED CONFIG)
 find_package(SDL3_image REQUIRED CONFIG)
+# The shared first-run screen (RmlUi from the checkout beside it), after SDL3.
+set(SETUP_UI_ROOT "$ENV{HOME}/repo/shared/setup-ui" CACHE PATH "Shared setup-ui checkout")
+add_subdirectory("${SETUP_UI_ROOT}" "${CMAKE_BINARY_DIR}/setup-ui" EXCLUDE_FROM_ALL)
 
 add_executable(z3d
   src/main.cpp
@@ -22,6 +25,10 @@ add_executable(z3d
   src/game_options.cpp
   src/options_menu.cpp
   src/title_picker.cpp
+  src/menu_canvas.cpp
+  src/folder_setup.cpp
+  src/folder_browser.cpp
+  src/tool_process.cpp
   src/set_install.cpp
   src/game_window.cpp
   src/pad_input.cpp
@@ -34,5 +41,5 @@ add_executable(z3d
   src/hud_atlas.cpp
   src/mod_swap.cpp
   src/player.cpp)
-target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf SDL3_image::SDL3_image)
+target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf SDL3_image::SDL3_image setup_ui::setup_ui)
 target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)

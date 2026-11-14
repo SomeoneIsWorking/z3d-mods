@@ -19,7 +19,7 @@ from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, config, ctr, games, harness, play, shortcut, steps, symbols
+from z3dmods import app, config, ctr, games, harness, package, play, shortcut, source_check, steps, symbols
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -27,7 +27,7 @@ WIDTH, HEIGHT = 1280, 720
 # The player's Azahar keys (pad_input.cpp kKeys), as X keysyms.
 KEYS = {
     "a": "a", "b": "s", "x": "z", "y": "x", "start": "m", "select": "n", "l": "q", "r": "w",
-    "zl": "e", "dpad_left": "f",
+    "zl": "e", "dpad_left": "f", "confirm": "Return",
     "menu": "Escape", "reload_patch": "F5", "toggle_patch": "F6", "toggle_textures": "F7", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
 }
 PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
@@ -369,14 +369,16 @@ def _chord_mm3d(session: Session, pad: Gamepad) -> None:
 
 
 SETUP_GAME = "mm3d"
+# The game whose base mod the downloads hold as an archive this setup opens (The One Screen's .tar.gz).
+ARCHIVE_GAME = "oot3d"
 
 
-def _without_set(cfg: Config, user: Path, out: Path) -> None:
-    """The test's user folder with a load/ of its own that lacks SETUP_GAME's set: the other
+def _without_set(cfg: Config, user: Path, out: Path, name: str = SETUP_GAME) -> None:
+    """The test's user folder with a load/ of its own that lacks `name`'s set: the other
     games' folders are links to the installed ones."""
     load = user / "Azahar" / "load"
     load.unlink()
-    missing = GameSet.named(cfg.repo, SETUP_GAME).title_id
+    missing = GameSet.named(cfg.repo, name).title_id
     for kind in ("mods", "textures"):
         (load / kind).mkdir(parents=True)
         for folder in (cfg.azahar_data / "load" / kind).iterdir():
@@ -523,6 +525,115 @@ def _different_mod(cfg: Config, out: Path) -> Config:
     return replace(cfg, mod_sources=out / "mods")
 
 
+def _without_archive_set(cfg: Config, user: Path, out: Path) -> None:
+    _without_set(cfg, user, out, ARCHIVE_GAME)
+
+
+def _archived_mod(cfg: Config, out: Path) -> Config:
+    """A mods folder as a player has it after downloading: ARCHIVE_GAME's base mod still the
+    archive its site gives, its texture pack unpacked. Both are links to the checkout's copies."""
+    game = GameSet.named(cfg.repo, ARCHIVE_GAME)
+    mods = out / "mods"
+    mods.mkdir(parents=True)
+    unpacked = next(p for p in cfg.mod_sources.rglob(game.base["code_patch"]) if p.is_file())
+    download = next(p for p in cfg.mod_sources.iterdir() if unpacked.is_relative_to(p))
+    (archive,) = (p for p in download.iterdir() if p.is_file() and p.name.endswith(source_check.UNPACKED))
+    os.link(archive, mods / archive.name)
+    pack = next(p for p in sorted(cfg.mod_sources.rglob(game.textures["folder"])) if p.is_dir())
+    shutil.copytree(pack, mods / "textures" / pack.name, copy_function=os.link)
+    return replace(cfg, mod_sources=mods)
+
+
+def _setup_archive(session: Session, pad: Gamepad) -> None:
+    """A base mod left as its downloaded archive: the setup unpacks it and the game boots on it."""
+    session.expect("picker: on Ocarina")
+    session.wait(2)
+    session.shot("not-set-up")
+    pad.button("a")
+    session.expect("Unpacking", 60)
+    session.expect("the set is in place", 1200)
+    session.expect("booting")
+    session.wait(30)
+    session.key("start")
+    session.wait(10)
+    session.shot("booted")
+
+
+# The home folder the first run's browser opens in (_first_run_home), by row.
+FIRST_RUN_FOLDERS = ("Empty", "Mods", "ROM")
+
+
+def _first_run_home(cfg: Config, out: Path) -> Path:
+    """A home folder for the first run: an empty folder, the mod downloads and ROM/3DS with the
+    player's dumps beside a file that is none."""
+    home = out / "home"
+    (home / "Empty").mkdir(parents=True)
+    (home / "Mods").symlink_to(cfg.mod_sources, target_is_directory=True)
+    dumps = home / "ROM" / "3DS"
+    dumps.mkdir(parents=True)
+    for rom in cfg.roms.values():
+        (dumps / rom.name).symlink_to(rom)
+    (dumps / "notes.txt").write_text("not a dump\n")
+    return home
+
+
+def _browse_to(session: Session, pad: Gamepad, *names: str) -> None:
+    """Walks the folder browser, just opened, down into each of `names` with the pad: the stick
+    down to its row, then A."""
+    for name in names:
+        session.expect("folders: row Use this folder")
+        for _ in range(64):
+            pad.stick(0, 32767, 0.12)
+            # Long enough centred for the app to see the stick let go.
+            session.wait(0.1)
+            if f"folders: row {name}" in session.expect("folders: row"):
+                break
+        pad.button("a")
+        session.expect(f"/{name} (")
+
+
+def _first_run(session: Session, pad: Gamepad) -> None:
+    """A package started with nothing known: the window asks for the dump folder and the mods
+    folder, each chosen in its folder browser, and the picker opens over the dumps found. A
+    folder without a dump is refused on the screen."""
+    session.expect("folders: asking --roms")
+    session.wait(2)
+    session.shot("ask-roms")
+    pad.button("a")
+    session.expect("folders: in")
+    session.wait(1)
+    session.shot("browser-home")
+    _browse_to(session, pad, "Empty")
+    pad.button("x")
+    session.expect("folders: refused --roms")
+    session.wait(1)
+    session.shot("roms-refused")
+    pad.button("a")
+    session.expect("folders: in")
+    _browse_to(session, pad, "ROM", "3DS")
+    session.wait(1)
+    session.shot("browser-dumps")
+    pad.button("a")
+    session.expect("folders: asking --mods")
+    session.wait(2)
+    session.shot("ask-mods")
+    session.key("confirm")
+    session.expect("folders: in")
+    _browse_to(session, pad, "Mods")
+    session.wait(1)
+    session.shot("browser-mods")
+    # The first row, "Use this folder", with the mouse.
+    session.click(0.5, 0.255)
+    session.expect("folders: took --mods")
+    session.expect("picker: on")
+    session.wait(2)
+    session.shot("picker")
+    pad.stick(32767, 0, 0.3)
+    session.expect("picker: on Majora")
+    session.wait(1)
+    session.shot("picker-second")
+
+
 def _menu_pad(session: Session, pad: Gamepad) -> None:
     """The menus read the pad by its own button names whatever game was played last: after
     OoT3D, whose set trades X and Y on their way to the game, X still opens the options and
@@ -658,24 +769,39 @@ DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d", "aim":
 # What a scenario puts in its user folder before the app starts.
 PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "aim": _oot3d_chord_file,
            "aim-mm3d": _mm3d_chord_file, "setup": _without_set,
-           "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set}
+           "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
+           "setup-archive": _without_archive_set}
 # Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.
 PICKER = {"menu-pad": _menu_pad, "setup": _setup, "setup-wrong-dump": _setup_refused, "setup-missing-mod": _setup_refused,
-          "setup-different-mod": _setup_refused}
+          "setup-different-mod": _setup_refused, "setup-archive": _setup_archive}
 # The player's files a picker scenario runs on, when they are not the config's.
-FILES = {"setup-wrong-dump": _wrong_dump, "setup-missing-mod": _missing_mod, "setup-different-mod": _different_mod}
-SCENARIOS = {**DIRECT, **PICKER, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
+FILES = {"setup-wrong-dump": _wrong_dump, "setup-missing-mod": _missing_mod, "setup-different-mod": _different_mod,
+         "setup-archive": _archived_mod}
+# Scenarios on the package `z3dmods package` built, started with nothing known: by the folder's
+# launcher, and as the AppImage.
+PACKAGE = {"first-run": _first_run, "first-run-appimage": _first_run}
+PACKAGE_PROGRAM = {"first-run": lambda cfg: package.folder(cfg) / "z3d",
+                   "first-run-appimage": lambda cfg: package.folder(cfg).with_name(package.APPIMAGE)}
+SCENARIOS = {**DIRECT, **PICKER, **PACKAGE, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:
     user = out / "user"
+    if scenario in PACKAGE:
+        launcher = PACKAGE_PROGRAM[scenario](cfg)
+        if not launcher.exists():
+            raise RuntimeError(f"{launcher} is missing; run z3dmods package")
+        user.mkdir(parents=True)
+        return Session(out, [str(launcher)], {config.APP_DATA_ENV: str(user), "HOME": str(_first_run_home(cfg, out))})
     app.seed_user(cfg, user, fresh=True)
     if scenario in PREPARE:
         PREPARE[scenario](cfg, user, out)
     if scenario in DIRECT:
         return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user))
     if scenario in PICKER:
-        return Session(out, play.launch_args(FILES[scenario](cfg, out) if scenario in FILES else cfg, None, user))
+        files = FILES[scenario](cfg, out) if scenario in FILES else cfg
+        # The picker's tools are a program of their own: they are told the test's downloads.
+        return Session(out, play.launch_args(files, None, user), {config.MOD_SOURCES_ENV: str(files.mod_sources)})
     entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"
     if not entry.exists():
         raise RuntimeError(f"{entry} is missing; run z3dmods shortcut")
