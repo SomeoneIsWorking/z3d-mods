@@ -27,9 +27,7 @@ constexpr float kKeyLabelShare = 0.45F;
 constexpr float kIconShare = 0.68F;
 constexpr float kGlyphShare = 0.46F;
 // An item's count against its button, and a disabled item's opacity.
-constexpr float kCountShare = 0.34F;
-// The clear margin around a frame's art against its size (port-assets hud/ring and hud/slot).
-constexpr float kFrameMargin = 3.0F / 72.0F;
+constexpr float kCountShare = 0.3F;
 constexpr float kDimmed = 0.4F;
 // A counter's digits against its icon's height, and the gap before them.
 constexpr float kDigitShare = 0.62F;
@@ -293,11 +291,6 @@ HudSprite Hud::art(const std::string &name, float width, float height) {
   return atlas_->image(icons_ / (name + ".png"), static_cast<int>(width), static_cast<int>(height));
 }
 
-void Hud::number(uint32_t value, int height, HudInk ink, float baseline, float edge, bool fromRight) {
-  const HudSprite sprite = atlas_->text(std::to_string(value), height, ink);
-  quad(sprite, {fromRight ? edge - sprite.w : edge, baseline - sprite.base, sprite.w, sprite.h});
-}
-
 void Hud::draw(const Element &element) {
   // Whole window pixels, so a sprite is drawn pixel for pixel.
   OverlayRect box = overlayWindowRect(width_, height_, element.rect);
@@ -360,8 +353,10 @@ void Hud::draw(const Element &element) {
       limit = element.limits[std::min<size_t>(tier, element.limits.size() - 1)];
     }
     const float digit = std::round(box.h * kDigitShare);
-    number(*value, static_cast<int>(digit), limit && *value >= *limit ? HudInk::Full : HudInk::Light,
-           box.y + std::round((box.h + digit) / 2.0F), box.x + box.h + std::round(box.h * kCounterGap), false);
+    const HudSprite number = atlas_->text(std::to_string(*value), static_cast<int>(digit),
+                                          limit && *value >= *limit ? HudInk::Full : HudInk::Light);
+    quad(number, {box.x + box.h + std::round(box.h * kCounterGap),
+                  box.y + std::round((box.h + digit) / 2.0F) - number.base, number.w, number.h});
     return;
   }
   case Kind::Button: {
@@ -380,11 +375,10 @@ void Hud::draw(const Element &element) {
               ? read({element.ammo.address + counted->second * element.ammo.bytes, element.ammo.bytes})
               : std::nullopt;
       if (count) {
-        // In the button's bottom right corner on a plate, so the frame's rim never shows through it.
-        const int digit = static_cast<int>(std::round(box.w * kCountShare));
-        const float margin = std::round(box.w * kFrameMargin);
-        number(*count, digit, HudInk::Plate, box.y + box.h - margin - static_cast<float>(HudAtlas::outline(digit)),
-               box.x + box.w - margin, true);
+        // A plate hanging off the ring's bottom, centred: it starts where the icon ends and hides the rim.
+        const HudSprite plate =
+            atlas_->text(std::to_string(*count), static_cast<int>(std::round(box.w * kCountShare)), HudInk::Plate);
+        quad(plate, {box.x + std::round((box.w - plate.w) / 2.0F), box.y + inset + size, plate.w, plate.h});
       }
     }
     if (const std::optional<uint32_t> action = chord ? std::nullopt : read(element.label);

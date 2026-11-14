@@ -219,8 +219,9 @@ an overlay table, while every condition of `hud.toml`'s `show` holds.
 
 Lettering is port-assets' outline typeface sized by its capitals' height, with a dark outline,
 cut to its ink and placed by its baseline. A number is one piece of lettering. An item's count
-sits on a solid dark plate in its button's bottom right corner, inside the frame's art, so the
-ring's rim never shows between its digits. `hearts` picks one of the game's five hearts (empty,
+sits on a solid dark plate that hangs off the ring's bottom, centred: it starts where the icon
+ends, so it covers none of the icon, and the ring's rim never shows between its digits
+(`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100, released and with the chord). `hearts` picks one of the game's five hearts (empty,
 a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can read one entry
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
 a `limit` (the game's table by tier, OoT3D's `gUpgradeCapacities`) or `limits` (ours, MM3D).

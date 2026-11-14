@@ -105,8 +105,6 @@ private:
   void quad(const HudSprite &sprite, const OverlayRect &at, float opacity = 1.0F);
   // The game's art of that name, scaled to the size.
   [[nodiscard]] HudSprite art(const std::string &name, float width, float height);
-  // A number drawn as one piece of lettering on `baseline`, ending at `edge` or starting there.
-  void number(uint32_t value, int height, HudInk ink, float baseline, float edge, bool fromRight);
   // Whether the chord is held and this button then shows an item instead: `chordValue`.
   [[nodiscard]] bool chordContent(const Element &element) const;
   // The pad glyph or key cap of what presses a button element, on its top left corner.

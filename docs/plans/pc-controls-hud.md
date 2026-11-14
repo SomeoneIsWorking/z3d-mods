@@ -80,8 +80,9 @@ RE based instead of copying patches of bottom screen".
   second page's X and Y items.
 - Not on the HUD: the first page's I and II items. The bindings that press them stay as they are
   (`kChords`, each set's own I and II buttons).
-- Counts sit on a dark plate in a button's corner: the ring's rim behind a bare count read as a
-  decimal point ("30" as "3.0").
+- Counts sit on a dark plate: the ring's rim behind a bare count read as a decimal point ("30"
+  as "3.0"). The plate hangs below the ring, off the icon ("numbers overlap the icons too much"
+  about the plate in the ring's corner).
 - The rupee, the key and the hearts are the game's own art, the texture pack's copy ("use the 4k
   ones"); frames, the meter and glyphs stay vector.
 
