@@ -19,8 +19,8 @@ class Layout:
     cutscene_frames: int
     cutscene_script: int
     scene: int
-    # PlayState offset of the player actor pointer and the actor's world position; OoT3D only: the
-    # main camera's look-at and eye.
+    # PlayState offsets of the player actor pointer and the camera's look-at and eye, and the
+    # actor's world position.
     player: int | None = None
     actor_position: int | None = None
     # A teleport writes all three: the player restores its position from home while it stands,
@@ -101,6 +101,8 @@ def _mm3d(d: symbols.Decomp) -> Layout:
         actor_position=symbols.offset(d, "Actor.world"),
         actor_previous=symbols.offset(d, "Actor.prevPos"),
         actor_home=symbols.offset(d, "Actor.home"),
+        camera_at=symbols.offset(d, "PlayState.viewAt"),
+        camera_eye=symbols.offset(d, "PlayState.viewEye"),
         active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
         screens=symbols.global_(d, "gUiScreens"),
         screen_placements=_mm3d_placements(d),

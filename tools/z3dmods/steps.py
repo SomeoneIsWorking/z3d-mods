@@ -112,10 +112,7 @@ def _wait_script(session: Session, layout: Layout, script: int, button: str,
 
 
 WALK_SAMPLE = 0.1
-# The player turns toward a new pad angle over a few frames; the camera is read after them.
-WALK_TURN = 0.2
 WALK_ARRIVED = 4.0
-WALK_SETTLED = math.radians(20)
 # The pad eases off inside this distance, down to the weakest push that still moves the player.
 WALK_SLOW_WITHIN = 60.0
 WALK_SLOWEST = 0.65
@@ -123,40 +120,27 @@ STICK_FULL = 32767
 
 
 def _walk(session: Session, layout: Layout, x: float, z: float, timeout: float, log) -> None:
-    """Steers the circle pad toward (x, z). The pad's angle is relative to the camera, so the
-    camera's yaw is read back from where each push moved the player."""
+    """Steers the circle pad toward (x, z): the pad's up is away from the camera's eye."""
     stick = getattr(session, "stick", None)
     if stick is None:
         raise RuntimeError("walk is not available on this backend")
+    if layout.camera_eye is None:
+        raise RuntimeError("walk needs the camera's layout")
     player = _player(session, layout)
-
-    def position() -> tuple[float, float, float]:
-        now = struct.unpack("<3f", session.read(player + layout.actor_position, 12))
-        log(f"walk {now[0]:.1f} {now[1]:.1f} {now[2]:.1f}")
-        return now
-
-    # Yaws turn from +z toward +x; the pad's turn from up toward right, which is the other way.
-    # The first push is a slow one straight up the pad, to find the camera.
-    camera = None
-    held = None
-    last = position()
-    for _ in range(round(timeout / (WALK_TURN + WALK_SAMPLE))):
-        away = math.hypot(x - last[0], z - last[2])
+    play = _play(session, layout)
+    for _ in range(round(timeout / WALK_SAMPLE)):
+        here = struct.unpack("<3f", session.read(player + layout.actor_position, 12))
+        log(f"walk {here[0]:.1f} {here[1]:.1f} {here[2]:.1f}")
+        away = math.hypot(x - here[0], z - here[2])
         if away <= WALK_ARRIVED:
             return
-        pad = 0.0 if camera is None else camera - math.atan2(x - last[0], z - last[2])
-        push = STICK_FULL * (WALK_SLOWEST if camera is None else min(1.0, max(WALK_SLOWEST, away / WALK_SLOW_WITHIN)))
-        along = (str(round(math.sin(pad) * push)), str(round(-math.cos(pad) * push)))
-        stick(*along, str(WALK_TURN))
-        turned = position()
-        stick(*along, str(WALK_SAMPLE))
-        last = position()
-        # A push tells the camera only once the player has turned onto it.
-        settled = held is None or abs(math.remainder(pad - held, math.tau)) < WALK_SETTLED
-        if settled and math.hypot(last[0] - turned[0], last[2] - turned[2]) > 0.5:
-            camera = math.atan2(last[0] - turned[0], last[2] - turned[2]) + pad
-        held = pad
-    raise RuntimeError(f"walk did not reach {x}, {z} within {timeout}s (at {last})")
+        eye = struct.unpack("<3f", session.read(play + layout.camera_eye, 12))
+        at = struct.unpack("<3f", session.read(play + layout.camera_at, 12))
+        # Yaws turn from +z toward +x; the pad's turn from up toward right, which is the other way.
+        pad = math.atan2(at[0] - eye[0], at[2] - eye[2]) - math.atan2(x - here[0], z - here[2])
+        push = STICK_FULL * min(1.0, max(WALK_SLOWEST, away / WALK_SLOW_WITHIN))
+        stick(str(round(math.sin(pad) * push)), str(round(-math.cos(pad) * push)), str(WALK_SAMPLE))
+    raise RuntimeError(f"walk did not reach {x}, {z} within {timeout}s (at {here})")
 
 
 def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
