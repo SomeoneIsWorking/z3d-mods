@@ -199,8 +199,8 @@ def _oot3d(session: Session, pad: Gamepad) -> None:
 
 OOT3D_BOOT = ["wait:20", "start", "wait:3", "a", "wait:2", "a", "wait:8"]
 # chord_items.cpp's Store in the save's unused bytes: the marker, then the child's away page,
-# a slot for each of Y, X, I and II and the grid node each waits in.
-OOT3D_STORE = "c4ffff{slot:02x}ff00000000"
+# a slot for each of the game's Y, X, I and II and the grid node each waits in.
+OOT3D_STORE = "c4ff{x:02x}ff{ii:02x}00000000"
 OOT3D_AMMO = 30
 # Inside the Deku Tree: a file saved in a dungeon loads there, and the Slingshot is usable.
 OOT3D_DEKU_TREE = 0x0
@@ -223,19 +223,20 @@ def _copy_file(made: Path, user: Path) -> None:
 
 
 def _oot3d_chord_file(cfg: Config, user: Path, out: Path) -> None:
-    """File 1 with a Slingshot on item I of the child's second page, written by the game's own
-    save: the item goes into the inventory, the game puts it in the item screen's grid, the
-    page's bytes name it, and autosave writes the file on a scene change."""
+    """File 1 with a Slingshot on X and a Deku Stick on II of the child's second page, written
+    by the game's own save: the items go into the inventory, the game puts them in the item
+    screen's grid, the page's bytes name them, and autosave writes the file on a scene change."""
     d = symbols.load(cfg.repo, "oot3d")
     save = symbols.global_(d, "gSaveContext")
     inventory = save + symbols.offset(d, "SaveContext.inventory")
-    slot = d.define("SLOT_SLINGSHOT")
-    script = OOT3D_BOOT + [
-        f"poke:{inventory + symbols.offset(d, 'Inventory.items') + slot:#x},{d.define('ITEM_SLINGSHOT'):02x}",
-        f"poke:{inventory + symbols.offset(d, 'Inventory.ammo') + slot:#x},{OOT3D_AMMO:02x}",
-        "wait:1",
-        f"poke:{save + symbols.offset(d, 'SaveContext.unused_6C'):#x},{OOT3D_STORE.format(slot=slot)}",
-        "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
+    items = {name: (d.define(f"SLOT_{name}"), d.define(f"ITEM_{name}")) for name in ("SLINGSHOT", "STICK")}
+    script = list(OOT3D_BOOT)
+    for slot, item in items.values():
+        script += [f"poke:{inventory + symbols.offset(d, 'Inventory.items') + slot:#x},{item:02x}",
+                   f"poke:{inventory + symbols.offset(d, 'Inventory.ammo') + slot:#x},{OOT3D_AMMO:02x}"]
+    store = OOT3D_STORE.format(x=items["SLINGSHOT"][0], ii=items["STICK"][0])
+    script += ["wait:1", f"poke:{save + symbols.offset(d, 'SaveContext.unused_6C'):#x},{store}",
+               "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
     _copy_file(_harness_file(cfg, "oot3d", script, out), user)
 
 
@@ -251,24 +252,25 @@ MM3D_AWAY_ROW = 1
 
 
 def _mm3d_chord_file(cfg: Config, user: Path, out: Path) -> None:
-    """File 1 at South Clock Town's owl statue with a bow on Y of the second page, written by
-    the game's own save there."""
+    """File 1 at South Clock Town's owl statue with bombs on X and a bow on II of the second
+    page, written by the game's own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
-    slot, item = d.define("SLOT_BOW"), d.define("ITEM_BOW")
     away = (save + symbols.offset(d, "SaveData.equipment") + symbols.offset(d, "EquipmentData.buttonSlots")
-            + MM3D_AWAY_ROW * (d.define("EQUIP_BUTTON_II") + 1) + d.define("EQUIP_BUTTON_Y"))
-    script = MM3D_BOOT + [
-        f"poke:{save + symbols.offset(d, 'SaveData.items') + slot:#x},{item:02x}",
-        f"poke:{save + symbols.offset(d, 'SaveData.ammo') + item:#x},{MM3D_AMMO:02x}",
-        f"poke:{away:#x},{slot:02x}", "wait:1"] + MM3D_SAVE
-    _copy_file(_harness_file(cfg, "mm3d", script, out), user)
+            + MM3D_AWAY_ROW * (d.define("EQUIP_BUTTON_II") + 1))
+    script = list(MM3D_BOOT)
+    for name, button in (("BOMB", "X"), ("BOW", "II")):
+        slot, item = d.define(f"SLOT_{name}"), d.define(f"ITEM_{name}")
+        script += [f"poke:{save + symbols.offset(d, 'SaveData.items') + slot:#x},{item:02x}",
+                   f"poke:{save + symbols.offset(d, 'SaveData.ammo') + item:#x},{MM3D_AMMO:02x}",
+                   f"poke:{away + d.define(f'EQUIP_BUTTON_{button}'):#x},{slot:02x}"]
+    _copy_file(_harness_file(cfg, "mm3d", script + ["wait:1"] + MM3D_SAVE, out), user)
 
 
 def _chord(session: Session, pad: Gamepad) -> None:
-    """The second item page from a real pad, in a file with a Slingshot on its item I: with LB
-    held the HUD shows the page and the pad's A, held, aims the Slingshot; released, the first
-    page is back and A is the game's A again."""
+    """The second item page from a real pad, in a file with a Slingshot on its X and a Deku
+    Stick on its II: with LB held the HUD shows the page, the pad's X, held, aims the Slingshot
+    and the pad's B takes the stick in hand; released, the first page is back."""
     session.wait(20)
     session.key("start")
     session.wait(3)
@@ -280,18 +282,22 @@ def _chord(session: Session, pad: Gamepad) -> None:
     pad.hold("lb", True)
     session.wait(1)
     session.shot("chord-page")
-    pad.hold("a", True)
+    pad.hold("x", True)
     session.wait(2)
-    session.shot("chord-a-aims")
-    pad.hold("a", False)
-    session.wait(2)
-    session.shot("chord-a-released")
+    session.shot("chord-x-aims")
+    pad.hold("x", False)
     pad.hold("lb", False)
     session.wait(1)
-    session.shot("released")
-    pad.button("a")
+    pad.button("b")
     session.wait(2)
-    session.shot("a")
+    session.shot("released")
+    pad.hold("lb", True)
+    session.wait(1)
+    pad.button("b")
+    session.wait(2)
+    session.shot("chord-b-stick")
+    pad.hold("lb", False)
+    session.wait(1)
 
 
 def _mm3d(session: Session, pad: Gamepad) -> None:
@@ -315,33 +321,38 @@ def _mm3d(session: Session, pad: Gamepad) -> None:
 
 
 def _chord_mm3d(session: Session, pad: Gamepad) -> None:
-    """The second item page from a real pad in MM3D, in a file with a bow on its Y: with LB held
-    the HUD shows the page and the pad's Y, held, aims the bow; released, the first page is back."""
+    """The second item page from a real pad in MM3D, in a file with bombs on its X and a bow on
+    its II: with LB held the HUD shows the page, the pad's B, held, aims the bow and the pad's X
+    takes out a bomb; released, the first page is back."""
     session.wait(30)
     session.key("start")
     session.wait(12)
     session.key("a")
     session.wait(5)
-    session.shot("files")
     session.key("a")
     session.wait(4)
-    session.shot("file-1")
     session.key("a")
     session.wait(15)
     session.shot("page-1")
     pad.hold("lb", True)
     session.wait(1)
     session.shot("chord-page")
-    pad.hold("y", True)
+    pad.hold("b", True)
     session.wait(2)
-    session.shot("chord-y-aims")
-    pad.hold("y", False)
-    session.wait(2)
-    pad.button("b")
-    session.wait(2)
+    session.shot("chord-b-aims")
+    pad.hold("b", False)
     pad.hold("lb", False)
     session.wait(1)
+    pad.button("b")
+    session.wait(2)
     session.shot("released")
+    pad.hold("lb", True)
+    session.wait(1)
+    pad.button("x")
+    session.wait(1.5)
+    session.shot("chord-x-bomb")
+    pad.hold("lb", False)
+    session.wait(1)
 
 
 def _hotswap(session: Session, pad: Gamepad) -> None:

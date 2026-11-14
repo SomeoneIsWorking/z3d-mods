@@ -25,16 +25,22 @@ glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mo
   the chord button and, per face button, the `ItemButton` it presses. The chord is held while
   `state().buttons[NativeButton::Debug]` is set. Until our HUD draws from it, the sets' HUD art
   is out of date: The One Screen's LB on item I and MM3D's LB badge on View name the old button.
+- The pad's X and Y are the X and Y item buttons on both pages, pressed as the bound game's
+  layout says. The One Screen trades the pad word's X and Y bits in play (its
+  `source/input/policy.h`; on the harness the 3DS X reads 0x800 in `GameState.buttonsHeld`,
+  `oot-ch15`), so for OoT3D the pad's X holds the 3DS Y and the pad's Y the 3DS X. MM3D reads
+  them straight (0x400 for X, `mm-xy1`).
 - Shown with a real pad's events, in a file the test makes on the harness with the game's own
-  save (an item poked into the inventory and named on the second page):
-  - OoT3D (`z3dmods inputtest chord`, File 1 saved inside the Deku Tree, a Slingshot on item I of
-    the second page): LB held, the HUD draws the Slingshot and its 30 seeds; LB and A held, Link
-    aims it in first person; both released, the buttons are empty and A is the game's A.
-  - MM3D (`z3dmods inputtest chord-mm3d`, File 1 saved at South Clock Town's owl statue, a bow
-    on Y of the second page): LB held, the HUD draws the bow and its 30 arrows on Y; LB and Y
-    held, Link aims it; released, Y is empty again.
+  save (items poked into the inventory and named on the second page):
+  - OoT3D (`z3dmods inputtest chord`, File 1 saved inside the Deku Tree, a Slingshot on X and a
+    Deku Stick on II of the second page): LB held, the HUD draws the Slingshot on X and the
+    stick on B's slot; LB and X held, Link aims the Slingshot in first person; LB and B, Link
+    has the stick in hand. Before the pad's X held the 3DS Y for this game, LB and X did nothing.
+  - MM3D (`z3dmods inputtest chord-mm3d`, File 1 saved at South Clock Town's owl statue, bombs
+    on X and a bow on II of the second page): LB held, the HUD draws both; LB and B held, Link
+    aims the bow; LB and X, he lifts a bomb.
+  - A on the chord page (item I) aimed the Slingshot and Y the bow in the test's earlier files.
   - The Slingshot is not usable in Link's house, where a child's file saved outdoors loads.
-- Not shown: B on the chord page (item II).
 
 ## Our own HUD
 - One HUD per game drawn from the game's own state and art, with port-assets' Xbox glyphs on every

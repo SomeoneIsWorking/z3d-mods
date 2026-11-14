@@ -74,14 +74,15 @@ constexpr uint32_t bit(Button button) {
 // The chord is the left bumper in both games: the left index finger holds it while the left
 // thumb steers and the right thumb presses a face button, which a stick's click does not allow.
 // It holds pad bit 12 (the core's Debug button), which no 3DS button sets and our patches read
-// as "second item page" (plans/pad-features.md). X and Y keep their own item buttons; A and B
-// press I and II, as each game's mod set presses them.
+// as "second item page" (plans/pad-features.md). X and Y are the X and Y item buttons on both
+// pages; A and B press I and II on the second, as each game's mod set presses them.
 constexpr std::array kChords{
-    // Ocarina of Time 3D, The One Screen: I is ZL, II is ZR.
+    // Ocarina of Time 3D, The One Screen: I is ZL, II is ZR, and in play it trades the pad
+    // word's X and Y bits (its source/input/policy.h), so the 3DS Y presses the game's X.
     ChordLayout{"0004000000033500",
                 SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
-                {ChordSlot{SDL_GAMEPAD_BUTTON_WEST, ItemButton::X, bit(Settings::NativeButton::X)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_NORTH, ItemButton::Y, bit(Settings::NativeButton::Y)},
+                {ChordSlot{SDL_GAMEPAD_BUTTON_WEST, ItemButton::X, bit(Settings::NativeButton::Y)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_NORTH, ItemButton::Y, bit(Settings::NativeButton::X)},
                  ChordSlot{SDL_GAMEPAD_BUTTON_SOUTH, ItemButton::I, bit(Settings::NativeButton::ZL)},
                  ChordSlot{SDL_GAMEPAD_BUTTON_EAST, ItemButton::II, bit(Settings::NativeButton::ZR)}}},
     // Majora's Mask 3D, Project Restoration: I is ZR with X, II is ZR with Y.
@@ -267,8 +268,11 @@ void PadInput::readHost() {
         continue;
       }
       padHeld = true;
-      const auto *slot = chord ? std::ranges::find(chord_->slots, binding.pad, &ChordSlot::face) : nullptr;
-      held |= slot != nullptr && slot != chord_->slots.end() ? slot->buttons : bit(binding.button);
+      const auto *slot =
+          chord_ != nullptr ? std::ranges::find(chord_->slots, binding.pad, &ChordSlot::face) : nullptr;
+      const bool itemButton = slot != nullptr && slot != chord_->slots.end() &&
+                              (chord || slot->item == ItemButton::X || slot->item == ItemButton::Y);
+      held |= itemButton ? slot->buttons : bit(binding.button);
     }
     for (size_t i = 0; i < state.buttons.size(); ++i) {
       state.buttons[i] = state.buttons[i] || ((held >> i) & 1U) != 0;
