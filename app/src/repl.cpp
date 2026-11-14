@@ -3,6 +3,7 @@
 #include "emulator.hpp"
 #include "game_options.hpp"
 #include "game_window.hpp"
+#include "mod_swap.hpp"
 #include "pad_input.hpp"
 
 #include <lucent/log.h>
@@ -155,6 +156,22 @@ std::string Repl::execute(const std::string &line) {
     unsigned value = 0;
     if (!(args >> id >> value) || value > UINT8_MAX || !options_.set(id, static_cast<uint8_t>(value))) {
       return "err option <id> <value>";
+    }
+    options_.apply(emulator_, pad_);
+    return "ok";
+  }
+  if (command == "patch" || command == "textures") {
+    std::string state;
+    args >> state;
+    if (state != "on" && state != "off") {
+      return "err " + command + " on|off";
+    }
+    if (command == "textures") {
+      mods_.setTextures(state == "on");
+      return "ok";
+    }
+    if (!mods_.setPatch(state == "on")) {
+      return "err the patch did not apply";
     }
     options_.apply(emulator_, pad_);
     return "ok";

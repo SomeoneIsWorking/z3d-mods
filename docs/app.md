@@ -27,6 +27,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
 | `touch <x> <y>` / `touch off` | the stylus held at a pixel of the 320x240 touch screen, wherever the layout draws it, or lifted |
 | `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
+| `patch on` / `patch off` / `textures on` / `textures off` | swaps the running game's mods (Hotswap below) |
 
 Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
 (`default|single_screen|large_screen|side_by_side|overlay`), `--textures` and `--options <json>`, or `--library <json>` and
@@ -76,6 +77,33 @@ a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
 
 Adding a switch: an `[[option]]` in `patch/<game>/options.toml`, then read `options().<field>` from
 the generated `options.hpp` in the feature; the menu, the manifest and the stored file follow.
+
+## Hotswap
+`ModSwap` changes a running game's mods without a reboot, between two frames:
+
+- The patch: `patch on` writes the set's `code.ips` as it is on disk now, so a patch rebuilt by
+  `z3dmods install` replaces the running one; `patch off` puts the game's own code back. It
+  builds the code image the way the core's loader does (the loader's unpatched code, the set's
+  `code.bin` included, padded to the process image, then the core's own IPS reader), writes only
+  the bytes either patch changes below the patch's own pages, writes those pages whole (they
+  start at the options block, and their `.bss` starts over), and clears the CPU's translated
+  code. The options are applied again afterwards.
+- The textures: `textures on|off` sets the core's custom-texture switch; its cache is dropped and
+  refilled from the next frame. The core lists a pack's files once, so a pack changed on disk
+  still needs a reboot.
+- In the window: F5 reads the patch again, F6 takes it out or puts it back, F7 turns the textures
+  off or on. Run steps: `patch:<on|off>`, `textures:<on|off>`.
+- A patch that keeps state in the game's own data is swapped as it stands: take the patch out
+  with the chord button released, or the second item page stays on the buttons.
+- Not swapped: the base mod (`code.bin`, `exheader.bin`), `romfs/` and its layers, which the game
+  reads as it loads.
+
+Seen (`mm-swap1`, South Clock Town's owl statue, a bow on X): with the patch in, the chord button
+empties X; `patch off` and 0x317000 reads the game's own instruction and the chord does nothing;
+`patch on` and the hook is back, the chord empties X again and the statue still saves.
+`textures off` draws the 3DS's A on the action button, `textures on` the green A. In the window
+(`z3dmods inputtest hotswap`, real F7, F6 and F5 keys): the log names each swap ("patch out: 4112
+bytes written", "patch in") and the Lost Woods cutscene plays on through them.
 
 ## Overlay layout
 `overlay` is the app's own single screen for a game that keeps its HUD and menus on the touch
@@ -129,7 +157,7 @@ objects. Rebuild the app: `ninja -C build/app`.
 ## Data flow
 - `main` composes: `applyCoreSettings` (settings and user path, before anything reads them),
   `CoreLog`, `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
-  `EmuWindow`), `Emulator` (load, frames, memory, states, watches), then `Player` or
+  `EmuWindow`), `Emulator` (load, frames, memory, states, watches), `ModSwap`, then `Player` or
   `Repl`. With the picker: `GameLibrary` and a `GameOptions` per game, then per game `TitlePicker`
   (and its `OptionsMenu`), `applyGameSettings`, `GameWindow::boot` (title and the layout's window
   shape), a new `Emulator`, `GameOptions::apply` and `Player`.

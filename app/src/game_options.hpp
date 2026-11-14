@@ -43,6 +43,10 @@ public:
   // False for an unknown id or a value outside its choices.
   [[nodiscard]] bool set(std::string_view id, uint8_t value);
 
+  // The guest address of the patch's options block, where its own pages start; 0 without a patch.
+  [[nodiscard]] uint32_t blockAddress() const {
+    return address_;
+  }
   // The setup to boot with: the set's, with the app's own options applied.
   [[nodiscard]] GameSetup setup() const;
   // Writes the patch's switches into the running game's options block and sets the pad's.

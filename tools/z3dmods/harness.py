@@ -180,6 +180,14 @@ class HarnessSession:
         """Sets a game option (app/src/game_options.hpp) in the running game."""
         return self._send(f"option {name} {value}")
 
+    def patch(self, state: str) -> str:
+        """Puts the set's code.ips, as it is on disk now, into the running game (on) or takes it out (off)."""
+        return self._send(f"patch {state}")
+
+    def textures(self, state: str) -> str:
+        """Turns the texture pack on or off in the running game."""
+        return self._send(f"textures {state}")
+
     def watch(self, address: str, size: str) -> str:
         return self._send(f"watch {int(address, 0):x} {int(size, 0):x}")
 

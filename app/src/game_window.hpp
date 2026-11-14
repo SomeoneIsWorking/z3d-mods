@@ -27,6 +27,10 @@ struct TouchPoint {
   uint16_t y = 0;
 };
 
+// Keys the player's loop acts on while a game runs (mod_swap.hpp): F5 reads the patch again from
+// disk, F6 takes it out or puts it back, F7 turns the texture pack off or on.
+enum class ModKey : uint8_t { ReloadPatch, TogglePatch, ToggleTextures };
+
 class GameWindow final : public Frontend::EmuWindow {
 public:
   // Hidden windows are never mapped; their size is the screenshot layout at the render scale.
@@ -58,6 +62,11 @@ public:
     return std::exchange(menuRequested_, false);
   }
 
+  // The mod key pressed since the last call, if any.
+  [[nodiscard]] std::optional<ModKey> takeModKey() {
+    return std::exchange(modKey_, std::nullopt);
+  }
+
   [[nodiscard]] uint64_t framesShown() const {
     return frames_;
   }
@@ -78,6 +87,7 @@ private:
   uint64_t frames_ = 0;
   bool closeRequested_ = false;
   bool menuRequested_ = false;
+  std::optional<ModKey> modKey_;
   bool touching_ = false;
   OverlayPlacement overlay_ = OverlayPlacement::Split;
   std::vector<SDL_FPoint> clicks_;

@@ -27,6 +27,7 @@ add_executable(z3d
   src/frame.cpp
   src/repl.cpp
   src/screen_overlay.cpp
+  src/mod_swap.cpp
   src/player.cpp)
 target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)

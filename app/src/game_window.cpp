@@ -118,8 +118,17 @@ void GameWindow::pump(bool inGame) {
       updateLayout();
       break;
     case SDL_EVENT_KEY_DOWN:
-      if (event.key.scancode == SDL_SCANCODE_ESCAPE && !event.key.repeat) {
+      if (event.key.repeat) {
+        break;
+      }
+      if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
         menuRequested_ = true;
+      } else if (event.key.scancode == SDL_SCANCODE_F5) {
+        modKey_ = ModKey::ReloadPatch;
+      } else if (event.key.scancode == SDL_SCANCODE_F6) {
+        modKey_ = ModKey::TogglePatch;
+      } else if (event.key.scancode == SDL_SCANCODE_F7) {
+        modKey_ = ModKey::ToggleTextures;
       }
       break;
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN:

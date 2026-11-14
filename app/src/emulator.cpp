@@ -10,12 +10,14 @@
 #include "core/frontend/image_interface.h"
 #include "core/hle/kernel/kernel.h"
 #include "core/hle/kernel/process.h"
+#include "core/loader/loader.h"
 #include "core/memory.h"
 #include "video_core/gpu.h"
 #include "video_core/renderer_base.h"
 
 #include <lucent/log.h>
 
+#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <stdexcept>
@@ -179,6 +181,26 @@ bool Emulator::write(uint32_t address, std::span<const uint8_t> data) {
   }
   system_.Memory().WriteBlock(*process, address, data.data(), size);
   return true;
+}
+
+std::vector<uint8_t> Emulator::unpatchedImage() const {
+  std::vector<uint8_t> image;
+  const auto process = runningProcess(system_);
+  if (!process || system_.GetAppLoader().ReadCode(image) != Loader::ResultStatus::Success) {
+    return {};
+  }
+  uint32_t end = kImageBase;
+  while (mapped(system_, *process, end, Memory::CITRA_PAGE_SIZE)) {
+    end += Memory::CITRA_PAGE_SIZE;
+  }
+  image.resize(std::max<size_t>(image.size(), end - kImageBase));
+  return image;
+}
+
+void Emulator::codeChanged() {
+  for (uint32_t core = 0; core < system_.GetNumCores(); ++core) {
+    system_.GetCore(core).ClearInstructionCache();
+  }
 }
 
 bool Emulator::drainAsync() {

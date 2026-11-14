@@ -104,7 +104,8 @@ void placeOverlay(unsigned width, unsigned height, OverlayPlacement placement) {
   values.custom_bottom_y = static_cast<uint16_t>(touch.y);
   values.custom_bottom_width = static_cast<uint16_t>(touch.w);
   values.custom_bottom_height = static_cast<uint16_t>(touch.h);
-  values.custom_second_layer_opacity = placement == OverlayPlacement::Inset ? kInsetOpacity : kOpaque;
+  values.custom_second_layer_opacity =
+      placement == OverlayPlacement::Inset ? kInsetOpacity : kOpaque;
 }
 
 ScreenOverlay::ScreenOverlay(GameWindow &window, Emulator &emulator, const GameSetup &setup,
@@ -128,8 +129,9 @@ ScreenOverlay::ScreenOverlay(GameWindow &window, Emulator &emulator, const GameS
     return;
   }
   Screens found;
-  for (const auto &[name, field] : {std::pair{"active", &found.active}, std::pair{"table", &found.table},
-                                    std::pair{"hud", &found.hud}}) {
+  for (const auto &[name, field] :
+       {std::pair{"active", &found.active}, std::pair{"table", &found.table},
+        std::pair{"hud", &found.hud}}) {
     const lucent::json::Value *value = screens->find(name);
     if (value == nullptr || !value->integer()) {
       throw std::runtime_error(manifest.string() + ": \"screens\" wants active, table and hud");
@@ -138,7 +140,8 @@ ScreenOverlay::ScreenOverlay(GameWindow &window, Emulator &emulator, const GameS
   }
   const lucent::json::Value *placements = screens->find("placements");
   const lucent::json::Value *hidden = screens->find("hud_hidden");
-  if (placements == nullptr || placements->array() == nullptr || hidden == nullptr || hidden->array() == nullptr) {
+  if (placements == nullptr || placements->array() == nullptr || hidden == nullptr ||
+      hidden->array() == nullptr) {
     throw std::runtime_error(manifest.string() + ": \"screens\" wants placements and hud_hidden");
   }
   for (const lucent::json::Value &entry : *hidden->array()) {
@@ -152,7 +155,9 @@ ScreenOverlay::ScreenOverlay(GameWindow &window, Emulator &emulator, const GameS
     found.placements.push_back({parsePlacement(name), name == kHudScreen});
   }
   screens_ = found;
-  emulator_.onFrame([this] { update(); });
+  emulator_.onFrame([this] {
+    update();
+  });
 }
 
 OverlayPlacement ScreenOverlay::placement() const {
@@ -161,7 +166,8 @@ OverlayPlacement ScreenOverlay::placement() const {
     return OverlayPlacement::Split;
   }
   for (size_t i = 0; i < screens_->placements.size(); ++i) {
-    if (readPointer(emulator_, screens_->table + static_cast<uint32_t>(i * sizeof(uint32_t))) == active) {
+    if (readPointer(emulator_, screens_->table + static_cast<uint32_t>(i * sizeof(uint32_t))) ==
+        active) {
       const ScreenPlacement &screen = screens_->placements[i];
       return screen.followsHud && hudHidden() ? OverlayPlacement::TopOnly : screen.placement;
     }

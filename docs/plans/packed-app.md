@@ -30,6 +30,18 @@ own patches and of texture packs.
 - Third-party mods without a permissive license are never redistributed; the compatibility loaders
   avoid that by applying mods the player already has, not by bundling them.
 
+## Status (2026-11-14)
+- Built: the app (docs/app.md), the per-game options menu, and hotswap of our patch and of the
+  texture pack in a running game (`app/src/mod_swap`, docs/app.md "Hotswap"; F5, F6 and F7 in the
+  window).
+- The loaders that exist are the core's: `exheader.bin`, `code.bin`, one `code.ips` or
+  `code.bps`, `romfs/` and its layers, texture packs of either hash. The app adds none of its
+  own; hotswap reuses the core's loader and IPS reader.
+- Not built: the app checking a player's third-party files against a set's hashes and baking
+  the base mod itself. `z3dmods install` (Python) still does both, so a shipped app would need
+  that step in the app or the tools shipped with it. Hotswap of `romfs/` files and of a pack
+  changed on disk needs the core to drop what it listed at load.
+
 ## Open
 - Hidden-window mode for tools (the current harness is already that).
 - Input: real host events for the player; the tool path keeps the `input` command.

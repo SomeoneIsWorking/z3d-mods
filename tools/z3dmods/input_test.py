@@ -25,7 +25,7 @@ WIDTH, HEIGHT = 1280, 720
 # The player's Azahar keys (pad_input.cpp kKeys), as X keysyms.
 KEYS = {
     "a": "a", "b": "s", "x": "z", "y": "x", "start": "m", "select": "n", "l": "q", "r": "w",
-    "menu": "Escape", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
+    "menu": "Escape", "reload_patch": "F5", "toggle_patch": "F6", "toggle_textures": "F7", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
 }
 PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
                "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE}
@@ -194,6 +194,18 @@ def _mm3d(session: Session, pad: Gamepad) -> None:
     session.shot("skipped-to-woods")
 
 
+def _hotswap(session: Session, pad: Gamepad) -> None:
+    """MM3D's mods swapped while it runs: F7 turns the textures off and on, F6 takes the patch out
+    and puts it back, F5 reads it again; the game runs on (the log names each swap)."""
+    _mm3d(session, pad)
+    session.wait(25)
+    session.shot("woods")
+    for key in ("toggle_textures", "toggle_textures", "toggle_patch", "toggle_patch", "reload_patch"):
+        session.key(key)
+        session.wait(3)
+        session.shot(key)
+
+
 def _picker(session: Session, pad: Gamepad) -> None:
     """The shortcut's picker: keys boot OoT3D and Escape returns; the pad boots MM3D and Guide
     returns; a click boots OoT3D again."""
@@ -281,7 +293,9 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d}
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap}
+# The game a direct scenario launches, when it is not the scenario's name.
+DIRECT_GAME = {"hotswap": "mm3d"}
 SCENARIOS = {**DIRECT, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
@@ -289,7 +303,7 @@ def _session(cfg: Config, scenario: str, out: Path) -> Session:
     user = out / "user"
     app.seed_user(cfg, user, fresh=True)
     if scenario in DIRECT:
-        return Session(out, play.launch_args(cfg, scenario, user))
+        return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user))
     entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"
     if not entry.exists():
         raise RuntimeError(f"{entry} is missing; run z3dmods shortcut")

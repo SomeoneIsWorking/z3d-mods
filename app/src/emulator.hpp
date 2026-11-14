@@ -53,6 +53,14 @@ public:
   [[nodiscard]] bool read(uint32_t address, std::span<uint8_t> out) const;
   [[nodiscard]] bool write(uint32_t address, std::span<const uint8_t> data);
 
+  // Where the process image (code, data, .bss) starts.
+  static constexpr uint32_t kImageBase = 0x00100000;
+  // The game's code as its loader reads it (a set's code.bin included) before any code patch,
+  // padded with zeros to the size of the running process image.
+  [[nodiscard]] std::vector<uint8_t> unpatchedImage() const;
+  // After code was written: the CPU drops what it translated.
+  void codeChanged();
+
   [[nodiscard]] std::optional<std::vector<uint8_t>> saveState();
   [[nodiscard]] bool loadState(std::vector<uint8_t> state);
 

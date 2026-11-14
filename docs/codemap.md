@@ -45,6 +45,7 @@
   - `game_library`: the picker's games from the tools' library file, titles and icons from each dump's SMDH.
   - `game_options`: a game's options: the patch's switches from its manifest plus layout and textures, the player's stored choices, the write into the guest block.
   - `screen_overlay`: the overlay layout: the touch screen drawn over the top screen, placed by which touch screen the game has up.
+  - `mod_swap`: the running game's patch put in, taken out or read again from disk, and its texture pack turned on and off.
   - `options_menu`: the picker's options screen for one game.
   - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
