@@ -249,6 +249,9 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
     element.art = strings(entry, "art");
     element.tier = guest(entry, "tier");
     element.limit = guest(entry, "limit");
+    if (entry.find("none") != nullptr) {
+      element.none = integer(entry, "none", 0);
+    }
     if (element.kind == Kind::Hearts && element.art.size() < 2) {
       throw std::runtime_error(manifest.string() +
                                ": hud hearts want \"art\", a heart from empty to full");
@@ -474,7 +477,7 @@ void Hud::draw(const Element &element) {
     const uint32_t index = element.index.bytes != 0 ? read(element.index).value_or(0) : 0;
     const std::optional<uint32_t> value = read({element.value.address + index * element.value.bytes,
                                                 element.value.bytes, element.value.pointer});
-    if (!value) {
+    if (!value || value == element.none) {
       return;
     }
     const uint32_t tier = element.tier.bytes != 0 ? read(element.tier).value_or(0) : 0;

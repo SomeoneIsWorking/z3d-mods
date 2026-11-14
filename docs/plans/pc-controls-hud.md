@@ -353,6 +353,10 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   travel gives `camera`'s and `aim`'s frames (`camera-fast`, `aim-fast`; the log counts 800 by
   300 for `aim`'s 1600 by 600).
 - Not done: item counts are not coloured at capacity.
+- Small keys in both games: above the rupees in a dungeon, nothing before the first key (the game
+  keeps -1 there, a counter's `none`). MM3D's are by dungeon, each dungeon's scenes an element;
+  seen in Woodfall Temple (3) and Inverted Stone Tower (2), none in Snowhead, and OoT3D's Forest
+  Temple with none, then 2 (`mmkeys6`, `ootkeys8`).
 - Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
   game's own clock still draws and is not ours yet.

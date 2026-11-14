@@ -80,6 +80,9 @@ private:
     GuestValue tier;
     // Counter: the most it holds, drawn in the full colour: the game's table by `tier`.
     GuestValue limit;
+    // Counter: the value that stands for none yet (a dungeon's keys before the first), drawn as
+    // nothing.
+    std::optional<uint32_t> none;
     // Button and Panel: the frame (hud set). A button shows an item slot's content (`slot`), or
     // the item `value` reads, under the prompt of its slot or of the verb that presses it; while
     // the chord is held it shows `chordSlot` instead, where it has one. An item without an icon

@@ -110,12 +110,12 @@ def _guest_address(d: symbols.Decomp, terms: list[str | int]) -> int:
 
 def _resolved(d: symbols.Decomp, value: object) -> object:
     """hud.toml's `{ at = [...], through = "global" }` as `{ address, pointer }`, wherever it sits;
-    a `mask` or `shift` may be one of the decomp's defines."""
+    a `mask`, `shift` or the `equals` of a condition may be one of the decomp's defines."""
     if isinstance(value, list):
         return [_resolved(d, entry) for entry in value]
     if not isinstance(value, dict):
         return value
-    out = {key: d.define(entry) if key in ("mask", "shift") and isinstance(entry, str) else _resolved(d, entry)
+    out = {key: d.define(entry) if key in ("mask", "shift", "equals") and isinstance(entry, str) else _resolved(d, entry)
            for key, entry in value.items() if key not in ("at", "through")}
     if "at" in value:
         out["address"] = _guest_address(d, value["at"])
