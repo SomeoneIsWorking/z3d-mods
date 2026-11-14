@@ -70,6 +70,56 @@ RE based instead of copying patches of bottom screen".
 - Stopgap: a menu (Items, Masks, Gear, the map, the notebook) still shows the game's touch screen
   whole. The proper fix is those menus drawn by us or moved by a patch; the risk is only looks.
 
+### The button cluster (user, 2026-11-14)
+"Just show A B X Y only always and when cord is held it shows the alt versions."
+- The cluster is four buttons, A, B, X and Y, in the pad's diamond, top right, the same in both
+  games. A button's glyph never changes; only what it shows does.
+- Released: A is the action with its word, B the sword, X and Y their items.
+- Chord held: each shows what its press does then. A shows the I button's item and B the II
+  button's (the patch has traded the second page onto the game's four item buttons), X and Y the
+  second page's X and Y items.
+- Not on the HUD: the first page's I and II items. The bindings that press them stay as they are
+  (`kChords`, each set's own I and II buttons).
+- Counts sit on a dark plate in a button's corner: the ring's rim behind a bare count read as a
+  decimal point ("30" as "3.0").
+- The rupee, the key and the hearts are the game's own art, the texture pack's copy ("use the 4k
+  ones"); frames, the meter and glyphs stay vector.
+
+### Our own item slots (user, 2026-11-14)
+"we don't have to stick to what 3D games do, we can move away from this I and II things and make
+it so we can dictate inputs". Also: "let's not bind an item to right stick click. We have a ton of
+slots anyway like d-pad and chord dpad are available as well."
+
+This replaces the two pages on the game's Y, X, I and II buttons. Not built yet; until it is, the
+chord page above is what runs.
+
+- The player has N item slots (at least 8), ours, the same in both games. The game's Y, X, I and II
+  buttons become lanes the patch uses and the player never sees or binds.
+- Bindings: one table per game in the pad owner (`app/src/pad_input.cpp`, where `kChords` is now):
+  each slot's host inputs, any of a face button, chord and a face button, a D-pad direction, chord
+  and a D-pad direction, a key (1 to 8 and on). No slot is on the right stick's click. A set's
+  own job on an input a slot takes (The One Screen's and Project Restoration's D-pad shortcuts)
+  moves to a free input in the same table, and each move is listed here when it is made.
+- App to patch: the pad owner writes the slots held this frame, one bit a slot, into a block of the
+  patch that the app already writes (the options block's neighbour, its address in
+  `z3d-options.json`). The pad word has one spare bit (12), too few for a slot number.
+- Patch: on a held slot it puts the slot's item on a free lane (the game's X or Y button, so two
+  slots can be held at once), sets that lane's button in the play input itself, and gives the lane
+  back when the slot is released: the trade `chord_items.cpp` does today, per slot instead of per
+  page. The press and the trade are one step in the patch, so no frame separates them.
+- Where a slot's item lives: an inventory slot number per item slot in the save's unused bytes
+  (OoT3D `SaveContext.unused_6C`, MM3D the unused rows of `EquipmentData.buttonSlots`), as the
+  second page is kept now. The game's own button layout in the file is never ours: before a save
+  the lanes hold what the game put there, so the file loads the same without the patch.
+- Assigning: in the item screen the player presses a slot's input on the item under the cursor.
+  The patch reads the screen's cursor and writes the slot. What the screen's cursor is (the
+  selected node, in both games) is not reverse-engineered yet: that is the first RE step, into the
+  decomps.
+- HUD: A, B, X and Y as decided above, drawn from the slot table: each button shows the slot its
+  press uses now, released and with the chord. Slots on other inputs (the D-pad) are not drawn.
+- Order: the cursor's RE; OoT3D; MM3D. Proof: items used from D-pad and chord and D-pad slots with
+  real pad events, and a file saved with slots set loading clean without the patch.
+
 ### Design (one owner for both games)
 - f93caea drew the touch screen's play elements as cropped pieces; the user rejected it (rule
   above). Its table of layouts stays for the menus; its `play` pieces go.
@@ -136,22 +186,23 @@ draw in the app only what that cannot reach.
 
 ## Status
 - Chord + ABXY: bindings built, not yet seen in a run with a real pad.
-- HUD (MM3D): the owner, the atlas and the core's pass are built (docs/app.md, "HUD"). Drawn from
-  state: hearts, magic, rupees, the X, Y, I and II buttons with their items' icons and counts,
-  their prompts, the chord page's prompts, key caps (`mm-hud2` to `mm-hud4`). The cut-out
-  touch-screen pieces are gone from play.
-- Missing from MM3D's HUD: the wallet's colour and capacity, the A button's label (the number is
-  found, its mapping to a label is not), View, the minimap (what decides it is not found), the
-  ice and light arrows' and the powder keg's counts. The dimmed state is read but was seen in the
-  game only once (decomp `docs/hud.md`). The game's own A ring and clock still draw: hiding the
-  A button's widget is found, the clock alone is not, and no code patch has been built yet.
-- HUD (OoT3D): drawn from state (decomp `docs/hud.md`, `patch/oot3d/hud.toml`): hearts, magic,
-  rupees, small keys in the dungeons, B, the A button with its action's word, and Y, X, I and II
-  with icons and counts; The One Screen's own HUD is switched off in the patch (`base_hud`), and
-  the game's minimap stays (`mm-oothud3`). Missing: the wallet's capacity, the carrots, the D-pad
-  cross and View; the bow's, bombchus' and beans' counts and the action words past "Check" follow
-  the N64's numbering and were not seen; an equipped item was only seen written into memory, not
-  equipped through the item screen.
+- HUD, both games (docs/app.md, "HUD"): the owner, the atlas and the core's pass are built. Drawn
+  from state: hearts by quarters, magic, rupees (the wallet's gem in MM3D, green at the wallet's
+  capacity), the A, B, X and Y diamond with item icons and counts on plates, the chord's alt
+  contents on the same four buttons, key caps (`hud-ootlook3`, `hud-ootlook5`, `hud-mmlook3`,
+  `hud-mmlook5`). OoT3D also: small keys in the dungeons and the action's word under A. The rupee,
+  key and hearts are the pack's copies of the game's art. The cut-out touch-screen pieces are
+  gone from play, and The One Screen's own HUD is switched off in the patch (`base_hud`).
+- Missing from both: our own item slots (above); an item equipped through the item screen, a
+  count changing in play and a scene change were not seen, only values written into memory; the
+  first page's I and II items are not drawn; item counts are not coloured at capacity.
+- Missing from MM3D's HUD: the A button's word (the number is found, its mapping is not), View,
+  the minimap (what decides it is not found), the ice and light arrows' and the powder keg's
+  counts; the third wallet's red gem and 500 were not run. The game's own A ring and clock still
+  draw: hiding the A button's widget is found, the clock alone is not, and no code patch has been
+  built yet.
+- Missing from OoT3D's HUD: the carrots, the D-pad cross and View; the bow's, bombchus' and beans'
+  counts and the action words past "Check" follow the N64's numbering and were not seen.
 - Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
   command, not with real keys in a window.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the

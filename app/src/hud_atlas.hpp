@@ -22,7 +22,13 @@ struct HudSprite {
   float y = 0.0F;
   float w = 0.0F;
   float h = 0.0F;
+  // Lettering: the baseline's distance below the sprite's top.
+  float base = 0.0F;
 };
+
+// Lettering's colour: white or the game's green for a full count, both with a dark outline, or
+// dark for a key cap. Plate is Light on a solid dark plate, which hides what is behind it.
+enum class HudInk : uint8_t { Light, Full, Dark, Plate };
 
 class HudAtlas {
 public:
@@ -36,8 +42,10 @@ public:
 
   // Each draws its art once per size and returns it again after that.
   [[nodiscard]] HudSprite svg(const std::string &set, const std::string &name, int width, int height);
-  // Lettering `height` pixels tall in port-assets' key typeface: white, or `dark` for a key cap.
-  [[nodiscard]] HudSprite text(const std::string &text, int height, bool dark);
+  // Lettering in port-assets' key typeface with capitals `height` pixels tall, cut to its ink.
+  [[nodiscard]] HudSprite text(const std::string &text, int height, HudInk ink);
+  // The outline's width around lettering of that height that has one; a plate's edge is as far out.
+  [[nodiscard]] static int outline(int height);
   // A raster image (an item icon) scaled to the size.
   [[nodiscard]] HudSprite image(const std::filesystem::path &file, int width, int height);
 
@@ -47,10 +55,13 @@ public:
   [[nodiscard]] std::shared_ptr<const Settings::OverlayImage> image();
 
 private:
-  [[nodiscard]] HudSprite place(const std::string &key, SDL_Surface *surface);
+  [[nodiscard]] HudSprite place(const std::string &key, SDL_Surface *surface, float base = 0.0F);
+  [[nodiscard]] SDL_Surface *lettering(const std::string &text, int height, HudInk ink, float &base);
 
   std::filesystem::path assets_;
   TTF_Font *font_ = nullptr;
+  // A capital's height against the font's size.
+  float capShare_ = 0.0F;
   std::map<std::string, HudSprite> sprites_;
   std::vector<uint8_t> pixels_;
   uint32_t height_ = 0;

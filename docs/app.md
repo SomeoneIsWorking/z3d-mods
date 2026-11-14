@@ -196,42 +196,55 @@ top screen alone.
 ## HUD
 `hud` is the play HUD's one owner, for every game (plans/pc-controls-hud.md). It knows element
 kinds, not games: `hearts` (a row of hearts filled by a health value), `meter` (a bar filled by a
-value), `counter` (an icon and a number) and `button` (a round or square glass frame, the item's
-icon, and the pad's glyph). A game is `patch/<game>/hud.toml`: each element's kind, its rectangle
-on the top screen's 400x240 and the guest memory it reads, written as a sum of the decomp's names
-(`at = ["gCommonData", "CommonData.save", ...]`); the install resolves the sums and writes them
-into `z3d-options.json` as `"hud"`.
+value), `counter` (a piece of the game's art and a number) and `button` (a round glass frame, the
+item's icon and count, and the pad's glyph). A game is `patch/<game>/hud.toml`: each element's
+kind, its rectangle on the top screen's 400x240 and the guest memory it reads, written as a sum
+of the decomp's names (`at = ["gCommonData", "CommonData.save", ...]`); the install resolves the
+sums and writes them into `z3d-options.json` as `"hud"`. A value can sit behind a guest pointer
+(`through`) or be a bit field (`mask`, then `shift`), and an element is drawn only while its
+`when` conditions hold.
 
-The art is port-assets' (`--assets <port-assets copy>`: `sets/hud`, `sets/gamepad-xbox360`, the
-key typeface): `hud_atlas` rasterizes each SVG at the size it is drawn at in the window, once per
-window size, into one RGBA image, and `Hud` gives the core that image and a list of quads every
-frame (`Settings::values.overlay_image`, `overlay_quads`). It reads the game after every frame
-through `Emulator::read`, and draws only while the overlay's layout is play's (`hud = true` in
-`overlay.toml`), or, for a game without an overlay table, while every condition of `hud.toml`'s
-`show` holds. A value can sit behind a guest pointer (`through`), and an element is drawn only
-while its `when` conditions hold. While the chord is held (`PadInput::chord()`), a button shows the face button
-that presses it; with the keyboard last used it shows a key cap instead (1 to 4, or 5 to 8 on
-the second page). An item's icon is `<mods>/z3d-hud-icons/<item id>.png`, cut at install from the game's icon sheet
-(the pack's copy when it has one) by the game's own table of a frame per item (`hud_icons.py`,
-`[icons]` in `hud.toml`). Where the game has no such table an item's frame is its id (OoT3D). A button also draws its
-item's count, dims a disabled item and writes the word of the game's action number under it
-(`label`, `labels`); a counter can read one entry of an array (`index`); a meter can double its
-length.
+Art comes from two places. Frames, the meter and the pad's glyphs are port-assets' SVGs
+(`--assets <port-assets copy>`: `sets/hud`, `sets/gamepad-xbox360`, the key typeface), which
+`hud_atlas` rasterizes at the size they are drawn at in the window, once per window size.
+Item icons, the rupee, the key and the hearts are the game's own art, the texture pack's copy
+when it has one: the install cuts them into `<mods>/z3d-hud-icons/` (`hud_icons.py`), an item's
+icon as `<item id>.png` by the game's table of a frame per item (`[icons]` in `hud.toml`; where
+the game has no table an item's frame is its id, OoT3D) and a named piece as `<name>.png` by its
+rectangle in the HUD's sheet (`[art]`). Everything lands in one RGBA atlas, and `Hud` gives the
+core that image and a list of quads every frame (`Settings::values.overlay_image`,
+`overlay_quads`). It reads the game after every frame through `Emulator::read`, and draws only
+while the overlay's layout is play's (`hud = true` in `overlay.toml`), or, for a game without
+an overlay table, while every condition of `hud.toml`'s `show` holds.
 
-Seen (MM3D, `mm-hud2` at scale 3, `mm-hud3` at scale 5): three hearts and 0 rupees on a fresh
-file; `healthCapacity` 0xA0, `health` 0x68 and `rupees` 123 written, and the next frame has ten
-hearts with six and a half red and the counter at 123; the chord held puts A and B on the I and
-II buttons; `device:keyboard` turns the glyphs into caps 1 to 4, and 5 to 8 with the chord. The
-same crops at both sizes have clean edges.
-`mm-hud4`: the bow, a bomb, the powder keg and the fire arrow written onto X, Y, I and II draw
-their icons (the pack's) with the counts from `SaveData.ammo`, the half-full magic meter shows
-once `magicAcquired` is set, and after Y pulls a bomb that goes off in Link's hands the hearts
-read two and a half.
-OoT3D (`mm-oothud3`, scale 3): the same values written give ten hearts with six and a half red,
-the half meter and 123 rupees; a bomb, the Slingshot, nuts and sticks written onto the buttons
-draw their icons with 9, 17, 7 and 5; "Check" sits under A beside the bed; in the Forest Temple
-the key counter reads the 2 written to its dungeon; the chord puts A and B on I and II; the
-pause screen hides the HUD. The One Screen's HUD is not drawn in any of them.
+Lettering is port-assets' outline typeface sized by its capitals' height, with a dark outline,
+cut to its ink and placed by its baseline. A number is one piece of lettering. An item's count
+sits on a solid dark plate in its button's bottom right corner, inside the frame's art, so the
+ring's rim never shows between its digits. `hearts` picks one of the game's five hearts (empty,
+a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can read one entry
+of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
+a `limit` (the game's table by tier, OoT3D's `gUpgradeCapacities`) or `limits` (ours, MM3D).
+
+The buttons are four, the same in both games: A, B, X and Y in the pad's diamond, top right. A
+button's glyph never changes. Released, A writes the word of the game's action number under it
+(`label`, `labels`; OoT3D only so far), B shows the sword and X and Y their items; while the
+chord is held (`PadInput::chord()`), A and B show what `chord` names in `hud.toml`, the items of
+the game's I and II buttons, onto which the patch has then traded the second page. With the
+keyboard last used a button shows a key cap instead of the pad's glyph: the key of what it shows
+now (1 and 2 for X and Y, 5 to 8 with the chord). The first page's I and II items are not drawn.
+
+Seen, both games at scales 3 and 5 (`hud-ootlook3`, `hud-ootlook5`, `hud-mmlook3`,
+`hud-mmlook5`; crops in `scratch/mm-agent/crops/`), with items and counts written into memory
+and the second page named in the patch's bytes: the diamond with counts of 5, 30 and 100 on
+their plates; the chord held puts the second page's four items on Y, X, A and B; the keyboard
+turns the glyphs into caps, 5 to 8 with the chord; the pack's hearts with a quarter heart, the
+pack's rupee with the count in white below the wallet's capacity; "Check" under A beside the bed
+(OoT3D); the Kokiri Sword on B (MM3D). Earlier, on the layout before the diamond: MM3D's blue
+gem and a green 200 with the second wallet (`hud-mmart3`), OoT3D's key counter in the Forest
+Temple and the pause screen hiding the HUD (`mm-oothud3`).
+Not seen: items equipped through the game's item screen, a count changing in play, the HUD
+across a scene change, real keys in a window on this layout. MM3D's own A ring still draws,
+bottom right.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`

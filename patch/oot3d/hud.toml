@@ -18,11 +18,23 @@ frame = [42, 42]
 columns = 12
 icons = 144
 
+# The touch screen HUD's own art: the rupee, the key and a heart by quarters.
+[art]
+sheet = "menu/01_US_ENGLISH/menu_top_parts00.ctxb"
+rupee = [128, 96, 18, 18]
+key = [152, 96, 18, 18]
+heart_0 = [240, 80, 12, 12]
+heart_1 = [240, 96, 12, 12]
+heart_2 = [240, 112, 12, 12]
+heart_3 = [240, 128, 12, 12]
+heart_4 = [240, 144, 12, 12]
+
 [[element]]
 kind = "hearts"
 rect = [8, 8, 11, 11]
 unit = 0x10
 columns = 10
+art = ["heart_0", "heart_1", "heart_2", "heart_3", "heart_4"]
 value = { at = ["gSaveContext", "SaveContext.health"], bytes = 2 }
 capacity = { at = ["gSaveContext", "SaveContext.healthCapacity"], bytes = 2 }
 
@@ -38,6 +50,10 @@ kind = "counter"
 icon = "rupee"
 rect = [8, 198, 40, 13]
 value = { at = ["gSaveContext", "SaveContext.rupees"], bytes = 2 }
+# Green at the wallet's capacity: gUpgradeCapacities[UPG_WALLET], four u16, by the wallet's bits
+# (gUpgradeMasks and gUpgradeShifts [UPG_WALLET]).
+tier = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.upgrades"], bytes = 4, mask = 0x3000, shift = 12 }
+limit = { at = ["gUpgradeCapacities", 32], bytes = 2 }
 
 # Small keys: the dungeons' scenes, where the dungeon has a count.
 [[element]]
@@ -51,67 +67,56 @@ when = [
   { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2, most = 18 },
 ]
 
+# The four buttons, top right, as the pad's diamond. A is the action and B the sword; while the
+# chord is held they show the items the chord gives them (the I and II buttons', which the patch
+# has then traded for the second page's). The first page's I and II items have no button here.
 # The action's words follow DO_ACTION_*; -1 and DO_ACTION_NONE have none.
-[[element]]
-kind = "button"
-frame = "ring"
-button = "A"
-rect = [318, 24, 28, 28]
-label = { at = ["gTopHud", "TopHud.doAction"], bytes = 4 }
-labels = ["Attack", "Check", "Enter", "Return", "Open", "Jump", "Decide", "Dive", "Faster", "Throw", "",
-          "Climb", "Drop", "Down", "Save", "Speak", "Next", "Grab", "Stop", "Put Away", "Reel"]
 
 [[element]]
 kind = "button"
 frame = "ring"
-button = "B"
-rect = [292, 12, 24, 24]
-value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 0], bytes = 1 }
-status = { at = ["gSaveContext", "SaveContext.buttonStatus", 0], bytes = 1 }
+button = "A"
+rect = [346, 56, 24, 24]
+label = { at = ["gTopHud", "TopHud.doAction"], bytes = 4 }
+labels = ["Attack", "Check", "Enter", "Return", "Open", "Jump", "Decide", "Dive", "Faster", "Throw", "",
+          "Climb", "Drop", "Down", "Save", "Speak", "Next", "Grab", "Stop", "Put Away", "Reel"]
+chord = { item_button = "I", value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 3], bytes = 1 }, status = { at = ["gSaveContext", "SaveContext.buttonStatus", 3], bytes = 1 } }
+ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
+ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
 disabled = 0xFF
 
 [[element]]
 kind = "button"
 frame = "ring"
-button = "Y"
-item_button = "Y"
-rect = [372, 10, 22, 22]
-value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 1], bytes = 1 }
+button = "B"
+rect = [373, 29, 24, 24]
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 0], bytes = 1 }
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 0], bytes = 1 }
+chord = { item_button = "II", value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 4], bytes = 1 }, status = { at = ["gSaveContext", "SaveContext.buttonStatus", 4], bytes = 1 } }
 ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
 ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
-status = { at = ["gSaveContext", "SaveContext.buttonStatus", 1], bytes = 1 }
 disabled = 0xFF
 
 [[element]]
 kind = "button"
 frame = "ring"
 button = "X"
+rect = [319, 29, 24, 24]
 item_button = "X"
-rect = [348, 10, 22, 22]
 value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 2], bytes = 1 }
-ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
-ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
 status = { at = ["gSaveContext", "SaveContext.buttonStatus", 2], bytes = 1 }
+ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
+ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
 disabled = 0xFF
 
 [[element]]
 kind = "button"
-frame = "slot"
-item_button = "I"
-rect = [348, 36, 22, 22]
-value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 3], bytes = 1 }
+frame = "ring"
+button = "Y"
+rect = [346, 2, 24, 24]
+item_button = "Y"
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 1], bytes = 1 }
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 1], bytes = 1 }
 ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
 ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
-status = { at = ["gSaveContext", "SaveContext.buttonStatus", 3], bytes = 1 }
-disabled = 0xFF
-
-[[element]]
-kind = "button"
-frame = "slot"
-item_button = "II"
-rect = [372, 36, 22, 22]
-value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 4], bytes = 1 }
-ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
-ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
-status = { at = ["gSaveContext", "SaveContext.buttonStatus", 4], bytes = 1 }
 disabled = 0xFF

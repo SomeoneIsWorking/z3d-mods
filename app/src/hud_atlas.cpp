@@ -6,6 +6,8 @@
 #include <lucent/log.h>
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstring>
 #include <stdexcept>
 #include <utility>
@@ -19,6 +21,49 @@ constexpr uint32_t kBytesPerPixel = 4;
 // Clear pixels between sprites, so a quad's edge never samples its neighbour.
 constexpr uint32_t kGap = 2;
 constexpr const char *kFont = "fonts/NotoSans-Bold-keys.ttf";
+// The size the capital's height is measured at, and lettering's outline against its height.
+constexpr float kMeasureSize = 200.0F;
+constexpr float kOutlineShare = 0.14F;
+constexpr uint8_t kInkAlpha = 8;
+
+// The rows and columns of `surface` (RGBA32) that hold ink; empty when it has none.
+// Fills `surface` (RGBA32) with the outline's colour, its corners rounded by `radius`.
+void plate(SDL_Surface *surface, int radius) {
+  constexpr std::array<uint8_t, kBytesPerPixel> kPlate{16, 16, 20, 255};
+  const int limit = std::min({radius, surface->w / 2, surface->h / 2});
+  for (int y = 0; y < surface->h; ++y) {
+    uint8_t *row = static_cast<uint8_t *>(surface->pixels) + static_cast<size_t>(y) * static_cast<size_t>(surface->pitch);
+    const int down = std::max({limit - y, y - (surface->h - 1 - limit), 0});
+    for (int x = 0; x < surface->w; ++x) {
+      const int across = std::max({limit - x, x - (surface->w - 1 - limit), 0});
+      if (across * across + down * down <= limit * limit) {
+        std::memcpy(row + static_cast<size_t>(x) * kBytesPerPixel, kPlate.data(), kBytesPerPixel);
+      }
+    }
+  }
+}
+
+SDL_Rect inkBounds(const SDL_Surface *surface) {
+  int left = surface->w;
+  int top = surface->h;
+  int right = -1;
+  int bottom = -1;
+  for (int y = 0; y < surface->h; ++y) {
+    const uint8_t *row = static_cast<const uint8_t *>(surface->pixels) + static_cast<size_t>(y) * static_cast<size_t>(surface->pitch);
+    for (int x = 0; x < surface->w; ++x) {
+      if (row[static_cast<size_t>(x) * kBytesPerPixel + 3] > kInkAlpha) {
+        left = std::min(left, x);
+        right = std::max(right, x);
+        top = std::min(top, y);
+        bottom = std::max(bottom, y);
+      }
+    }
+  }
+  if (right < left) {
+    return {0, 0, 0, 0};
+  }
+  return {left, top, right - left + 1, bottom - top + 1};
+}
 
 } // namespace
 
@@ -30,6 +75,17 @@ HudAtlas::HudAtlas(std::filesystem::path assets) : assets_(std::move(assets)) {
   if (font_ == nullptr) {
     TTF_Quit();
     throw std::runtime_error((assets_ / kFont).string() + ": " + SDL_GetError());
+  }
+  TTF_SetFontSize(font_, kMeasureSize);
+  SDL_Surface *capital = TTF_RenderText_Blended(font_, "H", 1, SDL_Color{255, 255, 255, 255});
+  SDL_Surface *rgba = capital != nullptr ? SDL_ConvertSurface(capital, SDL_PIXELFORMAT_RGBA32) : nullptr;
+  SDL_DestroySurface(capital);
+  capShare_ = rgba != nullptr ? static_cast<float>(inkBounds(rgba).h) / kMeasureSize : 0.0F;
+  SDL_DestroySurface(rgba);
+  if (capShare_ <= 0.0F) {
+    TTF_CloseFont(font_);
+    TTF_Quit();
+    throw std::runtime_error((assets_ / kFont).string() + " draws no capital");
   }
   clear();
 }
@@ -49,7 +105,7 @@ void HudAtlas::clear() {
   image_.reset();
 }
 
-HudSprite HudAtlas::place(const std::string &key, SDL_Surface *surface) {
+HudSprite HudAtlas::place(const std::string &key, SDL_Surface *surface, float base) {
   if (surface == nullptr) {
     lucent::warn("hud", "no art for {}: {}", key, SDL_GetError());
     return sprites_[key] = {};
@@ -79,7 +135,7 @@ HudSprite HudAtlas::place(const std::string &key, SDL_Surface *surface) {
                 size_t{width} * kBytesPerPixel);
   }
   const HudSprite sprite{static_cast<float>(shelfX_), static_cast<float>(shelfTop_),
-                         static_cast<float>(width), static_cast<float>(height)};
+                         static_cast<float>(width), static_cast<float>(height), base};
   shelfX_ += width + kGap;
   SDL_DestroySurface(rgba);
   image_.reset();
@@ -100,13 +156,61 @@ HudSprite HudAtlas::svg(const std::string &set, const std::string &name, int wid
   return place(key, surface);
 }
 
-HudSprite HudAtlas::text(const std::string &text, int height, bool dark) {
-  const std::string key = (dark ? "dark/" : "text/") + text + "@" + std::to_string(height);
+int HudAtlas::outline(int height) {
+  return std::max(1, static_cast<int>(std::lround(static_cast<float>(height) * kOutlineShare)));
+}
+
+// The text drawn and cut to its ink, RGBA32; `base` is the baseline's row in it.
+SDL_Surface *HudAtlas::lettering(const std::string &text, int height, HudInk ink, float &base) {
+  constexpr SDL_Color kDark{32, 32, 36, 255};
+  constexpr SDL_Color kOutline{16, 16, 20, 255};
+  constexpr SDL_Color kLight{255, 255, 255, 255};
+  constexpr SDL_Color kFull{120, 255, 80, 255};
+  TTF_SetFontSize(font_, static_cast<float>(height) / capShare_);
+  const int around = ink == HudInk::Dark ? 0 : outline(height);
+  const int baseline = TTF_GetFontAscent(font_) + around;
+  SDL_Surface *fill = TTF_RenderText_Blended(font_, text.c_str(), text.size(),
+                                             ink == HudInk::Dark ? kDark : ink == HudInk::Full ? kFull : kLight);
+  SDL_Surface *drawn = fill;
+  if (fill != nullptr && around > 0) {
+    TTF_SetFontOutline(font_, around);
+    drawn = TTF_RenderText_Blended(font_, text.c_str(), text.size(), kOutline);
+    TTF_SetFontOutline(font_, 0);
+    SDL_Rect inside{around, around, fill->w, fill->h};
+    if (drawn != nullptr) {
+      SDL_BlitSurface(fill, nullptr, drawn, &inside);
+    }
+    SDL_DestroySurface(fill);
+  }
+  SDL_Surface *rgba = drawn != nullptr ? SDL_ConvertSurface(drawn, SDL_PIXELFORMAT_RGBA32) : nullptr;
+  SDL_DestroySurface(drawn);
+  if (rgba == nullptr) {
+    return nullptr;
+  }
+  const SDL_Rect bounds = inkBounds(rgba);
+  SDL_Surface *cut = bounds.w > 0 ? SDL_CreateSurface(bounds.w, bounds.h, SDL_PIXELFORMAT_RGBA32) : nullptr;
+  if (cut != nullptr) {
+    if (ink == HudInk::Plate) {
+      plate(cut, around);
+    } else {
+      SDL_SetSurfaceBlendMode(rgba, SDL_BLENDMODE_NONE);
+    }
+    SDL_BlitSurface(rgba, &bounds, cut, nullptr);
+    base = static_cast<float>(baseline - bounds.y);
+  }
+  SDL_DestroySurface(rgba);
+  return cut;
+}
+
+HudSprite HudAtlas::text(const std::string &text, int height, HudInk ink) {
+  constexpr std::array kNames{"text/", "full/", "dark/", "plate/"};
+  const std::string key = kNames[static_cast<size_t>(ink)] + text + "@" + std::to_string(height);
   if (const auto found = sprites_.find(key); found != sprites_.end()) {
     return found->second;
   }
-  TTF_SetFontSize(font_, static_cast<float>(height));
-  return place(key, TTF_RenderText_Blended(font_, text.c_str(), text.size(), dark ? SDL_Color{32, 32, 36, 255} : SDL_Color{255, 255, 255, 255}));
+  float base = 0.0F;
+  SDL_Surface *surface = lettering(text, height, ink, base);
+  return place(key, surface, base);
 }
 
 HudSprite HudAtlas::image(const std::filesystem::path &file, int width, int height) {

@@ -1,4 +1,7 @@
-"""Install a game's mod set into Azahar's load/ folders, recording every file it writes."""
+"""Install a game's mod set into Azahar's load/ folders, recording every file it writes.
+
+A set is built whole in a folder beside its target and moved in only when nothing failed, so a
+failed install leaves the installed set as it was."""
 
 from __future__ import annotations
 
@@ -17,6 +20,7 @@ RECORD = "z3dmods-install.json"
 PAGE = 0x1000
 EXHEADER_BSS_SIZE = 0x3C
 HUD_FOLDER = "z3dmods-hud"
+STAGING = ".z3dmods-new"
 # The layer switch in the patch's options.toml that turns the stepped stairs on.
 STAIRS_OPTION = "stairs"
 
@@ -72,18 +76,39 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _remove_recorded(folder: Path) -> None:
+def _recorded(folder: Path) -> list[Path]:
+    """The files the last install put in `folder`; refuses a folder or a file that is not ours to replace."""
     record = folder / RECORD
     if not record.exists():
         if folder.exists() and any(folder.iterdir()):
             raise RuntimeError(f"{folder} has files z3dmods did not install; move them first")
-        return
+        return []
+    files = []
     for rel, digest in json.loads(record.read_text())["files"].items():
         path = folder / rel
         if path.exists() and _sha(path) != digest:
             raise RuntimeError(f"{path} changed since install; not removing it")
+        files.append(path)
+    return files + [record]
+
+
+def _staging(folder: Path) -> Path:
+    """An empty folder beside `folder`, on its filesystem, to build its next contents in."""
+    staging = folder.with_name(folder.name + STAGING)
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True)
+    return staging
+
+
+def _replace(folder: Path, staging: Path, recorded: list[Path]) -> None:
+    """Takes the last install's files out of `folder` and moves the staged ones in."""
+    for path in recorded:
         path.unlink(missing_ok=True)
-    record.unlink()
+    for source in sorted(p for p in staging.rglob("*") if p.is_file()):
+        target = folder / source.relative_to(staging)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source.replace(target)
     for directory in sorted((p for p in folder.rglob("*") if p.is_dir()), reverse=True):
         if not any(directory.iterdir()):
             directory.rmdir()
@@ -199,13 +224,32 @@ def install(cfg: Config, game: GameSet) -> Path:
              if game.hud else {})
 
     mods = cfg.mods_dir(game.title_id)
-    _remove_recorded(mods)
-    mods.mkdir(parents=True, exist_ok=True)
+    textures = cfg.textures_dir(game.title_id) if game.textures or menus else None
+    staged = [(folder, _staging(folder)) for folder in (mods, textures) if folder is not None]
+    try:
+        _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], stairs_layer, rooms)
+        if textures is not None:
+            _build_textures(game, texture_root, menus, staged[1][1])
+        # Every refusal comes before the first file is taken out.
+        recorded = [_recorded(folder) for folder, _ in staged]
+        for (folder, staging), files in zip(staged, recorded):
+            _replace(folder, staging, files)
+    finally:
+        for _, staging in staged:
+            shutil.rmtree(staging, ignore_errors=True)
+    if game.azahar_global:
+        azahar_config.set_global(cfg.azahar_config, game.azahar_global)
+    return mods
+
+
+def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | None, code: bytes, root: Path,
+                base_romfs: Path | None, mods: Path, stairs_layer: str | None, rooms: dict[str, bytes]) -> None:
+    """The game's mods folder, whole, with its record."""
     if game.patch:
         _layer(cfg, game, code, (root / game.base["exheader"]).read_bytes(),
                mods, {stairs_layer} if stairs_layer else set())
     else:
-        shutil.copyfile(code_patch, mods / Path(game.base["code_patch"]).name)
+        shutil.copyfile(root / game.base["code_patch"], mods / Path(game.base["code_patch"]).name)
         shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
     if base_romfs:
         _copy_tree(base_romfs, mods / "romfs")
@@ -220,19 +264,15 @@ def install(cfg: Config, game: GameSet) -> Path:
     _write_record(mods, {"base": game.base["name"], "patch": game.patch or "",
                          "stairs": "yes" if game.stairs else "no"})
 
-    if game.textures or menus:
-        textures = cfg.textures_dir(game.title_id)
-        _remove_recorded(textures)
-        textures.mkdir(parents=True, exist_ok=True)
-        if texture_root:
-            # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
-            _copy_tree(texture_root, textures, frozenset(menus))
-        for name, png in menus.items():
-            target = textures / HUD_FOLDER / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(png)
-        _write_record(textures, {"textures": game.textures["name"] if game.textures else "",
-                                 "hud": game.hud or ""})
-    if game.azahar_global:
-        azahar_config.set_global(cfg.azahar_config, game.azahar_global)
-    return mods
+
+def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, bytes], textures: Path) -> None:
+    """The game's textures folder, whole, with its record."""
+    if texture_root:
+        # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
+        _copy_tree(texture_root, textures, frozenset(menus))
+    for name, png in menus.items():
+        target = textures / HUD_FOLDER / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(png)
+    _write_record(textures, {"textures": game.textures["name"] if game.textures else "",
+                             "hud": game.hud or ""})

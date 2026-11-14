@@ -32,11 +32,13 @@ public:
 
 private:
   // A little-endian unsigned value in guest memory; `bytes` 0 is no value. With `pointer`, the
-  // address is an offset from what that guest pointer holds.
+  // address is an offset from what that guest pointer holds. A bit field is masked, then shifted down.
   struct GuestValue {
     uint32_t address = 0;
     uint8_t bytes = 0;
     uint32_t pointer = 0;
+    uint8_t shift = 0;
+    uint32_t mask = UINT32_MAX;
   };
 
   // Holds while the value reads `least` to `most`.
@@ -63,10 +65,17 @@ private:
     uint32_t full = 0;
     // Meter: twice as long while this reads nonzero, and `full` twice as much.
     GuestValue longer;
-    // Counter: the port-assets hud glyph before the number, and which of the game's array of
-    // values to read (if it is one).
+    // Counter: the game's art before the number, and which of the game's array of values to
+    // read (if it is one).
     std::string icon;
     GuestValue index;
+    // Hearts: the art of a heart from empty to full. Counter: the art for each `tier`, where it
+    // changes with one (a wallet's size).
+    std::vector<std::string> art;
+    GuestValue tier;
+    // Counter: the most it holds, drawn in the full colour: the game's table by `tier`, or ours.
+    GuestValue limit;
+    std::vector<uint32_t> limits;
     // Button: its frame (hud set), the 3DS button that presses it (if one does), the item
     // button it is (if it is one), and the item value that means empty.
     std::string frame;
@@ -79,6 +88,11 @@ private:
     std::vector<std::pair<uint32_t, uint32_t>> ammoIndex;
     GuestValue status;
     uint32_t disabled = 0;
+    // Button: what it shows instead while the chord is held, where the chord gives its pad
+    // button to an item: that item, its status and the item button it then is.
+    GuestValue chordValue;
+    GuestValue chordStatus;
+    std::optional<ItemButton> chordItem;
     // Button: the game's number of the action it does now, and the word for each.
     GuestValue label;
     std::vector<std::string> labels;
@@ -88,7 +102,13 @@ private:
   [[nodiscard]] bool hold(const std::vector<Condition> &conditions) const;
   void update();
   void draw(const Element &element);
-  void quad(const HudSprite &sprite, const OverlayRect &at, float share = 1.0F, float opacity = 1.0F);
+  void quad(const HudSprite &sprite, const OverlayRect &at, float opacity = 1.0F);
+  // The game's art of that name, scaled to the size.
+  [[nodiscard]] HudSprite art(const std::string &name, float width, float height);
+  // A number drawn as one piece of lettering on `baseline`, ending at `edge` or starting there.
+  void number(uint32_t value, int height, HudInk ink, float baseline, float edge, bool fromRight);
+  // Whether the chord is held and this button then shows an item instead: `chordValue`.
+  [[nodiscard]] bool chordContent(const Element &element) const;
   // The pad glyph or key cap of what presses a button element, on its top left corner.
   void prompt(const Element &element, const OverlayRect &box);
 

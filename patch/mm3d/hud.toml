@@ -12,11 +12,25 @@ frame = [42, 42]
 columns = 12
 icons = 108
 
+# The touch screen HUD's own art: a rupee per wallet, the key and a heart by quarters.
+[art]
+sheet = "layout/US_English/Joker.Main.Play.gar/hud_patrs00_action_text.ctxb"
+rupee_green = [456, 60, 18, 18]
+rupee_blue = [456, 41, 18, 18]
+rupee_red = [456, 23, 18, 18]
+key = [456, 96, 22, 22]
+heart_0 = [482, 66, 12, 12]
+heart_1 = [482, 50, 12, 12]
+heart_2 = [482, 34, 12, 12]
+heart_3 = [482, 18, 12, 12]
+heart_4 = [482, 2, 12, 12]
+
 [[element]]
 kind = "hearts"
 rect = [8, 8, 11, 11]
 unit = 0x10
 columns = 10
+art = ["heart_0", "heart_1", "heart_2", "heart_3", "heart_4"]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.health"], bytes = 2 }
 capacity = { at = ["gCommonData", "CommonData.save", "SaveData.healthCapacity"], bytes = 2 }
 
@@ -29,54 +43,61 @@ value = { at = ["gCommonData", "CommonData.save", "SaveData.magic"], bytes = 1 }
 when = [{ at = ["gCommonData", "CommonData.save", "SaveData.magicAcquired"], bytes = 1, least = 1 }]
 longer = { at = ["gCommonData", "CommonData.save", "SaveData.doubleMagicAcquired"], bytes = 1 }
 
+# The wallet picks the gem and what fills it; the third wallet's 500 is the N64's.
 [[element]]
 kind = "counter"
-icon = "rupee"
+art = ["rupee_green", "rupee_blue", "rupee_red"]
 rect = [8, 198, 40, 13]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.rupees"], bytes = 2 }
+tier = { at = ["gCommonData", "CommonData.save", "SaveData.upgrades"], bytes = 4, mask = "UPGRADE_WALLET_MASK", shift = "UPGRADE_WALLET_SHIFT" }
+limits = [99, 200, 500]
+
+# The four buttons, top right, as the pad's diamond. A is the action and B the sword; while the
+# chord is held they show the items the chord gives them (the I and II buttons', which the patch
+# has then traded for the second page's). The first page's I and II items have no button here.
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "A"
+rect = [346, 56, 24, 24]
+chord = { item_button = "I", value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }, status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_I"], bytes = 1 } }
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+disabled = 0xFF
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "B"
+rect = [373, 29, 24, 24]
+value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_B"], bytes = 1 }
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_B"], bytes = 1 }
+chord = { item_button = "II", value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_II"], bytes = 1 }, status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_II"], bytes = 1 } }
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+disabled = 0xFF
 
 [[element]]
 kind = "button"
 frame = "ring"
 button = "X"
+rect = [319, 29, 24, 24]
 item_button = "X"
-rect = [316, 200, 26, 26]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_X"], bytes = 1 }
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_X"], bytes = 1 }
 ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
 ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_X"], bytes = 1 }
 disabled = 0xFF
 
 [[element]]
 kind = "button"
 frame = "ring"
 button = "Y"
+rect = [346, 2, 24, 24]
 item_button = "Y"
-rect = [338, 172, 26, 26]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_Y"], bytes = 1 }
-ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
 status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_Y"], bytes = 1 }
-disabled = 0xFF
-
-[[element]]
-kind = "button"
-frame = "slot"
-item_button = "I"
-rect = [370, 164, 24, 24]
-value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }
 ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
 ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_I"], bytes = 1 }
-disabled = 0xFF
-
-[[element]]
-kind = "button"
-frame = "slot"
-item_button = "II"
-rect = [370, 136, 24, 24]
-value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_II"], bytes = 1 }
-ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_II"], bytes = 1 }
 disabled = 0xFF
