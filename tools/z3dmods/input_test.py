@@ -597,7 +597,7 @@ def _browse_to(session: Session, pad: Gamepad, *names: str) -> None:
 def _first_run(session: Session, pad: Gamepad) -> None:
     """A package started with nothing known: the window asks for the dump folder and the mods
     folder, each chosen in its folder browser, and the picker opens over the dumps found. A
-    folder without a dump is refused on the screen."""
+    folder without a dump is refused on the screen. The options then ask for both again."""
     session.expect("folders: asking --roms")
     session.wait(2)
     session.shot("ask-roms")
@@ -634,6 +634,31 @@ def _first_run(session: Session, pad: Gamepad) -> None:
     session.expect("picker: on Majora")
     session.wait(1)
     session.shot("picker-second")
+    # The options' last row asks again: the dump folder is kept, the mods folder changed.
+    pad.button("x")
+    row = session.expect("options: row ")
+    while not row.endswith("options: row folders"):
+        pad.stick(0, 32767, 0.12)
+        session.wait(0.1)
+        row = session.expect("options: row ")
+    session.wait(1)
+    session.shot("options-folders")
+    pad.button("a")
+    session.expect("folders: asking --roms")
+    session.wait(2)
+    session.shot("ask-roms-again")
+    pad.button("b")
+    session.expect("folders: kept --roms")
+    session.expect("folders: asking --mods")
+    session.wait(1)
+    pad.button("a")
+    session.expect("folders: in")
+    _browse_to(session, pad, "Empty")
+    pad.button("x")
+    session.expect("folders: took --mods")
+    session.expect("picker: on")
+    session.wait(2)
+    session.shot("picker-after-folders")
 
 
 def _menu_pad(session: Session, pad: Gamepad) -> None:

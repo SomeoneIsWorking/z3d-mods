@@ -14,6 +14,9 @@ namespace z3d::app {
 namespace {
 
 constexpr const char *kHint = "Up/Down  Select    A  Change    B  Back";
+constexpr const char *kFolders = "Games and mods folders";
+constexpr const char *kFoldersChange = "Change";
+constexpr const char *kFoldersRow = "folders";
 // Text heights as shares of the window's height, capped by its width so a row fits a narrow window.
 constexpr float kHeadingShare = 1.0F / 16.0F;
 constexpr float kRowShare = 1.0F / 24.0F;
@@ -37,18 +40,30 @@ struct Held {
 
 } // namespace
 
+size_t OptionsMenu::rows() const {
+  return options_.items().size() + (folders_ ? 1 : 0);
+}
+
+bool OptionsMenu::onFolders() const {
+  return selected_ == options_.items().size();
+}
+
 void OptionsMenu::select(size_t index) {
   selected_ = index;
-  lucent::info("menu", "options: row {}", options_.items()[selected_].id);
+  lucent::info("menu", "options: row {}",
+               onFolders() ? kFoldersRow : options_.items()[selected_].id);
 }
 
 void OptionsMenu::step(int direction) {
+  if (onFolders()) {
+    return;
+  }
   options_.step(selected_, direction);
   const Option &item = options_.items()[selected_];
   lucent::info("menu", "options: {} = {}", item.id, item.choices[item.value]);
 }
 
-void OptionsMenu::run() {
+OptionsMenu::Left OptionsMenu::run() {
   (void)window_.takeMenuRequest();
   Held before = Held::from(pad_.menu());
   lucent::info("menu", "options: open for {}", title_);
@@ -56,7 +71,10 @@ void OptionsMenu::run() {
   while (!window_.closeRequested()) {
     (void)window_.pollMenu();
     const Held now = Held::from(pad_.menu());
-    const size_t count = options_.items().size();
+    const size_t count = rows();
+    if (count == 0) {
+      break;
+    }
     if (now.up && !before.up) {
       select((selected_ + count - 1) % count);
     }
@@ -66,19 +84,25 @@ void OptionsMenu::run() {
     if (now.left && !before.left) {
       step(-1);
     }
+    if (now.change && !before.change && onFolders()) {
+      lucent::info("menu", "options: closed for the folders");
+      return Left::ForFolders;
+    }
     if ((now.right && !before.right) || (now.change && !before.change)) {
       step(1);
     }
     if ((now.back && !before.back) || window_.takeMenuRequest()) {
-      lucent::info("menu", "options: closed");
-      return;
+      break;
     }
     before = now;
     draw();
   }
+  lucent::info("menu", "options: closed");
+  return Left::Back;
 }
 
-void OptionsMenu::text(const std::string &line, float x, float y, bool selected, bool rightAligned) {
+void OptionsMenu::text(const std::string &line, float x, float y, bool selected,
+                       bool rightAligned) {
   TTF_Text *made = TTF_CreateText(engine_, font_, line.c_str(), line.size());
   if (made == nullptr) {
     return;
@@ -116,6 +140,10 @@ void OptionsMenu::draw() {
     text(item.label, left, y, i == selected_, false);
     text(item.choices[item.value], right, y, i == selected_, true);
     y += pitch;
+  }
+  if (folders_) {
+    text(kFolders, left, y, onFolders(), false);
+    text(kFoldersChange, right, y, onFolders(), true);
   }
   text(kHint, left, height * 0.9F, false, false);
   SDL_RenderPresent(renderer_);

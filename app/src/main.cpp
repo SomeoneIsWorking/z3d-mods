@@ -43,6 +43,14 @@ GameOptions loadOptions(const AppConfig &config, const GameSetup &game) {
           config.hidden ? std::filesystem::path() : storedOptions(config, game)};
 }
 
+std::vector<GameOptions> loadAll(const AppConfig &config, const GameLibrary &library) {
+  std::vector<GameOptions> options;
+  for (const Game &game : library.games()) {
+    options.push_back(loadOptions(config, game.setup));
+  }
+  return options;
+}
+
 int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   GameOptions options = loadOptions(config, game);
   for (const auto &[id, value] : config.options) {
@@ -73,7 +81,7 @@ int picker(const AppConfig &config, PadInput &pad) {
   GameLibrary library = GameLibrary::load(config.library);
   if (library.games().empty()) {
     // The tools know no dump yet: the player says where theirs are, and the tools list them.
-    if (!config.tools.empty() && !FolderSetup(window, pad, config).run()) {
+    if (!config.tools.empty() && !FolderSetup(window, pad, config).run(FolderSetup::Asking::First)) {
       return 0;
     }
     library = GameLibrary::load(config.library);
@@ -81,20 +89,26 @@ int picker(const AppConfig &config, PadInput &pad) {
   if (library.games().empty()) {
     throw std::runtime_error("library " + config.library.string() + " names no games");
   }
-  std::vector<GameOptions> options;
-  for (const Game &game : library.games()) {
-    options.push_back(loadOptions(config, game.setup));
-  }
+  std::vector<GameOptions> options = loadAll(config, library);
   SetInstall install(config.tools, config.userDir);
   while (true) {
-    std::optional<size_t> chosen;
+    std::optional<TitlePicker::Picked> picked;
     {
       const MenuCanvas canvas(window, config.font);
-      TitlePicker picker(canvas, window, pad, library, options, install);
-      chosen = picker.run();
+      TitlePicker picker(canvas, window, pad, library, options, install, !config.tools.empty());
+      picked = picker.run();
     }
-    if (!chosen) {
+    if (!picked) {
       return 0;
+    }
+    const std::optional<size_t> chosen = picked->game;
+    if (!chosen) {
+      if (!FolderSetup(window, pad, config).run(FolderSetup::Asking::Again)) {
+        return 0;
+      }
+      library = GameLibrary::load(config.library);
+      options = loadAll(config, library);
+      continue;
     }
     const Game &game = library.games()[*chosen];
     if (install.takeFresh()) {

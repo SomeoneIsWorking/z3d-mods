@@ -31,6 +31,8 @@ constexpr const char *kTitle = "z3d";
 constexpr const char *kBrowse = "Choose the folder";
 constexpr const char *kAgain = "Choose another folder";
 constexpr const char *kFooter = "A or Enter: choose the folder";
+constexpr const char *kFooterAgain =
+    "A or Enter: choose the folder. B or Esc: keep the one you have.";
 constexpr std::array kAsks{
     Ask{"--roms", "Where are your 3DS games?", "The folder with your game dumps (.3ds or .cci)",
         "z3d plays Ocarina of Time 3D and Majora's Mask 3D from your own dumps.",
@@ -52,14 +54,15 @@ std::filesystem::path home() {
   return path.has_filename() ? path : path.parent_path();
 }
 
-// False when the window closes before the tools take a folder.
-bool ask(const Ask &what, GameWindow &window, const PadInput &pad, const AppConfig &config) {
+// False when the window closes before the question is answered.
+bool ask(const Ask &what, FolderSetup::Asking asking, GameWindow &window, const PadInput &pad,
+         const AppConfig &config) {
   const MenuCanvas canvas(window, config.font);
   setup_ui::Config screen;
   screen.title = kTitle;
   screen.message = what.message;
   screen.hint = what.hint;
-  screen.footer = kFooter;
+  screen.footer = asking == FolderSetup::Asking::Again ? kFooterAgain : kFooter;
   screen.files = {setup_ui::FileSpec{what.flag, "", what.label}};
   screen.placement = setup_ui::Placement::Adopt;
   screen.browse_label = kBrowse;
@@ -91,6 +94,10 @@ bool ask(const Ask &what, GameWindow &window, const PadInput &pad, const AppConf
       view.handle_event(event);
     });
     for (const setup_ui::Request &request : view.poll()) {
+      if (request.kind == setup_ui::RequestKind::Cancel && asking == FolderSetup::Asking::Again) {
+        lucent::info("menu", "folders: kept {}", what.flag);
+        return true;
+      }
       if (request.kind != setup_ui::RequestKind::Browse) {
         continue;
       }
@@ -119,9 +126,9 @@ bool ask(const Ask &what, GameWindow &window, const PadInput &pad, const AppConf
 
 } // namespace
 
-bool FolderSetup::run() {
-  return std::ranges::all_of(kAsks, [this](const Ask &what) {
-    return ask(what, window_, pad_, config_);
+bool FolderSetup::run(Asking asking) {
+  return std::ranges::all_of(kAsks, [this, asking](const Ask &what) {
+    return ask(what, asking, window_, pad_, config_);
   });
 }
 

@@ -69,9 +69,10 @@ struct TitlePicker::Layout {
 };
 
 TitlePicker::TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad,
-                         const GameLibrary &library, std::vector<GameOptions> &options, SetInstall &install)
+                         const GameLibrary &library, std::vector<GameOptions> &options, SetInstall &install,
+                         bool folders)
     : canvas_(canvas), renderer_(canvas.renderer()), font_(canvas.font()), window_(window), pad_(pad),
-      library_(library), options_(options), install_(install) {
+      library_(library), options_(options), install_(install), folders_(folders) {
   TTF_SetFontWrapAlignment(font_, TTF_HORIZONTAL_ALIGN_CENTER);
   for (const Game &game : library_.games()) {
     SDL_Texture *icon = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_ABGR8888,
@@ -120,7 +121,7 @@ void TitlePicker::select(size_t index) {
   lucent::info("menu", "picker: on {}", library_.games()[selected_].title);
 }
 
-std::optional<size_t> TitlePicker::run() {
+std::optional<TitlePicker::Picked> TitlePicker::run() {
   (void)window_.takeMenuRequest();
   // What is held when the picker opens (the A that chose it, say) is not a press.
   Held before = Held::from(pad_.menu());
@@ -148,16 +149,18 @@ std::optional<size_t> TitlePicker::run() {
     }
     if (chosen) {
       if (!install_.wanted(library_.games()[*chosen].setup) || setUp(*chosen)) {
-        return chosen;
+        return Picked{chosen};
       }
       before = Held::from(pad_.menu());
       select(*chosen);
       continue;
     }
     if (now.options && !before.options) {
-      OptionsMenu(renderer_, canvas_.engine(), font_, window_, pad_, options_[selected_],
-                  library_.games()[selected_].title)
-          .run();
+      OptionsMenu menu(renderer_, canvas_.engine(), font_, window_, pad_, options_[selected_],
+                       library_.games()[selected_].title, folders_);
+      if (menu.run() == OptionsMenu::Left::ForFolders) {
+        return Picked{};
+      }
       // The menu left the font at its own size.
       textHeight_ = 0.0F;
       before = Held::from(pad_.menu());

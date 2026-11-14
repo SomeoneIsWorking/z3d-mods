@@ -1,5 +1,6 @@
 // The in-window title picker: each game's icon and title from the player's dump, chosen with the
-// pad (left and right, A or Start) or a click; X opens the selected game's options. A game whose
+// pad (left and right, A or Start) or a click; X opens the selected game's options, whose last
+// row asks for the games and mods folders again when the picker can change them. A game whose
 // set is missing is set up from the player's dump first (set_install.hpp). It draws on the
 // canvas it is given (menu_canvas.hpp).
 #pragma once
@@ -26,15 +27,19 @@ class TitlePicker {
 public:
   // `options` holds one entry per game of the library, in its order.
   TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad, const GameLibrary &library,
-              std::vector<GameOptions> &options, SetInstall &install);
+              std::vector<GameOptions> &options, SetInstall &install, bool folders);
   ~TitlePicker();
   TitlePicker(const TitlePicker &) = delete;
   TitlePicker &operator=(const TitlePicker &) = delete;
   TitlePicker(TitlePicker &&) = delete;
   TitlePicker &operator=(TitlePicker &&) = delete;
 
-  // The chosen game's index, or nothing when the window closes.
-  [[nodiscard]] std::optional<size_t> run();
+  struct Picked {
+    // The game to play, or nothing when the player asks to change the folders.
+    std::optional<size_t> game;
+  };
+  // What the player picked, or nothing when the window closes.
+  [[nodiscard]] std::optional<Picked> run();
 
 private:
   struct Layout;
@@ -58,6 +63,7 @@ private:
   const GameLibrary &library_;
   std::vector<GameOptions> &options_;
   SetInstall &install_;
+  bool folders_;
   std::vector<SDL_Texture *> icons_;
   std::vector<TTF_Text *> titles_;
   TTF_Text *heading_ = nullptr;

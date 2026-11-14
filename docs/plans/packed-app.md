@@ -107,7 +107,8 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
   library; `--mods <folder>` keeps the mods folder. The app then reads the library and opens
   the picker.
 - `z3d --roms <folder> --mods <folder>` still sets them from a terminal, for a maintainer.
-- Not built: changing a folder later from the window (delete `folders.json`, or use the flags).
+- The picker's options end in "Games and mods folders", which asks both again; a question
+  dismissed keeps its folder.
 
 ### The player's mod downloads
 - A set names each third-party source by what it is, where to get it and its SHA-256 (`"from"`

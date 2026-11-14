@@ -1,7 +1,8 @@
-// The first run's questions: the folder of the player's dumps, then the folder of their mod
-// downloads, each asked on the shared setup screen (setup-ui) in the game window, chosen in the
-// folder browser and taken by the tools, which keep them in <user>/folders.json and write the
-// library (docs/plans/packed-app.md).
+// The folder questions, asked on the first run and again from the picker's options: the folder of
+// the player's dumps, then the folder of their mod downloads, each asked on the shared setup screen
+// (setup-ui) in the game window, chosen in the folder browser and taken by the tools, which keep
+// them in <user>/folders.json and write the library (docs/plans/packed-app.md). Asked again, a
+// question the player dismisses keeps its folder.
 #pragma once
 
 #include "app_config.hpp"
@@ -17,8 +18,9 @@ public:
       : window_(window), pad_(pad), config_(config) {
   }
 
-  // False when the window closes before both folders are taken.
-  [[nodiscard]] bool run();
+  enum class Asking { First, Again };
+  // False when the window closes before both questions are answered.
+  [[nodiscard]] bool run(Asking asking);
 
 private:
   GameWindow &window_;

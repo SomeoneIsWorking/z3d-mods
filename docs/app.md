@@ -56,8 +56,10 @@ printed lines it reads (`src/tool_process`); a tool's refusal is its lines that 
   events) asks for the dump folder, then the mods folder. Its button opens `FolderBrowser`
   (`src/folder_browser`): the folders of one place as rows with its files listed under them; Up
   and Down pick a row, A opens it, B goes to the parent, X or Start takes the folder shown, a
-  click opens a row, Escape gives up. A folder the tools refuse (no dump of either game in it)
-  stays on the screen with the reason.
+  click opens a row, Escape gives up. A name too long for its line loses its middle. A folder
+  the tools refuse (no dump of either game in it) stays on the screen with the reason.
+- The options' last row, "Games and mods folders", runs `FolderSetup` again: B or Escape on a
+  question keeps that folder, and the picker reopens on the library the tools wrote.
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
@@ -117,7 +119,8 @@ button is the same whichever game was played last.
 
 ## Options
 Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick
-a row, A, Left or Right change it, B or X goes back. `GameOptions` owns them:
+a row, A, Left or Right change it, B or X goes back. Under them, when the picker has the tools,
+is the row that asks for the folders again (Setup above). `GameOptions` owns the options:
 
 - The patch's switches come from the manifest the install writes beside the set,
   `load/mods/<title id>/z3d-options.json` (`tools/z3dmods/options.py`, from
@@ -367,7 +370,9 @@ run the package's launcher. Re-run it after a change.
   folder taken with X comes back as "No dump of Ocarina of Time 3D or Majora's Mask 3D is in
   ..." in red; ROM/3DS shows the two dumps under its rows and is taken; the mods question
   follows, answered with Return, the stick and a click on "Use this folder"; the picker then
-  shows both games, each "A  Set up from your game". `folders.json` holds both folders.
+  shows both games, each "A  Set up from your game". `folders.json` holds both folders. Then
+  X and the options' last row ask again: B keeps the dump folder, another mods folder is taken,
+  and `folders.json` names it.
 
 - Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the
