@@ -182,6 +182,17 @@ font is permissively licensed and close to the game's look; first check whether 
 sheets can be regenerated at the pack's scale from the outline font (texture replacement), and
 draw in the app only what that cannot reach.
 
+Started (2026-11-14), the fonts' files read, in the decomps:
+- OoT3D: `message/<language>/ltn16.qbf`, `QBF1`: 199 glyphs in 208 cells of 16 by 16 at 4 bits,
+  each glyph with its left edge and width (decomp/oot3d `docs/message.md`, "The font files").
+- MM3D: `message/ltn16.gzf`, `GZFX`: 468 glyphs on three 4-bit sheets, 256x256 twice and 256x128
+  (decomp/mm3d `docs/formats/gzf.md`).
+- Next: the cells' and sheets' pixel order; then the loader at each magic's literal (OoT3D
+  0x2DF6A8, MM3D 0x133A2C) and the function that draws a glyph, to learn how glyphs reach the
+  GPU. MM3D's sheets are likely whole textures a pack can replace with an outline font drawn at
+  its scale; OoT3D's cells may be copied into a texture as text is laid out, which a pack cannot
+  key. The words and the prompts in a message need `us.qm` and `GMSG` decoded too.
+
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.
   The switch is immediate (hotswap), with no restart.
