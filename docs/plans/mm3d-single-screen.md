@@ -28,6 +28,9 @@ properly RE based instead of copying patches of bottom screen"). Play gets our o
 the game's state (plans/pc-controls-hud.md, "Rule"); the cut-out pieces are deleted when it lands.
 The menus showing the touch screen whole is a stopgap.
 
+Done for play (2026-11-14): `patch/mm3d/overlay.toml`'s `play` layout has no pieces; the HUD is
+`patch/mm3d/hud.toml` (`mm-hud2`). What it does not draw yet is listed in plans/pc-controls-hud.md.
+
 Seen (`mm-ov3`): play has the elements along the edges, Items and Masks are large, the area's
 title card draws the top screen alone (`hudVisibility` 2). The pad reaches the touch-only buttons
 through Project Restoration: ZL is View, ZR with X is item I and ZR with Y is item II (`mm-zl`,

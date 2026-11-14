@@ -119,10 +119,8 @@ screen's 320x240 pixels drawn at a rectangle of the top screen's 400x240, with r
 an opacity. The game's table, `patch/<game>/overlay.toml`, holds the layouts and names one for each
 of the game's touch screens (and one for while its HUD visibility hides that screen); MM3D's:
 
-- `play` (the main touch screen): the top screen fills the window and the HUD's elements are each
-  drawn on it at 0.55 of their size: hearts and magic, rupees and View top left, the ocarina
-  bottom left, Gear and the Masks, Map and Items tabs top right, the I, II, X and Y item buttons
-  on the right edge above the A button. The decorative middle panel is not drawn;
+- `play` (the main touch screen): the top screen alone, under our own HUD (`hud = true`; "HUD"
+  below). No part of the touch screen is drawn in play;
 - `menu` (Items, Masks, Gear): the whole touch screen, large, under the menu's title bar;
 - `top_only` (the game blanks the touch screen, or its HUD visibility hides the main one: an
   area's title card, a cutscene): the top screen alone;
@@ -139,8 +137,8 @@ and hands the layout to `GameWindow`, which writes the core's custom layout and
 between pieces touches nothing. A tool screenshot of the side-by-side layout is cut to the
 screens' extent (800x384 at scale 2).
 
-Seen (`mm-ov3`, scale 3): play, the Items and Masks menus, first person, and Woodfall Temple's
-title card with the top screen alone.
+Seen (`mm-ov3`, scale 3): the Items and Masks menus, and Woodfall Temple's title card with the
+top screen alone.
 
 ## HUD
 `hud` is the play HUD's one owner, for every game (plans/pc-controls-hud.md). It knows element
@@ -157,7 +155,14 @@ window size, into one RGBA image, and `Hud` gives the core that image and a list
 frame (`Settings::values.overlay_image`, `overlay_quads`). It reads the game after every frame
 through `Emulator::read`, and draws only while the overlay's layout is play's (`hud = true` in
 `overlay.toml`). While the chord is held (`PadInput::chord()`), a button shows the face button
-that presses it. An item's icon is `<mods>/z3d-hud-icons/<item id>.png`.
+that presses it; with the keyboard last used it shows a key cap instead (1 to 4, or 5 to 8 on
+the second page). An item's icon is `<mods>/z3d-hud-icons/<item id>.png`.
+
+Seen (MM3D, `mm-hud2` at scale 3, `mm-hud3` at scale 5): three hearts and 0 rupees on a fresh
+file; `healthCapacity` 0xA0, `health` 0x68 and `rupees` 123 written, and the next frame has ten
+hearts with six and a half red and the counter at 123; the chord held puts A and B on the I and
+II buttons; `device:keyboard` turns the glyphs into caps 1 to 4, and 5 to 8 with the chord. The
+same crops at both sizes have clean edges.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`

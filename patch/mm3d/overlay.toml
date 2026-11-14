@@ -1,7 +1,8 @@
 # The app's single screen (app/src/screen_overlay.hpp): which layout each touch screen takes, and
 # the layouts. A layout places the top screen and pieces of the touch screen on the top screen's
 # 400x240 pixels; a piece is `from` [x, y, width, height] in the touch screen's 320x240 pixels
-# drawn at `to`, with corners rounded by `radius` touch pixels. Later pieces lie over earlier ones.
+# drawn at `to`, with corners rounded by `radius` touch pixels. Only a menu shows the touch screen,
+# and whole: play's view never does.
 
 # Outside play (the title, file select) and on a screen not named here. "split" is the app's own:
 # the two screens side by side.
@@ -25,17 +26,7 @@ pieces = [{ from = [0, 0, 320, 240], to = [59.2, 28.8, 281.6, 211.2] }]
 [layouts.ocarina]
 pieces = [{ from = [0, 0, 320, 240], to = [4, 4, 128, 96], radius = 8, opacity = 0.85 }]
 
-# Play's HUD: each element at 0.55 of its size, about the top screen's A button.
+# Play: the top screen alone, under our own HUD (hud.toml).
 [layouts.play]
-pieces = [
-  { from = [63, 0, 193, 38], to = [4, 4, 106.15, 20.9], radius = 6 },     # hearts and magic
-  { from = [0, 62, 56, 34], to = [4, 27, 30.8, 18.7], radius = 6 },       # rupees
-  { from = [0, 0, 56, 55], to = [4, 48, 30.8, 30.25], radius = 8 },       # View
-  { from = [0, 183, 56, 57], to = [4, 205, 30.8, 31.35], radius = 8 },    # ocarina
-  { from = [0, 100, 56, 38], to = [258.25, 4, 30.8, 20.9], radius = 6 },  # Gear
-  { from = [63, 200, 193, 40], to = [290, 4, 106.15, 22], radius = 6 },   # Masks, Map, Items
-  { from = [264, 0, 56, 55], to = [365.2, 100, 30.8, 30.25], radius = 8 },   # I
-  { from = [264, 183, 56, 57], to = [365.2, 132, 30.8, 31.35], radius = 8 }, # II
-  { from = [266, 72, 52, 46], to = [334, 103, 28.6, 25.3], radius = 23 },    # X
-  { from = [257, 120, 50, 48], to = [334, 134, 27.5, 26.4], radius = 24 },   # Y
-]
+hud = true
+pieces = []

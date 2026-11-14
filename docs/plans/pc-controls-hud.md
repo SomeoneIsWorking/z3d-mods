@@ -119,4 +119,16 @@ draw in the app only what that cannot reach.
   it waits for: a steady rate may be taken for drift, or the accelerometer may have to agree.
 
 ## Status
-Chord + ABXY: bindings built; the face buttons leaving the game is shown, an item on A or B is not. The rest not started.
+- Chord + ABXY: bindings built, not yet seen in a run with a real pad.
+- HUD (MM3D): the owner, the atlas and the core's pass are built (docs/app.md, "HUD"). Drawn from
+  state: hearts, rupees, the X, Y, I and II buttons with their prompts, the chord page's prompts,
+  key caps (`mm-hud2`, `mm-hud3`). The cut-out touch-screen pieces are gone from play.
+- Missing from MM3D's HUD: the items' icons and ammo, a button's dimmed state, magic, the wallet,
+  the A button's label and View; the game's own A ring and clock still draw (the clock is Project
+  Restoration's and may stay). Each needs its field named in the decomp first (`docs/hud.md`).
+- OoT3D: nothing drawn yet; its inventory is being written into `decomp/oot3d`.
+- Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
+  command, not with real keys in a window.
+- Mouse aim: the gyroscope feed exists and the games do not answer it yet (below).
+- Outline fonts: the HUD's own lettering is port-assets' outline typeface at the window's size;
+  the games' text is not started.

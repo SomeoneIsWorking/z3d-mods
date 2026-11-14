@@ -1,0 +1,47 @@
+# Our play HUD (app/src/hud.hpp): each element's place on the top screen's 400x240 pixels and the
+# guest memory it reads. `at` is a sum: a global of the decomp, `Struct.field` offsets, defines and
+# numbers (decomp/mm3d docs/hud.md names them).
+
+[[element]]
+kind = "hearts"
+rect = [8, 8, 11, 11]
+unit = 0x10
+columns = 10
+value = { at = ["gCommonData", "CommonData.save", "SaveData.health"], bytes = 2 }
+capacity = { at = ["gCommonData", "CommonData.save", "SaveData.healthCapacity"], bytes = 2 }
+
+[[element]]
+kind = "counter"
+icon = "rupee"
+rect = [8, 198, 40, 13]
+value = { at = ["gCommonData", "CommonData.save", "SaveData.rupees"], bytes = 2 }
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "X"
+item_button = "X"
+rect = [316, 200, 26, 26]
+value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_X"], bytes = 1 }
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "Y"
+item_button = "Y"
+rect = [338, 172, 26, 26]
+value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_Y"], bytes = 1 }
+
+[[element]]
+kind = "button"
+frame = "slot"
+item_button = "I"
+rect = [370, 164, 24, 24]
+value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }
+
+[[element]]
+kind = "button"
+frame = "slot"
+item_button = "II"
+rect = [370, 136, 24, 24]
+value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_II"], bytes = 1 }
