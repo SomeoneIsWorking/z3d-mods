@@ -6,6 +6,7 @@ build was made from, which a package names as its source (SOURCE.txt).
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import urllib.request
 from collections.abc import Callable
@@ -91,6 +92,10 @@ def fetch() -> list[Path]:
         folder.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "clone", "--quiet", "--no-checkout", source.url, str(folder)], check=True)
         subprocess.run(["git", "-C", str(folder), "checkout", "--quiet", "--detach", source.revision], check=True)
+        hook = folder / "hooks" / "pre-commit"
+        if hook.exists():
+            # The core's configure copies its hook in, and the build container cannot write the checkout.
+            shutil.copyfile(hook, folder / ".git" / "hooks" / "pre-commit")
         if source.submodules:
             subprocess.run(["git", "-C", str(folder), "submodule", "update", "--quiet", "--init", "--recursive",
                             "--depth", "1"], check=True)

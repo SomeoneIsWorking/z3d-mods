@@ -22,6 +22,7 @@ is read-only, so it always uses the data folder.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -92,7 +93,9 @@ LICENSE_NAMES = ("license", "licence", "copying", "copyright", "notice")
 
 
 def _run(*command: str) -> str:
-    return subprocess.run(command, check=True, capture_output=True, text=True).stdout
+    # The package's interpreter leaves no bytecode in it, which would name this folder.
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    return subprocess.run(command, check=True, capture_output=True, text=True, env=env).stdout
 
 
 def _python(out: Path) -> Path:
@@ -276,6 +279,6 @@ def build(cfg: Config, out: Path) -> Path:
     _check_floor(out)
     # The mark comes last: a folder with it is a whole package.
     (out / config.PACKAGE_MARK).write_text(json.dumps({"revision": revision, "azahar": app.AZAHAR_REVISION}) + "\n")
-    _run(str(interpreter), "-I", "-B", "-c", "import z3dmods.packed")
+    _run(str(interpreter), "-I", "-c", "import z3dmods.packed")
     _check_private(cfg, out)
     return out
