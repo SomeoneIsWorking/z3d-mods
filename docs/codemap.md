@@ -14,7 +14,7 @@
 - `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by the hash its `pack.json` names.
 - `tools/z3dmods/ctxb.py`: CTXB menu texture bundles.
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).
-- `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies and draws port-assets' pad glyphs over the 3DS button prompts (edit tables in `sets/hud/`).
+- `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies and draws port-assets' pad glyphs over the 3DS button prompts (edit tables in `sets/hud/`), and the text's prompt sheet again with the app's key caps for the pack's keyboard variant.
 - `tools/z3dmods/hud_icons.py`: the game art the app's play HUD draws, cut from the game's sheets or the pack's copies: item icons by the game's icon table, named pieces and the A button's words (`[icons]`, `[art]`, `[words]` in `patch/<game>/hud.toml`).
 - `tools/z3dmods/text.py`: a game's own text for the PC, from its table in `sets/text/`: the text font drawn from an outline font (`sets/fonts/`) into the game's font file and the pack's images, and the messages' prompt words reworded.
 - `tools/z3dmods/text_font.py`: an outline font fitted to a bitmap font's cells (capital height, baseline, tracking) and drawn into them at the game's size and a pack's scale.

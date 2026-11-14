@@ -342,6 +342,8 @@ void Hud::update() {
   }
   Settings::values.overlay_image = atlas_->image();
   Settings::values.overlay_quads = quads_;
+  Settings::values.custom_texture_variant =
+      pad_.lastDevice() == HostDevice::Keyboard ? kKeyTextureVariant : "";
 }
 
 // `sprite` drawn at `at` window pixels.

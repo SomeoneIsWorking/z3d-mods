@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, source_check, stairs, symbols, text, zsi
+from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -21,6 +22,8 @@ PAGE = 0x1000
 EXHEADER_BSS_SIZE = 0x3C
 HUD_FOLDER = "z3dmods-hud"
 TEXT_FOLDER = "z3dmods-text"
+# The pack's variant the core shows while the player last used the keyboard (app/src/hud.cpp).
+KEYBOARD_VARIANT = Path("variants") / "keyboard"
 STAGING = ".z3dmods-new"
 # The layer switch in the patch's options.toml that turns the stepped stairs on.
 STAIRS_OPTION = "stairs"
@@ -224,9 +227,9 @@ def install(cfg: Config, game: GameSet) -> Path:
                    if game.stairs else ({}, {}))
     for scene, use in uses.items():
         print(f"{scene}: {use}")
-    menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
-                      cfg.glyph_set())
-             if game.hud else {})
+    menus, keyboard = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
+                                 cfg.glyph_set(), AppKeys(cfg))
+                       if game.hud else ({}, {}))
 
     words, letters = _text(cfg, game, rom, base_romfs, pack)
 
@@ -236,7 +239,7 @@ def install(cfg: Config, game: GameSet) -> Path:
     try:
         _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], stairs_layer, rooms, words)
         if textures is not None:
-            _build_textures(game, texture_root, menus, letters, staged[1][1])
+            _build_textures(game, texture_root, menus, keyboard, letters, staged[1][1])
         # Every refusal comes before the first file is taken out.
         recorded = [_recorded(folder) for folder, _ in staged]
         for (folder, staging), files in zip(staged, recorded):
@@ -295,13 +298,17 @@ def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | N
 
 
 def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, bytes],
-                    letters: dict[str, bytes], textures: Path) -> None:
+                    keyboard: dict[str, bytes], letters: dict[str, bytes], textures: Path) -> None:
     """The game's textures folder, whole, with its record."""
     if texture_root:
         # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
         _copy_tree(texture_root, textures, frozenset(menus))
     for name, png in menus.items():
         target = textures / HUD_FOLDER / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(png)
+    for name, png in keyboard.items():
+        target = textures / KEYBOARD_VARIANT / HUD_FOLDER / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(png)
     for name, png in letters.items():

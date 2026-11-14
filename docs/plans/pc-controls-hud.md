@@ -168,7 +168,9 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
 - What a cell cannot say is said in the message data: the install rewords the prompts
   (`sets/text/`, "The games' text" below), so the sword's prompt is X and the item messages
   name the slots.
-- No key caps in text boxes: the sheet is a texture made at install, not swapped by device.
+- The prompts follow the last device: the install draws the text's prompt sheet a second time
+  with the app's key caps (each cell's `key` in `sets/hud/`) into the pack's `variants/keyboard/`,
+  and `Hud` selects that variant in the core while the keyboard was last used.
 - MM3D's touch-screen HUD sheet still labels I, II, View, Gear and Map with Project
   Restoration's shortcuts; that sheet is not drawn in play any more.
 
@@ -235,12 +237,27 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   ZR outside play (the song list); MM3D's notebook has no input; OoT3D's View does nothing in
   a dungeon (The One Screen's map touch); "LB" in the chord's text is a word and does not
   follow the device; MM3D's map zoom has no pad input.
-- Not done: the prompts do not follow the last device. The prompt sheet is one texture made
-  at install; following the device needs the core to swap that one replacement while the game
-  runs (a second image of the sheet with key caps, and a setting the app flips), which is not
-  built. French and Spanish are not reworded. The fonts' characters the outline font lacks
+- Prompts by device, seen with the same box swapped live by `device:` (`txt-oot-k3`: 0x00A4
+  shows Menu, RT, A, then Tab, the right mouse button, E, then the pad's again; 0x1036 and
+  0x0066 with caps; `txt-mm-k2`: 0x0078's Menu, LT, Y, B, RB, D-pad become Tab, Q, 1, 2, 3,
+  4567, and back; 0x026B and 0x003E with caps). A cell names one meaning: OoT3D's plain B is
+  Backspace (its slot B has its own cell), MM3D's B is slot 2, so MM3D's few "B to cancel"
+  prompts show 2. Long key names (Backspace, Left Shift) are too small to read in a cell, and
+  a cell of several keys (WASD, 4567) is small.
+- Not done: the fonts' characters the outline font lacks
   keep the game's bitmap, enlarged (MM3D's Greek and Cyrillic sheets, the US text uses none).
   sys8.qbf is not redrawn.
+- French and Spanish are not reworded, and the English tables do not carry over: the finds
+  are English phrases, so of the tables' edits only one or two match anything in the other
+  languages (OoT3D's `us.qm` holds all three, languages 4 and 6; MM3D's are
+  `message/us/usf.gmsg` and `uss.gmsg`, read the same way). Each language needs its own edits
+  for the same messages, written and checked against its own words: the touch screen is named
+  in OoT3D by 24 English, 14 French and 29 Spanish messages, in MM3D by 10, 8 and 21 (FR:
+  "écran tactile", "écran inférieur", "touchez", "stylet"; ES: "pantalla táctil", "pantalla
+  inferior", "puntero"; Spanish "tocar" is also playing the ocarina). The item-button and sword
+  prompts are rewritten by the words around the icon, so they need the same. `text.py` applies
+  a table to English only; a language's table would name its language (QM index or file). The
+  MM3D pack has no French prompt sheet, so French MM3D keeps the 3DS art.
 
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.
@@ -261,8 +278,12 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   itself (no frame-time scaling), the reader's dead zone, zero drift, averaging and
   accelerometer revise are off for it with the bias 0, pitch turns the 3DS around its x and yaw
   around world up, and the look's limits do not wind up. No patch code was needed.
-- Not built: the free camera on the mouse outside aiming, a sensitivity option, firing from a
-  mouse button.
+- Built, 2026-11-14 (docs/app.md "Mouse camera"): in the rest of play the mouse turns the
+  camera, 0.05 degrees a count, through a yaw and pitch delta in the link block (`look`).
+  OoT3D's `free_camera.cpp` adds it to its orbit; MM3D's `mouse_camera.cpp` makes the game's
+  C-stick test read as moved and turns `Camera_Follow`'s eye around its look-at point (the
+  decomp's `docs/camera.md`).
+- Not built: a sensitivity option, firing from a mouse button.
 
 ## Status
 - Slots, pad, keyboard and HUD: built in both games. Seen with a real pad's and real key events
@@ -284,10 +305,11 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   to the Bunny Hood, D-Left takes it; in play D-Left puts it on and takes it off; R3 enters
   first person and leaves it. `slots-mm3d` uses four slots in a row, which fills the game's
   four item buttons (I, II, X, Y), so the X and Y lanes run there.
-- Not built: the mouse as the free camera outside aim. The right stick is the C-stick, which
-  OoT3D's `free_camera.cpp` and Project Restoration read as a rate; a mouse wants an angle, so
-  the next step is a yaw and pitch delta in the link block that `free_camera.cpp` adds to its
-  orbit, and for MM3D the RE of Project Restoration's camera input.
+- Mouse camera: built in both games. On the harness (`mouse:<dx>,<dy>`) 400 counts right turn
+  OoT3D's free camera by 3640 binary angles for 3641 and back, 200 up by 1820
+  (`mm-q-oot-mouse2`); MM3D's camera at South Clock Town's owl statue by 3626 and 3642 for 3641,
+  200 up by 1789 for 1820 (`mm-q-mouse8`, at moving with the eye). In a window with real mouse
+  motion: `inputtest camera`, `camera-mm3d`. Not run: Master Quest.
 - Not done: item counts are not coloured at capacity.
 - Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The

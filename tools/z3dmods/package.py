@@ -9,7 +9,7 @@ but the desktop's own libraries (docs/plans/packed-app.md).
     tools/z3dmods/      these tools; the app runs `z3dmods.packed folders` and `setup`
     sets/, patch/       the sets and each patch's tables (options, HUD, overlay)
     prebuilt/<game>/    our patch built for the set's base, and the decomp's names the tools read
-    prebuilt/glyphs/    port-assets' pad glyphs drawn for the menu textures
+    prebuilt/glyphs/    port-assets' pad glyphs and key caps drawn for the menu textures
     assets/, fonts/     port-assets' glyphs and key typeface, the picker's font
     SOURCE.txt          the commit of every checkout the build was made from (the GPL's source)
     licenses/           the licence of everything in it that is not ours
@@ -32,6 +32,7 @@ from z3dmods import (
     build_container,
     config,
     glyphs,
+    hud,
     patch_build,
     play,
     shortcut,
@@ -259,6 +260,7 @@ def build(cfg: Config, out: Path) -> Path:
         patch_build.save(patch_build.build(cfg.repo, name, game.payload, cfg.repo / "build" / "patch" / name), built)
         symbols.save(symbols.load(cfg.repo, name), built / symbols.PACKAGED)
     glyphs.save(cfg.glyph_set(), out / config.PREBUILT / glyphs.FOLDER)
+    glyphs.save(cfg.glyph_set().parent / hud.KEY_SET, out / config.PREBUILT / glyphs.FOLDER)
     for part in ("sets", "fonts"):
         shutil.copytree(cfg.port_assets / part, out / "assets" / part)
     shutil.copyfile(cfg.port_assets / "LICENSE", out / "assets" / "LICENSE")

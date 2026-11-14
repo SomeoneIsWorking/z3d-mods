@@ -36,6 +36,14 @@ class AppKeys:
             raise KeyError(f"the app binds no key to {table} {name}")
         return self._bindings[table, name][0]
 
+    def key(self, table: str, name: str) -> str:
+        """SDL's name of the first key bound to `name` of `table`; a mouse button's number."""
+        return self._first(table, name)
+
+    @staticmethod
+    def is_mouse(table: str) -> bool:
+        return table == MOUSE
+
     def keysyms(self, table: str, name: str) -> list[str]:
         """The keys to hold for `name` of `table`, by its first binding."""
         return [_keysym(key) for key in self._first(table, name).split("+")]

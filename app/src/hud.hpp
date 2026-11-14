@@ -1,6 +1,7 @@
 // Our own play HUD, drawn over the top screen from the game's state: hearts, a meter, counters and
 // item buttons with the pad's glyphs. A game is data: the manifest's "hud" (z3d-options.json,
-// from patch/<game>/hud.toml) places the elements and says which guest memory each reads.
+// from patch/<game>/hud.toml) places the elements and says which guest memory each reads. The
+// game's own text prompts follow the same device: the texture pack's keyboard variant.
 #pragma once
 
 #include "hud_atlas.hpp"

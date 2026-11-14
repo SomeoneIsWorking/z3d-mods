@@ -14,13 +14,16 @@ import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from z3dmods import options
 from z3dmods.config import Config
-from z3dmods.install import GameSet
+
+if TYPE_CHECKING:
+    from z3dmods.install import GameSet
 
 # The fork's z3d-harness branch the app is built against.
-AZAHAR_REVISION = "045af2645"
+AZAHAR_REVISION = "126dede48"
 TOOLCHAIN = "clang"
 COMPILERS = ["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]
 AZAHAR_OPTIONS = {

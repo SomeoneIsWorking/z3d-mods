@@ -273,7 +273,9 @@ the rim of a slot that plays only once held (`charge`). While the chord is held
 the diamond shows slots 8 to 11. Each ring's prompt is what `PadInput::slotPrompt` or
 `verbPrompt` says presses it, drawn by `prompt_art`: the pad's glyph, or with the keyboard last
 used the key's cap (the mouse's button for the sword). While a screen assigns slots (`PadMode::
-Assign`) a panel beside it shows all eleven.
+Assign`) a panel beside it shows all eleven. The game's own text prompts follow the same
+device: each frame `Hud` selects the texture pack's `keyboard` variant while the keyboard was
+last used, where the install put the text's prompt sheet with key caps (`tools/z3dmods/hud.py`).
 
 Seen in a window with real pad and key events at 1280x720 and 854x480 (`z3dmods inputtest
 slots`, `slots-small`, `slots-mm3d`, `slots-mm3d-small`; crops by `scratch/ctl/crops.py`): the
@@ -327,6 +329,11 @@ games.
    asked once per HID gyroscope sample and its rate is taken as it is, rounded to the HID's unit;
    every other device is read as before, its rate stretched by the host's last frame time
    (which made a tool's unpaced run feed a tenth of the rate, unevenly).
+8. `custom_textures`: `Settings::values.custom_texture_variant`. A pack's files under
+   `variants/<name>/` are a second set of replacements, by the same names and hashes, used over
+   the pack's own while `<name>` is selected. A change drops only the cached textures some
+   variant replaces (`RasterizerCache::UnregisterVariantSurfaces`); their next use uploads the
+   selected image.
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and

@@ -29,6 +29,8 @@ inline constexpr const char *kKeySet = "keyboard";
 inline constexpr const char *kKeyCap = "cap";
 inline constexpr const char *kWideCap = "cap_wide";
 inline constexpr float kWideCapAspect = 1.5F;
+// The texture pack's variant with key caps for the game's prompts (tools/z3dmods/install.py).
+inline constexpr const char *kKeyTextureVariant = "keyboard";
 
 // The glyph of each pad button a prompt can name.
 inline constexpr std::array kPadGlyphs{

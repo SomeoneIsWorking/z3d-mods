@@ -10,6 +10,11 @@ the mod's texture, so the pack covers the mod's version too.
 With no base mod behind a texture (MM3D) only the prompts change, and the replacement carries the
 name of the pack's own copy, which the install then leaves out. A texture inside a GAR archive is named
 `<archive>.gar/<file>.ctxb`.
+
+A texture whose prompt cells each name the app's key binding for that prompt (`"key"`: "<table> <name>"
+lines of `z3d --keys`, several for one cell) also gets a keyboard image: each cell a key cap labelled
+with the app's key, or the mouse button. The core shows it while the player last used the keyboard
+(the pack's `variants/keyboard/`).
 """
 
 from __future__ import annotations
@@ -21,8 +26,13 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
+from typing import TYPE_CHECKING
+
 from z3dmods import ctr, ctxb, gar, glyphs, pica_texture
 from z3dmods.texture_pack import TexturePack
+
+if TYPE_CHECKING:
+    from z3dmods.app_keys import AppKeys
 
 # A premultiplied channel difference above this is an edit, not the mod's re-encoding.
 EDIT_THRESHOLD = 24
@@ -156,6 +166,33 @@ def _glyph(size: tuple[int, int], svg: Path, dimmed: bool) -> Image.Image:
     return layer
 
 
+# port-assets' key caps beside the pad glyphs, a mouse button's cap by SDL's number, and the
+# label's share of the cap: its capitals' height, and the most of the width it takes.
+KEY_SET = "keyboard"
+MOUSE_CAPS = {"1": "mouse_left", "2": "mouse_middle", "3": "mouse_right"}
+CAP_LABEL_HEIGHT = 0.45
+CAP_LABEL_WIDTH = 0.7
+CAP_INK = (40, 40, 40)
+
+
+def _key_cap(size: tuple[int, int], cell: dict, keys: AppKeys, glyph_set: Path, font: Path) -> Image.Image:
+    """The cap of the app's key for a prompt cell, or its mouse button, as large as fits `size`."""
+    bindings = [line.split(" ") for line in cell["key"]]
+    caps = glyph_set.parent / KEY_SET
+    dimmed = cell.get("dimmed", False)
+    if keys.is_mouse(bindings[0][0]):
+        return _glyph(size, caps / f"{MOUSE_CAPS[keys.key(*bindings[0])]}.svg", dimmed)
+    layer = _glyph(size, caps / "cap.svg", dimmed)
+    label = "".join(keys.key(table, name) for table, name in bindings)
+    side = min(size)
+    room = (round(side * CAP_LABEL_WIDTH), round(side * CAP_LABEL_HEIGHT))
+    text = _lettering(room, label, font, CAP_INK, 0)
+    if dimmed:
+        text.putalpha(text.getchannel("A").point(lambda v: int(v * DIMMED)))
+    layer.alpha_composite(text, ((size[0] - room[0]) // 2, (size[1] - room[1]) // 2))
+    return layer
+
+
 # A chord's held button takes this much of the cell's height, above the pressed one.
 CHORD_HELD = 0.5
 
@@ -207,8 +244,9 @@ def _darkest(image: Image.Image, mask: Image.Image) -> tuple[int, int, int]:
 
 
 def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], font: Path,
-            glyphs: Path) -> Image.Image:
-    """The pack's vanilla copy with the mod's edits redone at its scale."""
+            glyphs: Path, keys: AppKeys | None = None) -> Image.Image:
+    """The pack's vanilla copy with the mod's edits redone at its scale; with `keys`, each
+    prompt cell is the cap of its key."""
     scale = texture.scale
     out = texture.hires.copy()
     covered = Image.new("L", texture.vanilla.size, 0)
@@ -254,7 +292,11 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
                 out.paste(_inlay_ground(texture.hires, (x0, y0, x1, y1), scale), (x0, y0))
             elif not edit.get("badge", False):
                 out.paste(clear, (x0, y0, x1, y1))
-            out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)), (x0, y0))
+            if keys is not None:
+                out.alpha_composite(_key_cap(size, edit, keys, glyphs, font), (x0, y0))
+            else:
+                out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)),
+                                    (x0, y0))
         elif kind == "chord":
             held, pressed = edit["chord"]
             if not edit.get("badge", False):
@@ -281,9 +323,25 @@ def _per_language(document: dict) -> dict[str, list[dict]]:
     return edits
 
 
+def _keyed(cells: list[dict]) -> bool:
+    """Whether a texture's prompt cells name their keys; some but not all is a table error."""
+    prompts = [cell for cell in cells if "glyph" in cell]
+    named = [cell for cell in prompts if "key" in cell]
+    if named and len(named) != len(prompts):
+        raise ValueError("some of its prompt cells name a key and some do not")
+    return bool(named)
+
+
+def _png(image: Image.Image) -> bytes:
+    buffer = io.BytesIO()
+    image.save(buffer, "PNG")
+    return buffer.getvalue()
+
+
 def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack, table: Path, font: Path,
-          glyphs: Path) -> dict[str, bytes]:
-    """Pack file name -> PNG for every texture in the edit table."""
+          glyphs: Path, keys: AppKeys) -> tuple[dict[str, bytes], dict[str, bytes]]:
+    """Pack file name -> PNG for every texture in the edit table, and for the keyboard images of
+    those whose prompts name keys."""
     document = json.loads(table.read_text())
     edits = _per_language(document)
 
@@ -302,13 +360,13 @@ def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack, table: P
         if hires is None:
             raise ValueError(f"{path}: the texture pack has no copy of the vanilla texture")
         textures[path] = Texture(vanilla, modded, modded_data, gl_format, hires)
-    out = {}
+    out, keyboard = {}, {}
     for path, texture in textures.items():
+        name = pack.name(texture.modded, texture.modded_data, texture.gl_format)
         try:
-            image = compose(texture, edits[path], textures, font, glyphs)
+            out[name] = _png(compose(texture, edits[path], textures, font, glyphs))
+            if _keyed(edits[path]):
+                keyboard[name] = _png(compose(texture, edits[path], textures, font, glyphs, keys))
         except ValueError as error:
             raise ValueError(f"{path}: {error}") from error
-        buffer = io.BytesIO()
-        image.save(buffer, "PNG")
-        out[pack.name(texture.modded, texture.modded_data, texture.gl_format)] = buffer.getvalue()
-    return out
+    return out, keyboard
