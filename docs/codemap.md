@@ -47,10 +47,11 @@
 - `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
   - `slots.hpp`: the item slots both games' patches share: slot values packed for a save's spare bytes, and which of the game's item buttons carry the slots in use.
+  - `song_sequence.hpp`: a song's notes held one after another in the pad for the game to recognise.
   - `ctr.hpp`: 3DS kernel calls and service IPC from inside a title.
   - `cstick.hpp`: the New 3DS C-stick, read from `ir:rst`'s shared memory.
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), the item slots (`slot_items.cpp`) and a slot's song played on the ocarina (`song_player.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
-- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), the chord item page (`chord_items.cpp`), the game's own A button hidden (`base_hud.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), the item slots with their songs (`slot_items.cpp`), the game's own A button hidden (`base_hud.cpp`), its switches (`options.toml`), hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).
   - `core_settings`: the core's settings and user path from the config, applied first; a game's settings before it loads.

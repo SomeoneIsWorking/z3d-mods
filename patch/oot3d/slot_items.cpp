@@ -30,6 +30,11 @@ constexpr Lane kLanes[] = {
 };
 constexpr uint32_t kLaneCount = sizeof(kLanes) / sizeof(kLanes[0]);
 
+// A slot's value, six bits: an inventory slot, a song from kFirstSong on, or nothing.
+using Slots = SlotTable<6>;
+constexpr uint8_t kNoValue = Slots::kNone;
+constexpr uint8_t kFirstSong = 0x20;
+
 // The slots by number, as the app's pad table presses them (app/src/pad_input.cpp).
 constexpr uint32_t kSlotY = 0;
 constexpr uint32_t kSlotB = 1;
@@ -40,7 +45,7 @@ constexpr uint32_t kSlotDown = 5;
 // What the patch keeps in the save's unused bytes: the child's slots, then the adult's.
 struct Store {
   uint8_t marker;
-  uint8_t table[SlotTable::bytesFor(2 * kSlotCount)];
+  uint8_t table[Slots::bytesFor(2 * kSlotCount)];
 };
 static_assert(sizeof(Store) <= kSaveUnusedSize);
 constexpr uint8_t kStoreMarker = 0x5A;
@@ -68,7 +73,7 @@ public:
       // The age changed with slots on the lanes: the game put them away as the other age's.
       restore(lanesChild_ ? kSaveChildEquips : kSaveAdultEquips, lanesChild_);
     }
-    SlotTable table(store->table);
+    Slots table(store->table);
     const uint32_t first = child ? 0 : kSlotCount;
     if (guest::read<int32_t>(kItemMenuState) != kMenuScreenClosed) {
       link.mode = static_cast<uint8_t>(PadMode::Assign);
@@ -104,16 +109,16 @@ private:
 
   // A file new to the slots: the items on the game's four buttons, and the ocarina on Down.
   static void seed(volatile Store *store) {
-    SlotTable table(store->table);
+    Slots table(store->table);
     for (uint32_t index = 0; index < 2 * kSlotCount; ++index) {
-      table.set(index, kSlotValueNone);
+      table.set(index, kNoValue);
     }
     for (uint32_t age = 0; age < 2; ++age) {
       const uint32_t first = age * kSlotCount;
       const volatile uint8_t *nodes = layout(age == 0);
       constexpr uint8_t kFrom[][2] = {{kSlotY, kItemMenuNodeY}, {kSlotB, kItemMenuNodeX}, {kSlotRB, kItemMenuNodeI}, {kSlotUp, kItemMenuNodeII}};
       for (const auto &[slot, node] : kFrom) {
-        if (nodes[node] < kSlotValueSong) {
+        if (nodes[node] < kFirstSong) {
           table.set(first + slot, nodes[node]);
         }
       }
@@ -132,29 +137,29 @@ private:
   static uint8_t itemUnderCursor(bool child) {
     const int32_t node = guest::read<int32_t>(kItemMenuCursorNode);
     if (node < 0 || node >= kItemMenuNodes) {
-      return kSlotValueNone;
+      return kNoValue;
     }
     const uint8_t inventorySlot = layout(child)[node];
-    return inventorySlot < kSlotValueSong && itemIn(inventorySlot) != kItemNone ? inventorySlot : kSlotValueNone;
+    return inventorySlot < kFirstSong && itemIn(inventorySlot) != kItemNone ? inventorySlot : kNoValue;
   }
 
   // The ocarina's song list: the slot value of the song on show; none on one not learned.
   static uint8_t songOnShow() {
     const int32_t entry = guest::read<int32_t>(kOcarinaSongListShown);
     if (entry < 0 || entry >= kSongCount) {
-      return kSlotValueNone;
+      return kNoValue;
     }
     const uint32_t item = guest::read<uint32_t>(kOcarinaSongListItems + static_cast<uint32_t>(entry) * sizeof(uint32_t));
     if (item < kItemSongMinuet || item > kItemSongStorms) {
-      return kSlotValueNone;
+      return kNoValue;
     }
     const uint32_t song = item - kItemSongMinuet;
     const uint32_t learned = guest::read<uint32_t>(kSaveContext + kSaveInventory + kInventoryQuestItems);
-    return (learned >> (kQuestSongMinuet + song)) & 1U ? static_cast<uint8_t>(kSlotValueSong + song) : kSlotValueNone;
+    return (learned >> (kQuestSongMinuet + song)) & 1U ? static_cast<uint8_t>(kFirstSong + song) : kNoValue;
   }
 
   // Plain play: each held slot's item on a lane, and the lane's button in the play input.
-  void use(void *play, const SlotTable &table, uint32_t first, uint16_t held, uint16_t pressed, bool child) {
+  void use(void *play, const Slots &table, uint32_t first, uint16_t held, uint16_t pressed, bool child) {
     uint32_t busy = 0;
     for (uint32_t lane = 0; lane < kLaneCount; ++lane) {
       const uint8_t slot = lanes_.slot(lane);
@@ -178,8 +183,8 @@ private:
       if (lane != kLaneCount) {
         busy |= 1U << lane;
         buttonsPressed |= kLanes[lane].button;
-        if (const uint8_t value = table.get(first + slot); value >= kSlotValueSong) {
-          playSong(static_cast<uint8_t>(value - kSlotValueSong));
+        if (const uint8_t value = table.get(first + slot); value >= kFirstSong) {
+          playSong(static_cast<uint8_t>(value - kFirstSong));
         }
       }
     }
@@ -203,14 +208,14 @@ private:
 
   // The inventory slot a slot value uses: its own, or the ocarina's for a song.
   static uint8_t inventorySlotOf(uint8_t value) {
-    if (value == kSlotValueNone) {
+    if (value == kNoValue) {
       return kSlotNone;
     }
-    return value < kSlotValueSong ? value : static_cast<uint8_t>(kSlotOcarina);
+    return value < kFirstSong ? value : static_cast<uint8_t>(kSlotOcarina);
   }
 
   // The item a slot value uses now: a bottle's contents change, and an item can be gone.
-  static uint8_t itemOf(const SlotTable &table, uint32_t index) {
+  static uint8_t itemOf(const Slots &table, uint32_t index) {
     const uint8_t inventorySlot = inventorySlotOf(table.get(index));
     return inventorySlot != kSlotNone ? itemIn(inventorySlot) : static_cast<uint8_t>(kItemNone);
   }
@@ -235,13 +240,13 @@ private:
   }
 
   // What each slot holds and which lane it is on, for the app's HUD.
-  void publish(const SlotTable &table, uint32_t first) const {
+  void publish(const Slots &table, uint32_t first) const {
     volatile SlotLink &link = slotLink();
     for (uint32_t slot = 0; slot < kSlotCount; ++slot) {
       const uint8_t value = table.get(first + slot);
-      const bool song = value >= kSlotValueSong && value != kSlotValueNone;
+      const bool song = value >= kFirstSong && value != kNoValue;
       link.items[slot] = song ? kSlotEmpty : itemOf(table, first + slot);
-      link.songs[slot] = song ? static_cast<uint8_t>(value - kSlotValueSong + 1) : 0;
+      link.songs[slot] = song ? static_cast<uint8_t>(value - kFirstSong + 1) : 0;
       link.lanes[slot] = 0;
     }
     for (uint32_t lane = 0; lane < kLaneCount; ++lane) {

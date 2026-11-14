@@ -1,7 +1,21 @@
 # Our play HUD (app/src/hud.hpp): each element's place on the top screen's 400x240 pixels and the
 # guest memory it reads. `at` is a sum: a global of the decomp, `Struct.field` offsets, defines and
-# numbers (decomp/mm3d docs/hud.md names them). `ammo_index` is [item id, index in SaveData.ammo]
-# for the items seen drawing a count; the fire arrow draws the bow's.
+# numbers (decomp/mm3d docs/hud.md names them).
+
+# What every button shares: an item's count is an entry of the game's ammo array ([item id,
+# index], for the items seen drawing a count; the fire arrow draws the bow's), and an item on one
+# of the game's own buttons is dim while that button's status says so.
+ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
+ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+status = { at = ["gCommonData", "CommonData.buttonStatus"], bytes = 1 }
+disabled = 0xFF
+# A song's note by its entry in the ocarina's song list: Time, Healing, Epona's, Soaring, Storms,
+# the Sonata, the Goron Lullaby, its intro, the New Wave, the Elegy, the Oath, the Inverted Song
+# of Time, the Song of Double Time and the scarecrow's.
+song_colours = [
+  0x8FD0F7, 0xF2A0C8, 0xD9925A, 0xF2F7FA, 0xB8C4D4, 0x35C24A, 0xE8403A,
+  0xF09A8A, 0x3A7BE8, 0xF09A2A, 0x8A4AE0, 0x5AA0C8, 0xC8E8FF, 0xF2D82A,
+]
 
 [icons]
 sheet = "layout/Joker.Main.gar/icon_item_menu00.ctxb"
@@ -61,54 +75,181 @@ value = { at = ["gCommonData", "CommonData.save", "SaveData.rupees"], bytes = 2 
 tier = { at = ["gCommonData", "CommonData.save", "SaveData.upgrades"], bytes = 4, mask = "UPGRADE_WALLET_MASK", shift = "UPGRADE_WALLET_SHIFT" }
 limit = { at = ["gUpgradeCapacities", 32], bytes = 2 }
 
-# The four buttons, top right, as the pad's diamond. A is the action with its word (the game's
-# own A button is hidden by the patch, base_hud.cpp) and B the sword; while the
-# chord is held they show the items the chord gives them (the I and II buttons', which the patch
-# has then traded for the second page's). The first page's I and II items have no button here.
+# Play, top right: the pad's diamond, RB at its corner and the D-pad's cross beside it. A is the
+# action with its word (the game's own A button is hidden by the patch, base_hud.cpp) and X the
+# sword; Y, B, RB and the D-pad are item slots (app/src/pad_input.hpp numbers them), and with
+# the chord held the diamond shows the chord's four.
 
 [[element]]
 kind = "button"
 frame = "ring"
-button = "A"
+verb = "action"
+chord_slot = 7
 rect = [346, 56, 24, 24]
 label = { at = ["PlayState.aButtonDoAction"], through = "gPlayState", bytes = 2 }
-chord ={ item_button = "I", value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }, status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_I"], bytes = 1 } }
-ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-disabled = 0xFF
 
 [[element]]
 kind = "button"
 frame = "ring"
-button = "B"
+slot = 1
+chord_slot = 8
 rect = [373, 29, 24, 24]
+
+[[element]]
+kind = "button"
+frame = "ring"
+verb = "sword"
+chord_slot = 9
+rect = [319, 29, 24, 24]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_B"], bytes = 1 }
 status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_B"], bytes = 1 }
-chord = { item_button = "II", value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_II"], bytes = 1 }, status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_II"], bytes = 1 } }
-ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-disabled = 0xFF
 
 [[element]]
 kind = "button"
 frame = "ring"
-button = "X"
-rect = [319, 29, 24, 24]
-item_button = "X"
-value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_X"], bytes = 1 }
-status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_X"], bytes = 1 }
-ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-disabled = 0xFF
-
-[[element]]
-kind = "button"
-frame = "ring"
-button = "Y"
+slot = 0
+chord_slot = 10
 rect = [346, 2, 24, 24]
-item_button = "Y"
-value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_Y"], bytes = 1 }
-status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_Y"], bytes = 1 }
-ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
-disabled = 0xFF
+
+[[element]]
+kind = "button"
+frame = "ring"
+slot = 2
+rect = [377, 3, 20, 20]
+
+# The D-pad's cross: one glyph in its middle, and a slot's place says which way.
+[[element]]
+kind = "prompt"
+glyph = "dpad"
+rect = [263, 31, 16, 16]
+
+[[element]]
+kind = "button"
+frame = "ring"
+bare = true
+slot = 3
+rect = [262, 10, 18, 18]
+
+[[element]]
+kind = "button"
+frame = "ring"
+bare = true
+slot = 4
+rect = [282, 30, 18, 18]
+
+[[element]]
+kind = "button"
+frame = "ring"
+bare = true
+slot = 5
+rect = [262, 50, 18, 18]
+
+[[element]]
+kind = "button"
+frame = "ring"
+bare = true
+slot = 6
+rect = [242, 30, 18, 18]
+
+# The Items and Masks screens and the ocarina's song list: every slot on a panel at the right
+# edge. A slot's input puts the item under the cursor, or the song, on it. On the Items and
+# Masks screens the panel covers the game's own four buttons, which the slots replace.
+
+[[element]]
+kind = "panel"
+frame = "panel"
+assign = true
+rect = [294, 0, 106, 240]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 0
+rect = [336, 12, 22, 22]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 1
+rect = [362, 34, 22, 22]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 2
+rect = [376, 6, 18, 18]
+
+[[element]]
+kind = "prompt"
+assign = true
+glyph = "dpad"
+rect = [339, 95, 16, 16]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+bare = true
+slot = 3
+rect = [338, 74, 18, 18]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+bare = true
+slot = 4
+rect = [358, 94, 18, 18]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+bare = true
+slot = 5
+rect = [338, 114, 18, 18]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+bare = true
+slot = 6
+rect = [318, 94, 18, 18]
+
+[[element]]
+kind = "prompt"
+assign = true
+chord = true
+rect = [302, 152, 22, 14]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 10
+rect = [337, 164, 20, 20]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 9
+rect = [315, 184, 20, 20]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 8
+rect = [359, 184, 20, 20]
+
+[[element]]
+kind = "button"
+frame = "ring"
+assign = true
+slot = 7
+rect = [337, 204, 20, 20]

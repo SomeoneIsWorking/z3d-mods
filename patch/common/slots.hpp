@@ -9,31 +9,29 @@
 
 namespace z3dmods {
 
-// What a slot holds, six bits: an inventory slot below kSlotValueSong, a song from there on, or nothing.
-inline constexpr uint8_t kSlotValueBits = 6;
-inline constexpr uint8_t kSlotValueNone = 0x3F;
-inline constexpr uint8_t kSlotValueSong = 0x20;
-
-// Slot values packed low bits first into bytes of a save.
-class SlotTable {
+// Slot values of `Bits` bits (below 8) packed low bits first into bytes of a save. A value is
+// what the game's patch makes of it: an inventory slot, a song, or kNone for nothing.
+template <uint32_t Bits> class SlotTable {
 public:
+  static constexpr uint8_t kNone = (1U << Bits) - 1;
+
   // The bytes `count` values take.
   static constexpr uint32_t bytesFor(uint32_t count) {
-    return (count * kSlotValueBits + 7) / 8;
+    return (count * Bits + 7) / 8;
   }
 
   explicit SlotTable(volatile uint8_t *bytes) : bytes_(bytes) {
   }
 
   uint8_t get(uint32_t index) const {
-    const uint32_t bit = index * kSlotValueBits;
-    return static_cast<uint8_t>((word(bit) >> (bit % 8)) & kSlotValueNone);
+    const uint32_t bit = index * Bits;
+    return static_cast<uint8_t>((word(bit) >> (bit % 8)) & kNone);
   }
 
   void set(uint32_t index, uint8_t value) {
-    const uint32_t bit = index * kSlotValueBits;
+    const uint32_t bit = index * Bits;
     const uint32_t shift = bit % 8;
-    const uint32_t changed = (word(bit) & ~(uint32_t{kSlotValueNone} << shift)) | (uint32_t{value} << shift);
+    const uint32_t changed = (word(bit) & ~(uint32_t{kNone} << shift)) | (uint32_t{value} << shift);
     bytes_[bit / 8] = static_cast<uint8_t>(changed);
     if (spills(bit)) {
       bytes_[bit / 8 + 1] = static_cast<uint8_t>(changed >> 8);
@@ -47,7 +45,7 @@ public:
       if (((pressed >> slot) & 1U) == 0) {
         continue;
       }
-      for (uint32_t other = 0; value != kSlotValueNone && other < count; ++other) {
+      for (uint32_t other = 0; value != kNone && other < count; ++other) {
         if (other != slot && get(first + other) == value) {
           set(first + other, get(first + slot));
         }
@@ -59,7 +57,7 @@ public:
 private:
   // Whether the value starting at `bit` reaches into the next byte.
   static constexpr bool spills(uint32_t bit) {
-    return bit % 8 + kSlotValueBits > 8;
+    return bit % 8 + Bits > 8;
   }
 
   // The byte the value at `bit` starts in and, where it spills, the next one above it.

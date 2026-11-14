@@ -26,7 +26,19 @@
     b save_entry
 .section .expect.save_entry, "", %progbits
     .word 0xE92D41F0 @ push {r4-r8, lr}
+@ Play_Update's first instruction, every frame of a play state, a touch screen up or not; r0 is
+@ the play state.
+.section .patch.play_entry, "ax", %progbits
+    b play_entry
+.section .expect.play_entry, "", %progbits
+    .word 0xE92D4FF0 @ push {r4-r11, lr}
 .text
+play_entry:
+    push {r0-r3, r12, lr}
+    bl _ZN7z3dmods4mm3d15updateSlotItemsEPv
+    pop {r0-r3, r12, lr}
+    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+    b kPlayUpdate + 4
 save_entry:
     push {r0-r3, r12, lr}
     bl _ZN7z3dmods4mm3d10beforeSaveEv
@@ -35,8 +47,6 @@ save_entry:
     b kPlaySaveAtStatue + 4
 actor_update:
     push {r3, lr}
-    mov r0, r7
-    bl _ZN7z3dmods4mm3d16updateChordItemsEPv
     bl _ZN7z3dmods4mm3d11hideBaseHudEv
     pop {r3, lr}
     b kActorUpdateFirstCall
