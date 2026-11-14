@@ -18,6 +18,8 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from z3dmods import config
+
 _LD_LINE = re.compile(r"^\s+([A-Za-z_]\w*) 0x([0-9A-Fa-f]+)\s*$", re.M)
 _STRUCT_OPEN = re.compile(r"^\s*(?:typedef\s+)?struct\s*(\w*)\s*\{")
 _STRUCT_CLOSE = re.compile(r"^\s*\}\s*(\w*)\s*;")
@@ -125,7 +127,7 @@ def save(decomp: Decomp, path: Path) -> None:
 def load(repo: Path, game: str) -> Decomp:
     source = SOURCES[game]
     root = repo / source.path
-    packaged = repo / "prebuilt" / game / PACKAGED
+    packaged = repo / config.PREBUILT / game / PACKAGED
     if not root.exists() and packaged.exists():
         return Decomp(**json.loads(packaged.read_text()))
     if not root.is_dir() or not any(root.iterdir()):

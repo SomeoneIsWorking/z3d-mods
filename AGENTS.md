@@ -13,7 +13,7 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   source by name, where to get it and its SHA-256, never a path.
 - `tools/z3dmods/`: the maintainer CLI (`uv run --frozen z3dmods ...`).
 - `env-assets/local.json` (gitignored): ROM paths per title ID. `env-assets/downloads/<mod>/`: each
-  third-party download in its own folder, extracted into `x/` (any layout works: sources are found by hash). `env-assets/backup/`: the player's
+  third-party download in its own folder; a setup unpacks a .zip or .tar beside it, and a .7z or .rar is unpacked by hand (any layout works: sources are found by hash). `env-assets/backup/`: the player's
   Azahar config and data, copied before any change. `decomp/<game>/`: each game's
   decomp as a submodule (`git submodule update --init decomp/oot3d decomp/mm3d`, not recursive):
   guest addresses and RE findings live there, and a finding a change needs is committed to the
