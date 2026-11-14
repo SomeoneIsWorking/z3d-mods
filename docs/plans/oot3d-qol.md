@@ -42,5 +42,16 @@ Both go into the same MIT `code.ips` as the cutscene skip ([cutscene-skip.md](cu
   the Deku Tree's entrance (`oot-as7`), which is the game's rule for a save made anywhere in a
   dungeon and so what the pause screen's Save gives in the same room (same routine; the pause
   screen's Save was not pressed in the boss room to compare).
-- Not seen: an autosave as an adult, after a death or a void-out, or over a long session; the
-  save runs on the game's own thread while play goes on, where the pause screen waits for it.
+  As an adult (`oot-as11`, age set before a warp): the Temple of Time, Kakariko and Zora's
+  Domain each write the file (save count 4 to 7); that file loads as adult Link in the Temple
+  of Time with the Master Sword (`oot-as11r`).
+  A void-out (`oot-as9`, Link put under Kokiri Forest): the respawn is a scene change and
+  writes the file, with the heart the fall cost gone.
+  A death (`oot-as9`, health set to 0): the game itself writes the file on Game Over, with
+  autosave off too (`oot-as12`, count 4 to 5); with it on, the respawn after Continue writes
+  once more (count 6 to 8) with three hearts, and that file loads (`oot-as9r`).
+  A long session with the stairs off (`oot-as17`): 36 scene changes, 34 writes (the first two
+  came while the one before was still fading in), no stop; the file loads.
+- Open: with the stepped stairs on as well, the game stops on entering Kakariko after six or
+  seven autosaves ([issues/oot3d-autosave-stairs-stop.md](../issues/oot3d-autosave-stairs-stop.md)).
+- The save runs on the game's own thread while play goes on, where the pause screen waits for it.
