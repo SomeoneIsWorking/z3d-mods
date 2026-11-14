@@ -225,6 +225,11 @@ maintainer's:
   Those stay on the maintainer's machines.
 
 ### Seen (2026-11-14)
+- The release, `v0.4.0` (commit 44752ff): built by the tag's workflow run (43637645148). The
+  downloaded AppImage matches its `.sha256`; unpacked, its `SOURCE.txt` names 44752ff, no file
+  holds a home path, and `sets/` is the tagged commit's. `z3dmods shortcut --host ally` from
+  5626242 (docs and the mm3d decomp's names past the tag) put the package in Games/z3d after
+  backing up its user folder; the saves in `user/Azahar` stayed.
 - The release, `v0.2.0` (commit 587af4b): built by the tag's workflow run (43611544851), which
   made the release from `docs/releases/v0.2.0.md`. The downloaded AppImage matches its
   `.sha256`. Unpacked, it holds 1436 files. None of them holds a home path, a dump or a mod's

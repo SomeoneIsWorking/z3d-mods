@@ -64,11 +64,11 @@ masks by context.
 ## Our own HUD
 - One HUD per game drawn from the game's own state and art, with port-assets' Xbox glyphs on every
   button: the item slots, the chord's four while the chord is held, hearts, magic, rupees, the
-  minimap, the clock (MM3D). It replaces pasting the touch screen into the play view; full-screen
-  menus may still show the touch screen.
+  minimap; MM3D's clock stays the game's own. It replaces pasting the touch screen into the
+  play view; full-screen menus may still show the touch screen.
 - Each element sits where a console HUD puts it and occludes as little of the 3D view as possible.
 - Vector, drawn at the output resolution (user: "SVG HUD (item icons can stay as they are)"):
-  button rings and frames, glyphs, key caps, hearts, magic and rupee frames, the clock and the
+  button rings and frames, glyphs, key caps, hearts, magic and rupee frames and the
   minimap's frame are vector art (port-assets SVGs, extended there where missing) rasterized at
   the window's size, never a bitmap scaled up. The item icons stay the game's or the pack's
   raster art.
@@ -80,8 +80,8 @@ RE based instead of copying patches of bottom screen".
   pieces in `patch/mm3d/overlay.toml`, and the mouse mapping for them, are deleted when the HUD
   below replaces them; there is no second implementation.
 - The HUD is built from reverse-engineered state only: the item on each button and its icon, ammo,
-  a button's enabled or dimmed state, hearts and their fill, magic, rupees and the wallet, the
-  clock and day, the A button's action label, the minimap if shown. Each field and function is
+  a button's enabled or dimmed state, hearts and their fill, magic, rupees and the wallet,
+  the A button's action label, the minimap if shown. Each field and function is
   named in the game's decomp first (`decomp/mm3d` `docs/hud.md`, then `decomp/oot3d`), and the app
   reads the generated addresses through the core's guest memory.
 - The game's own HUD pieces we replace are switched off at their owner by the patch, not masked.
@@ -135,11 +135,11 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
 - f93caea drew the touch screen's play elements as cropped pieces; the user rejected it (rule
   above). Its table of layouts stays for the menus; its `play` pieces go.
 - `app/src/hud` is the one HUD owner. It knows element kinds, not games: a button (ring, glyph,
-  item icon, count), hearts, a magic bar, a rupee counter, a clock, a minimap frame. A game is
+  item icon, count), hearts, a magic bar, a rupee counter, a minimap frame. A game is
   data: `patch/<game>/hud.toml` places elements on the top screen's 400x240 and names what each
   reads; the install resolves those names to guest addresses from the decomp and writes them
   into `z3d-options.json` as `"hud"`, the way `"screens"` is written.
-- Art: port-assets SVGs (`gamepad-xbox360`, `keyboard`; hearts, frames, the clock and what else
+- Art: port-assets SVGs (`gamepad-xbox360`, `keyboard`; hearts, frames and what else
   is missing are added there), installed beside the app with its fonts and rasterized at the
   window's size into one atlas (SDL3_image). The atlas is redrawn on a resize and on a device
   change; a frame only moves quads.
@@ -153,7 +153,7 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
   HUD and the menus' hints alike.
 - Last device: `PadInput` records whether the last press came from a pad or the keyboard; the HUD
   reads it every frame and draws that device's layout.
-- The game's own HUD has to go where ours replaces it (MM3D's A button and clock on the top
+- The game's own HUD has to go where ours replaces it (MM3D's A button on the top
   screen, all of OoT3D's with The One Screen): a patch switch per element, found per game.
 
 ### Open
