@@ -48,6 +48,8 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   first box on screen, closes each box, runs the destination and lands in the nightmare cutscene
   in scene 81 with no text shown. Watched to the same point (scene 81, frame 459/460), the save
   context differs only in the counter at +0x15B4. Same on standalone Azahar in real time.
+  From a file made in the same run (`oot-nf2`: File 2 named, "Save completed", A on the list's
+  File 2, A on Start): the same script at frame 74 after 10 s, and Start lands in scene 81.
 - MM3D, new file from boot in the harness: Start on the title demo (frame 650) still opens file
   select and the demo is not skipped. Start at frame 119 of the opening narration (`legend.jdb`)
   closes each box and lands in the Lost Woods script `lw_meetstk.jdb` (scene 101), where watching

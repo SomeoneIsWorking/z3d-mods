@@ -156,8 +156,6 @@ objects. Rebuild the app: `ninja -C build/app`.
 - One core per process (`Core::System` is a singleton).
 - A state holds code memory: after `z3dmods install` rebuilds a patch, states made before it run
   the old patch. Make states in the same run that tests the patch.
-- OoT3D: Start on a file created in the same session is ignored
-  (docs/issues/harness-new-file-start.md).
 - `loadstate` clears watches; set them again after it.
 - Watch PC and LR are the running core's at the start of the translated block under the JIT; LR is
   stale there.
