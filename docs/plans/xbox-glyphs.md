@@ -59,11 +59,17 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
   yellow A again. A dialog's prompts (`mm-hires-text`, the Hero's Bow message) are the pack's sheet
   with ours on it.
 
+- The notebook's alarm (`mm-nb2`, the event flags at `SaveData` + 0x124C filled by hand so the
+  notebook has entries): "Set the alarm with A ... Remove ... with X" in the text, the green A on
+  Set and the blue X on Remove.
+- Project Restoration's shortcuts that have a touch button carry a badge (`mm-badges`, at 4x):
+  RB over Start on Gear, RB over Back on Map, Back on Items. The notebook (Start) and the ocarina
+  (RB with A) have no button to put one on.
+- The Spanish sheets are in the table (`{language}` in a path, `languages`): the pack has them
+  and the prompts sit in the same cells. Seen only as textures, not in a game set to Spanish.
+
 ## Still open
-- MM3D, not seen in game yet: the world map's zoom prompts, a notebook entry's A and X buttons
-  (the notebook was empty).
-- MM3D: only the English sheets are covered; French and Spanish keep the 3DS prompts.
-- MM3D: Project Restoration's other shortcuts (Start the notebook, Select Items, ZR with Start
-  Gear, ZR with Select the map, ZR with A the ocarina; all seen working in `mm-pad1`) have no hint
-  on the buttons they open.
+- MM3D, not seen in game yet: the map's zoom prompts. A fresh file owns no map; with the words
+  at `SaveData` + 0x11B0 filled by hand (`mm-map3`) Clock Town's map shows but no zoom buttons.
+- MM3D: the pack has no French sheets, so French keeps the 3DS prompts.
 - The Gossip Stone model's button texture (not in a layout archive) is not looked at.

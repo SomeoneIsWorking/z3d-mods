@@ -268,7 +268,8 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
             out.alpha_composite(_glyph(size, glyphs / f"{edit['glyph']}.svg", edit.get("dimmed", False)), (x0, y0))
         elif kind == "chord":
             held, pressed = edit["chord"]
-            out.paste(clear, (x0, y0, x1, y1))
+            if not edit.get("badge", False):
+                out.paste(clear, (x0, y0, x1, y1))
             out.alpha_composite(_chord(size, glyphs / f"{held}.svg", glyphs / f"{pressed}.svg"), (x0, y0))
         elif kind == "dpad":
             colour = _dominant(texture.modded.crop(tuple(box)))
@@ -280,11 +281,22 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
     return out
 
 
+def _per_language(document: dict) -> dict[str, list[dict]]:
+    """The table's textures; a path with {language} stands for one per entry of "languages"."""
+    edits = {}
+    for path, cells in document.items():
+        if path in ("about", "languages"):
+            continue
+        for language in document.get("languages", [""]) if "{language}" in path else [""]:
+            edits[path.replace("{language}", language)] = cells
+    return edits
+
+
 def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack, table: Path, font: Path,
           glyphs: Path) -> dict[str, bytes]:
     """Pack file name -> PNG for every texture in the edit table."""
     document = json.loads(table.read_text())
-    edits = {k: v for k, v in document.items() if k != "about"}
+    edits = _per_language(document)
 
     def base(path: str) -> bytes:
         return (base_romfs / path).read_bytes()
