@@ -97,7 +97,7 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
     Kakariko's 37914 stands for 103450. A Kakariko of 9333 triangles used 42355 nodes, past
     the 36989 it showed, and Link stood on its last triangles on three visits (`oot-n1`). The
     stop on a second visit once put down to this list was the autosave's leak
-    ([issues/oot3d-autosave-stairs-stop.md](../issues/oot3d-autosave-stairs-stop.md)).
+    ([oot3d-qol.md](oot3d-qol.md)).
 - A stepped room costs memory: a room takes one block of three times its file's size from the
   game's system arena. Kakariko's stepped room takes 0x432E70 bytes where the ROM's takes
   0x2A8F70, and leaves 0x415270 free of the arena's 0x18CBB40 as a child. `install` does not

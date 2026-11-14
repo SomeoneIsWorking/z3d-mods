@@ -53,8 +53,13 @@ Both go into the same MIT `code.ips` as the cutscene skip ([cutscene-skip.md](cu
   A long session with the stairs off (`oot-as17`): 36 scene changes, 34 writes (the first two
   came while the one before was still fading in), no stop; the file loads.
   With the stepped stairs on (`oot-k6`): 17 scene changes between Kakariko and Kokiri Forest,
-  17 writes, no stop. Before the write request was freed the game stopped there on the fourth
-  entry ([issues/oot3d-autosave-stairs-stop.md](../issues/oot3d-autosave-stairs-stop.md)).
+  17 writes, no stop, the system arena's blocks the same on every visit (629 in Kakariko, 625
+  in the forest; `arena:0x565500`, decomp/oot3d `docs/notes/arena.md`).
 - The write request is ours to free: autosave polls `Sram_IsWriteDone` and calls
-  `Sram_FinishWrite`, and starts no save while one is being written.
+  `Sram_FinishWrite`, and starts no save while one is being written. Before it did (fixed in
+  1319c56), each save left its 0x118-byte request in the system arena, on top of that scene's
+  blocks, and split the free space; a room takes one block of three times its file's size, so on
+  the fourth entry into Kakariko with the stepped stairs (0x432E70 bytes) no hole was large
+  enough, the allocation returned 0 and the room loader wrote over address 0 (`core stopped
+  (status 17)`, `oot-k1`, `oot-k4`). With the ROM's smaller rooms it did not show.
 - The save runs on the game's own thread while play goes on, where the pause screen waits for it.
