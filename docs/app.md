@@ -138,6 +138,23 @@ screens' extent (800x384 at scale 2).
 Seen (`mm-ov3`, scale 3): play, the Items and Masks menus, first person, and Woodfall Temple's
 title card with the top screen alone.
 
+## HUD
+`hud` is the play HUD's one owner, for every game (plans/pc-controls-hud.md). It knows element
+kinds, not games: `hearts` (a row of hearts filled by a health value), `meter` (a bar filled by a
+value), `counter` (an icon and a number) and `button` (a round or square glass frame, the item's
+icon, and the pad's glyph). A game is `patch/<game>/hud.toml`: each element's kind, its rectangle
+on the top screen's 400x240 and the guest memory it reads, written as a sum of the decomp's names
+(`at = ["gCommonData", "CommonData.save", ...]`); the install resolves the sums and writes them
+into `z3d-options.json` as `"hud"`.
+
+The art is port-assets' (`--assets <port-assets copy>`: `sets/hud`, `sets/gamepad-xbox360`, the
+key typeface): `hud_atlas` rasterizes each SVG at the size it is drawn at in the window, once per
+window size, into one RGBA image, and `Hud` gives the core that image and a list of quads every
+frame (`Settings::values.overlay_image`, `overlay_quads`). It reads the game after every frame
+through `Emulator::read`, and draws only while the overlay's layout is play's (`hud = true` in
+`overlay.toml`). While the chord is held (`PadInput::chord()`), a button shows the face button
+that presses it. An item's icon is `<mods>/z3d-hud-icons/<item id>.png`.
+
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`
 (`AZAHAR_REVISION`): upstream tag 2126.2 (the player's standalone version) plus our commits.
@@ -161,6 +178,9 @@ title card with the top screen alone.
    custom layout, the bottom screen is drawn as these pieces (a source rectangle of the screen at
    a destination rectangle of the window, corner radius, opacity) instead of whole. The present
    shaders compute each rectangle's coverage, which also carries the second layer's opacity.
+6. `renderer_vulkan`: `Settings::values.overlay_image` (RGBA, uploaded when its generation
+   changes) and `overlay_quads` (a rectangle of the image at a rectangle of the window), drawn
+   after the screens as the present shaders' fourth texture. Tool screenshots include them.
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and

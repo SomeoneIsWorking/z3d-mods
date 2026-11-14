@@ -38,15 +38,16 @@ def write_library(cfg: Config, folder: Path, rom_folder: Path | None = None) -> 
     return path
 
 
-def picker_args(binary: Path, library: Path, font: Path, user: Path) -> list[str]:
-    return [str(binary), "--library", str(library), "--font", str(font), "--user", str(user),
+def picker_args(binary: Path, library: Path, font: Path, assets: Path, user: Path) -> list[str]:
+    """`assets` is a port-assets copy, which the play HUD draws from."""
+    return [str(binary), "--library", str(library), "--font", str(font), "--assets", str(assets), "--user", str(user),
             "--resolution", str(RESOLUTION), "--app-id", DESKTOP_ID]
 
 
 def launch_args(cfg: Config, name: str | None, user: Path) -> list[str]:
     """The windowed app as the player runs it on the user folder `user`: game `name`, or the picker."""
     if name is None:
-        return picker_args(app.binary(cfg), write_library(cfg, user), cfg.ui_font(), user)
+        return picker_args(app.binary(cfg), write_library(cfg, user), cfg.ui_font(), cfg.port_assets, user)
     return app.launch_args(cfg, GameSet.named(cfg.repo, name), user, RESOLUTION) + [
         "--title", TITLES[name], "--app-id", DESKTOP_ID]
 

@@ -153,8 +153,8 @@ void Emulator::runFrames(uint64_t count, bool capture) {
       capture = false;
     }
     step();
-    if (frameObserver_) {
-      frameObserver_();
+    for (const std::function<void()> &observer : frameObservers_) {
+      observer();
     }
   }
 }

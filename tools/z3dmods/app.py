@@ -18,7 +18,7 @@ from z3dmods.config import Config
 from z3dmods.install import GameSet
 
 # The fork's z3d-harness branch the app is built against.
-AZAHAR_REVISION = "161eba85d"
+AZAHAR_REVISION = "79234172d"
 TOOLCHAIN = "clang"
 COMPILERS = ["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]
 AZAHAR_OPTIONS = {
@@ -92,7 +92,7 @@ def launch_args(cfg: Config, game: GameSet, user: Path, resolution: int,
     """`resolution` is the render scale (1 is the 3DS's own 400x240 top screen); `textures`
     overrides the set's custom textures."""
     args = [str(binary(cfg)), "--rom", str(cfg.rom(game.title_id)), "--user", str(user),
-            "--layout", game.screen_layout, "--resolution", str(resolution)]
+            "--layout", game.screen_layout, "--resolution", str(resolution), "--assets", str(cfg.port_assets)]
     if uses_textures(game, textures):
         args.append("--textures")
     return args + ["--options", str(options_manifest(game))]

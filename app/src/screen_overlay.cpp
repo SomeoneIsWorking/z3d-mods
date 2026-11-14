@@ -32,7 +32,9 @@ std::optional<uint32_t> readPointer(const Emulator &emulator, uint32_t address) 
   return value;
 }
 
-OverlayRect parseRect(const lucent::json::Value *value, const std::string &where) {
+} // namespace
+
+OverlayRect parseOverlayRect(const lucent::json::Value *value, const std::string &where) {
   if (value == nullptr || value->array() == nullptr || value->array()->size() != 4) {
     throw std::runtime_error(where + " wants [x, y, width, height]");
   }
@@ -46,6 +48,8 @@ OverlayRect parseRect(const lucent::json::Value *value, const std::string &where
   }
   return {sides[0], sides[1], sides[2], sides[3]};
 }
+
+namespace {
 
 float parseReal(const lucent::json::Value &object, std::string_view key, float otherwise) {
   const lucent::json::Value *value = object.find(key);
@@ -62,16 +66,19 @@ float parseReal(const lucent::json::Value &object, std::string_view key, float o
 OverlayLayout parseLayout(const lucent::json::Value &value, const std::string &name) {
   OverlayLayout layout;
   if (const lucent::json::Value *top = value.find("top")) {
-    layout.top = parseRect(top, "layout " + name + ": \"top\"");
+    layout.top = parseOverlayRect(top, "layout " + name + ": \"top\"");
   }
   const lucent::json::Value *pieces = value.find("pieces");
   if (pieces == nullptr || pieces->array() == nullptr) {
     throw std::runtime_error("layout " + name + " wants \"pieces\"");
   }
   for (const lucent::json::Value &piece : *pieces->array()) {
-    layout.pieces.push_back({parseRect(piece.find("from"), "layout " + name + ": \"from\""),
-                             parseRect(piece.find("to"), "layout " + name + ": \"to\""),
+    layout.pieces.push_back({parseOverlayRect(piece.find("from"), "layout " + name + ": \"from\""),
+                             parseOverlayRect(piece.find("to"), "layout " + name + ": \"to\""),
                              parseReal(piece, "radius", 0.0F), parseReal(piece, "opacity", 1.0F)});
+  }
+  if (const lucent::json::Value *hud = value.find("hud")) {
+    layout.hud = hud->boolean() != nullptr && *hud->boolean();
   }
   return layout;
 }
@@ -102,12 +109,16 @@ OverlayLayout splitLayout() {
             {240.0F, 60.0F, 160.0F, 120.0F}}}};
 }
 
-void placeOverlay(unsigned width, unsigned height, const OverlayLayout &layout) {
-  auto &values = Settings::values;
+OverlayRect overlayWindowRect(unsigned width, unsigned height, const OverlayRect &rect) {
   const float unit = static_cast<float>(height) / kOverlayHeight;
   const float left = (static_cast<float>(width) - kOverlayWidth * unit) / 2.0F;
+  return {left + rect.x * unit, rect.y * unit, rect.w * unit, rect.h * unit};
+}
+
+void placeOverlay(unsigned width, unsigned height, const OverlayLayout &layout) {
+  auto &values = Settings::values;
   const auto place = [&](const OverlayRect &rect) {
-    return OverlayRect{left + rect.x * unit, rect.y * unit, rect.w * unit, rect.h * unit};
+    return overlayWindowRect(width, height, rect);
   };
   const OverlayRect top = place(layout.top);
   const OverlayRect touch = place(extent(layout));

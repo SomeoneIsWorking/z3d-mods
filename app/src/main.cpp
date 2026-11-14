@@ -8,6 +8,7 @@
 #include "game_library.hpp"
 #include "game_options.hpp"
 #include "game_window.hpp"
+#include "hud.hpp"
 #include "mod_swap.hpp"
 #include "pad_input.hpp"
 #include "player.hpp"
@@ -50,6 +51,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   Emulator emulator(config, game.rom, window);
   options.apply(emulator, pad);
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
+  const Hud hud(window, emulator, pad, overlay, config.assets, config.userDir / game.options);
   ModSwap mods(emulator, (config.userDir / game.options).parent_path(), options.blockAddress());
   if (config.hidden) {
     Repl repl(emulator, window, pad, options, mods);
@@ -86,6 +88,7 @@ int picker(const AppConfig &config, PadInput &pad) {
       options[*chosen].apply(emulator, pad);
       const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
                                   config.userDir / game.setup.options);
+      const Hud hud(window, emulator, pad, overlay, config.assets, config.userDir / game.setup.options);
       ModSwap mods(emulator, (config.userDir / game.setup.options).parent_path(),
                    options[*chosen].blockAddress());
       Player(emulator, window, mods, options[*chosen], pad).run();

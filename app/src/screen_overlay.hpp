@@ -9,7 +9,12 @@
 #include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <string>
 #include <vector>
+
+namespace lucent::json {
+class Value;
+}
 
 namespace z3d::app {
 
@@ -45,10 +50,18 @@ struct OverlayPiece {
 struct OverlayLayout {
   OverlayRect top{0.0F, 0.0F, kOverlayWidth, kOverlayHeight};
   std::vector<OverlayPiece> pieces;
+  // Play's view: our HUD (hud.hpp) is drawn over it.
+  bool hud = false;
 };
 
 // The two screens side by side: the layout named "split", and the one before a game's table is read.
 [[nodiscard]] OverlayLayout splitLayout();
+
+// [x, y, width, height] of a manifest; `where` names it in the refusal.
+[[nodiscard]] OverlayRect parseOverlayRect(const lucent::json::Value *value, const std::string &where);
+
+// A rectangle of the layout's 400x240 in the pixels of a `width` x `height` window.
+[[nodiscard]] OverlayRect overlayWindowRect(unsigned width, unsigned height, const OverlayRect &rect);
 
 // Writes the core's custom layout for a `width` x `height` window.
 void placeOverlay(unsigned width, unsigned height, const OverlayLayout &layout);
@@ -63,6 +76,11 @@ public:
   // (z3d-options.json, "screens") names the game's touch screens and a layout for each.
   ScreenOverlay(GameWindow &window, Emulator &emulator, const GameSetup &setup,
                 const std::filesystem::path &manifest);
+
+  // Whether the layout that is up is play's view.
+  [[nodiscard]] bool hudShown() const {
+    return screens_ && layout_ && screens_->layouts[*layout_].hud;
+  }
 
 private:
   struct ScreenPlacement {

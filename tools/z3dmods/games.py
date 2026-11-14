@@ -38,6 +38,8 @@ class Layout:
     screen_layouts: dict[str, dict] | None = None
     screen_placements: tuple[dict[str, str], ...] | None = None
     screen_outside: str | None = None
+    # hud.toml as the app reads it (app/src/hud.hpp): elements with their guest addresses.
+    hud: dict[str, object] | None = None
     # CommonData.hudVisibility and its values that leave the main touch screen blank or dimmed.
     hud_visibility: int | None = None
     hud_hidden: tuple[int, ...] | None = None
@@ -87,6 +89,37 @@ def _overlay(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object]:
     return {"screen_layouts": layouts, "screen_placements": tuple(placements), "screen_outside": table["outside"]}
 
 
+def _guest_address(d: symbols.Decomp, terms: list[str | int]) -> int:
+    """The sum of a hud.toml address: a global's name, `Struct.field` offsets, defines and numbers."""
+    total = 0
+    for term in terms:
+        if isinstance(term, int):
+            total += term
+        elif "." in term:
+            total += symbols.offset(d, term)
+        elif term in d.defines:
+            total += d.define(term)
+        else:
+            total += symbols.global_(d, term)
+    return total
+
+
+def _hud(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object] | None:
+    """hud.toml with every `{ at = [...], bytes = n }` resolved to `{ address, bytes }`."""
+    path = repo / "patch" / game / "hud.toml"
+    if not path.exists():
+        return None
+    table = tomllib.loads(path.read_text())
+    elements = [{key: {"address": _guest_address(d, value["at"]), "bytes": value["bytes"]}
+                 if isinstance(value, dict) else value for key, value in element.items()}
+                for element in table["element"]]
+    return {"icons": HUD_ICONS, "elements": elements}
+
+
+# The folder of item icons beside the installed patch: <item id>.png.
+HUD_ICONS = "z3d-hud-icons"
+
+
 def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
     cutscene = symbols.offset(d, "PlayState.csCtx")
     return Layout(
@@ -109,6 +142,7 @@ def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
         active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
         screens=symbols.global_(d, "gUiScreens"),
         **_overlay(repo, "mm3d", d),
+        hud=_hud(repo, "mm3d", d),
         hud_visibility=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.hudVisibility"),
         hud_hidden=(d.define("HUD_VISIBILITY_NONE"), d.define("HUD_VISIBILITY_NONE_ALT")),
     )

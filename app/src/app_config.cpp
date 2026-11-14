@@ -81,6 +81,8 @@ AppConfig AppConfig::parse(int argc, char **argv) {
       config.library = value;
     } else if (flag == "--font") {
       config.font = value;
+    } else if (flag == "--assets") {
+      config.assets = value;
     } else if (flag == "--user") {
       config.userDir = value;
     } else if (flag == "--title") {

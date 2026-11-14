@@ -47,6 +47,8 @@
   - `game_library`: the picker's games from the tools' library file, titles and icons from each dump's SMDH.
   - `game_options`: a game's options: the patch's switches from its manifest plus layout and textures, the player's stored choices, the write into the guest block.
   - `screen_overlay`: the overlay layout: pieces of the touch screen drawn on the top screen from the game's table of layouts (`patch/<game>/overlay.toml`) by which touch screen is up, and the mouse mapped back through them.
+  - `hud`: the play HUD for every game: element kinds (hearts, meter, counter, button) read from guest memory by the game's table (`patch/<game>/hud.toml`) and drawn as quads of the atlas.
+  - `hud_atlas`: port-assets SVGs, lettering and item icons rasterized at the window's size into the image the core draws.
   - `mod_swap`: the running game's patch put in, taken out or read again from disk, and its texture pack turned on and off.
   - `options_menu`: the picker's options screen for one game.
   - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.

@@ -92,6 +92,13 @@ std::vector<SDL_FPoint> GameWindow::pollMenu() {
   return std::exchange(clicks_, {});
 }
 
+std::pair<unsigned, unsigned> GameWindow::pixelSize() const {
+  int width = 0;
+  int height = 0;
+  SDL_GetWindowSizeInPixels(window_, &width, &height);
+  return {static_cast<unsigned>(std::max(width, 1)), static_cast<unsigned>(std::max(height, 1))};
+}
+
 void GameWindow::placeOverlay(const OverlayLayout &layout) {
   overlay_ = layout;
   updateLayout();

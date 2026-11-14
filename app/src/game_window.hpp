@@ -42,6 +42,8 @@ public:
   // A game's title on the window and the window in its layout's shape (core_settings.hpp).
   void boot(const std::string &title);
 
+  // The window's size in pixels.
+  [[nodiscard]] std::pair<unsigned, unsigned> pixelSize() const;
   // Where the overlay layout draws the screens from now on.
   void placeOverlay(const OverlayLayout &layout);
 

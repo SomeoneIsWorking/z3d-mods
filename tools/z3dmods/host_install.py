@@ -33,12 +33,14 @@ def install(cfg: Config, host: str) -> list[Path]:
     user = root / "user"
     binary = app.binary(cfg)
     core = next(app.core_prefix(cfg).glob("lib*/libazahar_core.so"))
-    _ssh(host, f"mkdir -p {shlex.quote(str(root / 'lib'))} {shlex.quote(str(root / 'fonts'))} "
+    _ssh(host, f"mkdir -p {shlex.quote(str(root / 'lib'))} {shlex.quote(str(root / 'fonts'))} {shlex.quote(str(root / 'assets'))} "
                f"{shlex.quote(str(user / 'Azahar'))} ~/.local/share/applications "
                "~/.local/share/icons/hicolor/scalable/apps")
     _rsync([binary], host, root / binary.name)
     _rsync([core], host, root / "lib" / core.name)
     _rsync([cfg.ui_font()], host, root / "fonts" / cfg.ui_font().name)
+    # What the play HUD draws from: port-assets' sets and its key typeface.
+    _rsync([cfg.port_assets / "sets", cfg.port_assets / "fonts"], host, root / "assets", "--delete")
     _rsync([cfg.azahar_data / "load"], host, user / "Azahar", "--delete", "--copy-links")
     present = _ssh(host, f"ls {shlex.quote(str(user / 'Azahar'))}").split()
     saves = cfg.app_data / "Azahar"
@@ -50,7 +52,8 @@ def install(cfg: Config, host: str) -> list[Path]:
     staging.mkdir(parents=True, exist_ok=True)
     library = play.write_library(cfg, staging, home / ROMS)
     _rsync([library], host, user / library.name)
-    args = play.picker_args(root / binary.name, user / library.name, root / "fonts" / cfg.ui_font().name, user)
+    args = play.picker_args(root / binary.name, user / library.name, root / "fonts" / cfg.ui_font().name,
+                            root / "assets", user)
     exec_ = f"env LD_LIBRARY_PATH={root / 'lib'} " + " ".join(args)
     entry = staging / f"{play.DESKTOP_ID}.desktop"
     entry.write_text(shortcut.desktop_entry(exec_, root))

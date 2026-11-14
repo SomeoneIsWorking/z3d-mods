@@ -35,6 +35,8 @@ struct AppConfig {
   // The tools' list of games (game_library.hpp) and the picker's outline font.
   std::filesystem::path library;
   std::filesystem::path font;
+  // A port-assets copy (sets/, fonts/), which the play HUD draws from; none draws no HUD.
+  std::filesystem::path assets;
   // Holds Azahar/ in the core's user layout (nand, sdmc, sysdata, load).
   std::filesystem::path userDir;
   std::string title = "z3d";
