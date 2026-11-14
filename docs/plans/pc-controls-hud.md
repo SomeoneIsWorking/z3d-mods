@@ -26,7 +26,7 @@ prints the keyboard's and the mouse's.
 | LB held | Chord: A, B, X, Y are item slots 8 to 11; the HUD shows them while held |
 | Menu | Item screen; a slot's input there assigns the cursor's item to it, Menu again leaves |
 | LB and Menu | Pause (MM3D: the Gear screen, where its options are) |
-| View | Map |
+| View | Map; MM3D: View again on the Map Screen opens the Bombers' Notebook |
 
 | Keyboard and mouse | Job |
 |---|---|
@@ -230,13 +230,25 @@ The path is texture replacement, in both games, with nothing drawn by the app:
 - Left as they are, after a sweep of every English message for touch, tap, lower and upper
   screen, stylus and Touch Screen: physical touches (enemies, Cuccos, the Triforce, "touched
   the bottom"), "rapidly tap A", "tap X", OoT3D's 0x0966 motion-control option text, MM3D's
-  "Tap to enter a name" (0x575B, the file select's name entry, not seen), and MM3D's "Press
-  START" for the Bombers' Notebook (0x0050, 0x0737, 0x1796, 0x033F): plain Start reaches
-  nothing in our layout.
-- Layout gaps the text exposed: the keyboard has no R in the item screen (OoT3D's Gear) and no
-  ZR outside play (the song list); MM3D's notebook has no input; OoT3D's View does nothing in
-  a dungeon (The One Screen's map touch); "LB" in the chord's text is a word and does not
-  follow the device; MM3D's map zoom has no pad input.
+  "Tap to enter a name" (0x575B, the file select's name entry, not seen).
+- MM3D's "Press START" for the Bombers' Notebook (0x0050, 0x0737, 0x1796, 0x033F) is "Press
+  View twice": View opens the Map Screen and View there, with the notebook owned, changes to
+  the notebook (`patch/mm3d/notebook.cpp`, the screen Start opens from play; decomp
+  `docs/ui.md`). Seen with the pad's View and the keyboard's M, B back to play each time
+  (`gap-nbin1`).
+- The chord is a prompt cell, drawn as LB or the chord's key cap: OoT3D's unused +Control Pad
+  cell 0x02 (0x1036, 0x103B, 0x010F) and MM3D's ZL cell 0x34 (0x0270); OoT3D's song list
+  is cell 0x03, drawn as RB or the key R (0x10C7). Seen through a sign and a statue
+  (`gap-txt1`, `gap-txt2`); the Left Shift cap is too small to read.
+- Layout gaps the text exposed, closed: the keyboard's R is ZR by name (the song list, with the
+  ocarina out), and the right and middle mouse buttons are R and L by name and on a screen that
+  assigns slots (OoT3D's Gear page); seen in `gap-gaps1` (right button to Gear, middle back to
+  Items, R to the song list). OoT3D's View in a dungeon opens the dungeon map on the harness
+  (3DS Select, `gap-map2` to `gap-map4`) and in the window (the pad's View and M in the Deku
+  Tree, `gap-gaps1`); not reproduced.
+- Left: MM3D's map zoom is the touch screen's only (the mouse at the right of the split
+  layout); a touch on the map did not zoom it (`gap-zoom1`, `gap-zoom2`), so a pad input
+  waits on the map screen's zoom state in the decomp (`MenuMapState`, code near 0x5975AC).
 - Prompts by device, seen with the same box swapped live by `device:` (`txt-oot-k3`: 0x00A4
   shows Menu, RT, A, then Tab, the right mouse button, E, then the pad's again; 0x1036 and
   0x0066 with caps; `txt-mm-k2`: 0x0078's Menu, LT, Y, B, RB, D-pad become Tab, Q, 1, 2, 3,

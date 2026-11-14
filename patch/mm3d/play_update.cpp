@@ -23,6 +23,7 @@ bool inPlainPlay(void *play) {
 void updatePlay(void *play) {
   updateSlotItems(play);
   updateAutosave(play);
+  updateNotebook(play);
 }
 
 } // namespace z3dmods::mm3d

@@ -8,5 +8,6 @@ bool inPlainPlay(void *play);
 
 void updateSlotItems(void *play);
 void updateAutosave(void *play);
+void updateNotebook(void *play);
 
 } // namespace z3dmods::mm3d

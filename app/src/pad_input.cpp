@@ -84,9 +84,10 @@ struct KeyBinding {
   Button button;
 };
 
-// Outside play a key is a 3DS button: confirm, back, the menus' own buttons, and the ocarina's
-// five notes on 1 to 5 from the lowest.
+// Outside play a key is a 3DS button: confirm, back, the menus' own buttons, the ocarina's five
+// notes on 1 to 5 from the lowest, and R, which brings the ocarina out in play, its song list (ZR).
 constexpr std::array kNameKeys{
+    KeyBinding{SDL_SCANCODE_R, Settings::NativeButton::ZR},
     KeyBinding{SDL_SCANCODE_E, Settings::NativeButton::A},
     KeyBinding{SDL_SCANCODE_SPACE, Settings::NativeButton::A},
     KeyBinding{SDL_SCANCODE_RETURN, Settings::NativeButton::A},
@@ -105,6 +106,16 @@ constexpr std::array kNameKeys{
     KeyBinding{SDL_SCANCODE_4, Settings::NativeButton::X},
     KeyBinding{SDL_SCANCODE_5, Settings::NativeButton::A},
 };
+
+struct MouseBinding {
+  uint8_t mouse;
+  Button button;
+};
+
+// Outside play the right and middle buttons are R and L, as the shield's and the target's are in
+// play; the left one is the stylus.
+constexpr std::array kNameMouse{MouseBinding{SDL_BUTTON_RIGHT, Settings::NativeButton::R},
+                                MouseBinding{SDL_BUTTON_MIDDLE, Settings::NativeButton::L}};
 
 struct PadBinding {
   SDL_GamepadButton pad;
@@ -367,8 +378,9 @@ void PadInput::readHost() {
         slots |= static_cast<uint16_t>(1U << (shift && i < kShiftSlots ? kSlotKeys.size() + i : i));
       }
     }
-    const SDL_MouseButtonFlags mouse =
-        mode_ == PadMode::Play ? SDL_GetMouseState(nullptr, nullptr) : 0;
+    // A screen that assigns slots keeps the left button as the stylus.
+    const SDL_MouseButtonFlags stylus = mode_ == PadMode::Assign ? SDL_BUTTON_LMASK : 0;
+    const SDL_MouseButtonFlags mouse = SDL_GetMouseState(nullptr, nullptr) & ~stylus;
     for (const PlayMouse &binding : kPlayMouse) {
       if ((mouse & SDL_BUTTON_MASK(binding.button)) != 0) {
         keyHeld = true;
@@ -378,6 +390,13 @@ void PadInput::readHost() {
   } else {
     for (const KeyBinding &binding : kNameKeys) {
       if (keys[binding.key]) {
+        keyHeld = true;
+        held |= bit(binding.button);
+      }
+    }
+    const SDL_MouseButtonFlags mouse = SDL_GetMouseState(nullptr, nullptr);
+    for (const MouseBinding &binding : kNameMouse) {
+      if ((mouse & SDL_BUTTON_MASK(binding.mouse)) != 0) {
         keyHeld = true;
         held |= bit(binding.button);
       }
@@ -543,6 +562,12 @@ void PadInput::listKeys(std::ostream &out) {
   }
   for (const PlayMouse &binding : kPlayMouse) {
     line("mouse", verbName(binding.verb), std::to_string(binding.button));
+  }
+  for (const MouseBinding &binding : kNameMouse) {
+    line("mouse",
+         std::string_view(Settings::NativeButton::mapping[binding.button])
+             .substr(kButtonPrefix.size()),
+         std::to_string(binding.mouse));
   }
   for (size_t slot = 0; slot < kSlotCount; ++slot) {
     // A slot behind the chord is "<chord key>+<key>".

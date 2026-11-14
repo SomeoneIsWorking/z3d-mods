@@ -323,9 +323,10 @@ MM3D_BAGS = 0x00120000 | 0x1 | 0x8
 MM3D_ITEMS = ("BOW", "BOMB")
 
 
-def _mm3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
+def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False) -> None:
     """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle,
-    the Bunny Hood and every song, written by the game's own save there."""
+    the Bunny Hood, every song and, with `notebook`, the Bombers' Notebook, written by the game's
+    own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
     items = save + symbols.offset(d, "SaveData.items")
@@ -336,6 +337,7 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
                    f"poke:{save + symbols.offset(d, 'SaveData.ammo') + item:#x},{MM3D_AMMO:02x}"]
     first = d.define("QUEST_SONG_FIRST")
     songs = sum(1 << bit for bit in range(first, first + d.define("QUEST_SONG_COUNT"))) | 1 << d.define("QUEST_SONG_LULLABY_INTRO")
+    songs |= notebook << d.define("QUEST_BOMBERS_NOTEBOOK")
     script += [f"poke:{items + d.define('SLOT_OCARINA'):#x},{d.define('ITEM_OCARINA'):02x}",
                f"poke:{items + d.define('BOTTLE_SLOTS_FIRST'):#x},{d.define('ITEM_BOTTLE'):02x}",
                f"poke:{items + d.define('SLOT_MASK_BUNNY'):#x},{d.define('ITEM_MASK_BUNNY'):02x}",
@@ -622,6 +624,55 @@ def _verbs_mm3d(session: Session, pad: Gamepad) -> None:
         pad.button("b")
         session.wait(3)
     session.shot("play-again")
+
+
+def _gaps(session: Session, pad: Gamepad) -> None:
+    """OoT3D's inputs its text names: inside the Deku Tree the pad's View opens the map and closes
+    it, as M does; in the item screen the right mouse button turns to Gear and the middle one
+    back; R brings the ocarina out and R again its song list."""
+    _oot3d_file_1(session)
+    session.shot("play")
+    for name, press in (("pad-view", lambda: pad.button("select")), ("key-map", lambda: session.key("play", "map"))):
+        press()
+        session.wait(2)
+        session.shot(name)
+        press()
+        session.wait(2)
+        session.shot(f"{name}-closed")
+    session.key("play", "item_screen")
+    session.wait(2)
+    session.shot("items")
+    session.mouse_button("shield")
+    session.wait(2)
+    session.shot("gear")
+    session.mouse_button("target")
+    session.wait(2)
+    session.shot("items-again")
+    session.key("play", "item_screen")
+    session.wait(2)
+    session.shot("play-again")
+    session.key("play", "ocarina")
+    session.wait(3)
+    session.shot("ocarina")
+    session.key("name", "zr")
+    session.wait(2)
+    session.shot("song-list")
+
+
+def _notebook_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D with the Bombers' Notebook: the pad's View opens the map and View again the notebook,
+    B goes back to play; the same with M."""
+    _mm3d_file_1(session)
+    for name, press in (("pad-view", lambda: pad.button("select")), ("key-map", lambda: session.key("play", "map"))):
+        press()
+        session.wait(3)
+        session.shot(f"{name}-map")
+        press()
+        session.wait(3)
+        session.shot(f"{name}-notebook")
+        pad.button("b")
+        session.wait(3)
+        session.shot(f"{name}-play")
 
 
 SETUP_GAME = "mm3d"
@@ -1057,17 +1108,18 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
-               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "masks-mm3d": "mm3d",
+               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "masks-mm3d": "mm3d",
                "autosave-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
 PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-mm3d": _mm3d_slots_file,
-           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file, "masks-mm3d": _mm3d_slots_file,
+           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file, "masks-mm3d": _mm3d_slots_file, "gaps": _oot3d_slots_file,
+           "notebook-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, notebook=True),
            "autosave-mm3d": _mm3d_autosave_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,

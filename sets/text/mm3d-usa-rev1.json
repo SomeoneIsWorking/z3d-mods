@@ -1,5 +1,5 @@
 {
-  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: English prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\"); markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, 5 L (LT), 6 R (RT), 7 START (Menu), 9 the power button's cell (View), 11 the circle pad, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad (sets/hud/mm3d-usa-rev1.json). The word LB, for the Gear screen, has no cell.",
+  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: English prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\"); markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, 5 L (LT), 6 R (RT), 7 START (Menu), 9 the power button's cell (View), 11 the circle pad, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad (sets/hud/mm3d-usa-rev1.json). 0x34 is the sheet's ZL cell, drawn as LB (the chord), which no message uses.",
   "font": {
     "file": "message/ltn16.gzf",
     "outline": "Jost[wght].ttf",
@@ -145,7 +145,7 @@
           "0270"
         ],
         "find": "Tap \\{25:2D\\} on the lower screen if you\never want to take a look at the\ngear-like things",
-        "put": "Hold LB and press {25:7} if you ever\nwant to take a look at the gear-like\nthings"
+        "put": "Hold {25:34} and press {25:7} if you ever\nwant to take a look at the gear-like\nthings"
       },
       {
         "why": "The notebook shows in the split layout: the top screen at the left, the touch screen at the right.",
@@ -162,6 +162,38 @@
         ],
         "find": "\\{3A:1\\}Items highlighted\\{3A:B\\} on the touch\nscreen will be",
         "put": "{3A:1}Highlighted items{3A:B} will be"
+      },
+      {
+        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+        "only": [
+          "0050"
+        ],
+        "find": "Press \\{3A:1\\}START\\{3A:B\\} to read it\\.",
+        "put": "Press {25:9} twice to read it."
+      },
+      {
+        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+        "only": [
+          "0737"
+        ],
+        "find": "Press \\{3A:1\\}START\\{3A:B\\} to check your",
+        "put": "Press {25:9} twice to check your"
+      },
+      {
+        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+        "only": [
+          "1796"
+        ],
+        "find": "Press \\{3A:1\\}START \\{3A:B\\}to open it\\.",
+        "put": "Press {25:9} twice to open it."
+      },
+      {
+        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+        "only": [
+          "033F"
+        ],
+        "find": "Press \\{3A:1\\}START \\{3A:B\\}to look at any info\nyou've gathered so far\\.",
+        "put": "Press {25:9} twice to look at any\ninfo you've gathered so far."
       }
     ]
   }

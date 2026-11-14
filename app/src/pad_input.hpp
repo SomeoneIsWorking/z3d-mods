@@ -167,7 +167,7 @@ public:
   [[nodiscard]] static Prompt menuPrompt(bool MenuPad::*held);
   // Every key and mouse binding, a "<table>\t<name>\t<key>" line each, for the tools
   // (tools/z3dmods/app_keys.py): menu, name (a 3DS button outside play), play (a verb), mouse
-  // (a verb's mouse button), slot, stick and chord.
+  // (a verb's mouse button, or a 3DS button's outside play), slot, stick and chord.
   static void listKeys(std::ostream &out);
   // A game option (game_options.hpp).
   void invertCStick(bool x, bool y) {

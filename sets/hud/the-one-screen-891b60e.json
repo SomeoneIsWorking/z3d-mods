@@ -1,5 +1,5 @@
 {
-  "about": "What The One Screen 891b60e changed in each vanilla menu texture, in vanilla pixels [x0, y0, x1, y1]. keep: re-lettered in its own font, the pack's vanilla stays. copy: vanilla art moved from `from`. clear: erased. label: new lettering (Navi too, which the pack's copy lacks). relabel: a letter on vanilla art swapped. shell: the A button circle without its letter. dpad: an outlined cross. glyph: a 3DS button prompt drawn as port-assets' Xbox pad glyph for the pad button the app binds there by name; the text sheet's item-button cells, X, Y, I and II, name where our item slots start: Y, B, RB and the D-pad; the touch icons the text names are the input that does it in our layout: the Ocarina's is D-pad Down (a new file's ocarina slot), Navi's and View's R3 (first person), the Map's View (dimmed: the prompt's unavailable state). key: in the text's prompt sheet, the app's key bindings (`z3d --keys` lines, \"<table> <name>\") for that prompt, which the install draws as key caps in the sheet's keyboard image; a cell of several keys shows them in one cap.",
+  "about": "What The One Screen 891b60e changed in each vanilla menu texture, in vanilla pixels [x0, y0, x1, y1]. keep: re-lettered in its own font, the pack's vanilla stays. copy: vanilla art moved from `from`. clear: erased. label: new lettering (Navi too, which the pack's copy lacks). relabel: a letter on vanilla art swapped. shell: the A button circle without its letter. dpad: an outlined cross. glyph: a 3DS button prompt drawn as port-assets' Xbox pad glyph for the pad button the app binds there by name; the text sheet's item-button cells, X, Y, I and II, name where our item slots start: Y, B, RB and the D-pad; the touch icons the text names are the input that does it in our layout: the Ocarina's is D-pad Down (a new file's ocarina slot), Navi's and View's R3 (first person), the Map's View (dimmed: the prompt's unavailable state); the +Control Pad's Up and Right cells, which icons 0x02 and 0x03 draw and no message in any language uses, are LB (the chord, sets/text) and RB as the ocarina's song list reads it by name. key: in the text's prompt sheet, the app's key bindings (`z3d --keys` lines, \"<table> <name>\") for that prompt, which the install draws as key caps in the sheet's keyboard image; a cell of several keys shows them in one cap.",
   "menu/01_US_ENGLISH/hud_all00.ctxb": [
     {"keep": [0, 92, 194, 256]},
     {"label": "Navi", "box": [77, 112, 114, 128], "style": "white"},
@@ -47,8 +47,8 @@
     {"glyph": "ls_down", "box": [176, 0, 192, 16], "key": ["stick down"]},
     {"glyph": "ls_left", "box": [192, 0, 208, 16], "key": ["stick left"]},
     {"glyph": "dpad", "box": [128, 16, 144, 32], "key": ["menu up", "menu left", "menu down", "menu right"]},
-    {"glyph": "dpad_up", "box": [144, 16, 160, 32], "key": ["menu up"]},
-    {"glyph": "dpad_right", "box": [160, 16, 176, 32], "key": ["menu right"]},
+    {"glyph": "lb", "box": [144, 16, 160, 32], "key": ["chord chord"]},
+    {"glyph": "rb", "box": [160, 16, 176, 32], "key": ["name zr"]},
     {"glyph": "dpad_down", "box": [176, 16, 192, 32], "key": ["menu down"]},
     {"glyph": "dpad_left", "box": [192, 16, 208, 32], "key": ["menu left"]},
     {"glyph": "face_a", "box": [128, 32, 144, 48], "key": ["name a"]},

@@ -68,13 +68,15 @@ which table the game wants through the slot link (`slot_link`, `"link"` in `z3d-
 laid out by `tools/z3dmods/slot_link.py`), and `PadInput` reads the host through it:
 - By name (menus, the ocarina, text, a game without a patch): a pad's buttons are the 3DS
   buttons of the same names, LT and RT are L and R, LB and RB are ZL and ZR, the right stick the
-  C-stick; the keys are `name` in `z3d --keys`.
+  C-stick; the keys are `name` in `z3d --keys` (R is ZR, the ocarina's song list), and the
+  right and middle mouse buttons are R and L, as the shield's and the target's are in play.
 - Play: verbs on fixed buttons, each pressing the 3DS buttons the bound game reads for it
   (`kGames`), and the eleven item slots, which go to the patch as bits of the link's `held`, not
   as 3DS buttons. LB (Shift on the keyboard) is the chord: held, A, B, X and Y are slots 8 to 11
   and Menu is Pause.
-- Assign (an item screen, the ocarina's song list): the play table with the mouse left as the
-  stylus; Menu leaves the screen (`GameVerbs::leave`).
+- Assign (an item screen, the ocarina's song list): the play table with the left mouse button
+  left as the stylus (the right one is still the shield's R, OoT3D's next item-screen page);
+  Menu leaves the screen (`GameVerbs::leave`).
 The left mouse button on the bottom screen is the stylus where it shows. `z3d --keys` prints
 every key and mouse binding, a `<table>\t<name>\t<key>` line each; the tools read their keys
 from it (`tools/z3dmods/app_keys.py`). In the window F10 or Guide returns to the picker, F5
