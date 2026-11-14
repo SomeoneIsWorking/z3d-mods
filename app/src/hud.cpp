@@ -34,8 +34,9 @@ constexpr float kDigitShare = 0.62F;
 constexpr float kCounterGap = 0.3F;
 // A meter's art is this many times as long as it is tall (port-assets hud/bar).
 constexpr float kMeterAspect = 9.0F;
-// A button's action word against its size.
-constexpr float kLabelShare = 0.3F;
+// The game's word art for an action is <kWordArt><number>; its cell's height against the button.
+constexpr const char *kWordArt = "word_";
+constexpr float kLabelShare = 0.5F;
 
 uint32_t integer(const lucent::json::Value &object, std::string_view key, uint32_t otherwise) {
   const lucent::json::Value *value = object.find(key);
@@ -53,17 +54,18 @@ std::string text(const lucent::json::Value &object, std::string_view key) {
   return value != nullptr && value->string() != nullptr ? *value->string() : std::string();
 }
 
-// The port-assets glyph of a pad button.
+// The port-assets glyph of each pad button a prompt can name.
+constexpr std::array kGlyphs{std::pair{SDL_GAMEPAD_BUTTON_SOUTH, std::string_view("face_a")},
+                             std::pair{SDL_GAMEPAD_BUTTON_EAST, std::string_view("face_b")},
+                             std::pair{SDL_GAMEPAD_BUTTON_WEST, std::string_view("face_x")},
+                             std::pair{SDL_GAMEPAD_BUTTON_NORTH, std::string_view("face_y")},
+                             std::pair{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, std::string_view("lb")},
+                             std::pair{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, std::string_view("rb")},
+                             std::pair{SDL_GAMEPAD_BUTTON_RIGHT_STICK, std::string_view("rs")},
+                             std::pair{SDL_GAMEPAD_BUTTON_START, std::string_view("start")},
+                             std::pair{SDL_GAMEPAD_BUTTON_BACK, std::string_view("back")}};
+
 std::string_view glyphOf(SDL_GamepadButton button) {
-  constexpr std::array kGlyphs{std::pair{SDL_GAMEPAD_BUTTON_SOUTH, std::string_view("face_a")},
-                               std::pair{SDL_GAMEPAD_BUTTON_EAST, std::string_view("face_b")},
-                               std::pair{SDL_GAMEPAD_BUTTON_WEST, std::string_view("face_x")},
-                               std::pair{SDL_GAMEPAD_BUTTON_NORTH, std::string_view("face_y")},
-                               std::pair{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, std::string_view("lb")},
-                               std::pair{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, std::string_view("rb")},
-                               std::pair{SDL_GAMEPAD_BUTTON_RIGHT_STICK, std::string_view("rs")},
-                               std::pair{SDL_GAMEPAD_BUTTON_START, std::string_view("start")},
-                               std::pair{SDL_GAMEPAD_BUTTON_BACK, std::string_view("back")}};
   for (const auto &[pad, glyph] : kGlyphs) {
     if (pad == button) {
       return glyph;
@@ -184,7 +186,6 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
     element.frame = text(entry, "frame");
     element.button = nativeButton(text(entry, "button"));
     element.itemButton = itemButton(text(entry, "item_button"));
-    element.none = integer(entry, "none", 0xFF);
     element.when = conditions(entry, "when");
     element.index = guest(entry, "index");
     if (const lucent::json::Value *chord = entry.find("chord"); chord != nullptr) {
@@ -193,18 +194,9 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
       element.chordItem = itemButton(text(*chord, "item_button"));
     }
     element.label = guest(entry, "label");
-    element.labels = strings(entry, "labels");
     element.art = strings(entry, "art");
     element.tier = guest(entry, "tier");
     element.limit = guest(entry, "limit");
-    if (const lucent::json::Value *limits = entry.find("limits"); limits != nullptr && limits->array() != nullptr) {
-      for (const lucent::json::Value &limit : *limits->array()) {
-        if (!limit.integer()) {
-          throw std::runtime_error(manifest.string() + ": hud limits holds whole numbers");
-        }
-        element.limits.push_back(static_cast<uint32_t>(*limit.integer()));
-      }
-    }
     if (element.kind == Kind::Hearts && element.art.size() < 2) {
       throw std::runtime_error(manifest.string() + ": hud hearts want \"art\", a heart from empty to full");
     }
@@ -226,9 +218,58 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
   }
   icons_ = manifest.parent_path() / text(*hud, "icons");
   atlas_.emplace(assets);
+  requireArt();
   emulator_.onFrame([this] {
     update();
   });
+}
+
+// Everything the elements name is read once here, so a frame never finds art missing. The game's
+// art that depends on its state (an item's icon, an action's word) is what the install cut.
+void Hud::requireArt() {
+  std::error_code error;
+  for (const std::filesystem::directory_entry &file : std::filesystem::directory_iterator(icons_, error)) {
+    if (file.path().extension() == ".png") {
+      HudAtlas::requireImage(file.path());
+      art_.insert(file.path().stem().string());
+    }
+  }
+  if (error) {
+    throw std::runtime_error("the HUD's game art is not installed: " + icons_.string() + " (" + error.message() +
+                             "); install the game's set again");
+  }
+  const auto piece = [this](const std::string &name) {
+    if (!art_.contains(name)) {
+      HudAtlas::requireImage(icons_ / (name + ".png"));
+    }
+  };
+  bool buttons = false;
+  for (const Element &element : elements_) {
+    std::ranges::for_each(element.art, piece);
+    switch (element.kind) {
+    case Kind::Hearts:
+      break;
+    case Kind::Meter:
+      atlas_->requireSvg(kHudSet, "bar");
+      atlas_->requireSvg(kHudSet, "bar_fill");
+      break;
+    case Kind::Counter:
+      if (element.art.empty()) {
+        piece(element.icon);
+      }
+      break;
+    case Kind::Button:
+      atlas_->requireSvg(kHudSet, element.frame);
+      buttons = true;
+      break;
+    }
+  }
+  if (buttons) {
+    atlas_->requireSvg(kKeySet, "cap");
+    for (const auto &[pad, glyph] : kGlyphs) {
+      atlas_->requireSvg(kPadSet, std::string(glyph));
+    }
+  }
 }
 
 Hud::~Hud() {
@@ -349,8 +390,6 @@ void Hud::draw(const Element &element) {
     std::optional<uint32_t> limit;
     if (element.limit.bytes != 0) {
       limit = read({element.limit.address + tier * element.limit.bytes, element.limit.bytes, element.limit.pointer});
-    } else if (!element.limits.empty()) {
-      limit = element.limits[std::min<size_t>(tier, element.limits.size() - 1)];
     }
     const float digit = std::round(box.h * kDigitShare);
     const HudSprite number = atlas_->text(std::to_string(*value), static_cast<int>(digit),
@@ -364,7 +403,7 @@ void Hud::draw(const Element &element) {
     const GuestValue &status = chord ? element.chordStatus : element.status;
     quad(sized(kHudSet, element.frame, box.w, box.h), box);
     const std::optional<uint32_t> item = read(chord ? element.chordValue : element.value);
-    if (item && *item != element.none) {
+    if (item && art_.contains(std::to_string(*item))) {
       const float size = std::round(box.w * kIconShare);
       const float inset = std::round((box.w - size) / 2.0F);
       const bool dimmed = status.bytes != 0 && read(status) == element.disabled;
@@ -382,12 +421,11 @@ void Hud::draw(const Element &element) {
       }
     }
     if (const std::optional<uint32_t> action = chord ? std::nullopt : read(element.label);
-        action && *action < element.labels.size() && !element.labels[*action].empty()) {
-      // Centred under the button.
-      const int height = static_cast<int>(std::round(box.h * kLabelShare));
-      const HudSprite word = atlas_->text(element.labels[*action], height, HudInk::Light);
-      const float baseline = box.y + box.h + static_cast<float>(2 * HudAtlas::outline(height) + height);
-      quad(word, {std::round(box.x + (box.w - word.w) / 2.0F), baseline - word.base, word.w, word.h});
+        action && art_.contains(kWordArt + std::to_string(*action))) {
+      // The game's word for the action, centred under the button.
+      const float height = std::round(box.h * kLabelShare);
+      const HudSprite word = art(kWordArt + std::to_string(*action), 0.0F, height);
+      quad(word, {std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h});
     }
     prompt(element, box);
     return;

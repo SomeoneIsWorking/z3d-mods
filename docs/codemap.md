@@ -14,7 +14,7 @@
 - `tools/z3dmods/ctxb.py`: CTXB menu texture bundles.
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).
 - `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies and draws port-assets' pad glyphs over the 3DS button prompts (edit tables in `sets/hud/`).
-- `tools/z3dmods/hud_icons.py`: the item icons the app's play HUD draws, cut from the game's icon sheet or the pack's copy by the game's icon table (`[icons]` in `patch/<game>/hud.toml`).
+- `tools/z3dmods/hud_icons.py`: the game art the app's play HUD draws, cut from the game's sheets or the pack's copies: item icons by the game's icon table, named pieces and the A button's words (`[icons]`, `[art]`, `[words]` in `patch/<game>/hud.toml`).
 - `tools/z3dmods/stairs.py`: folds stair-textured ramps in a game's rooms into risers and treads, and the scene's collision triangles on them the same way.
 - `tools/z3dmods/bgcheck.py`: the room a scene's collision has in the game: the grid and memory `BgCheck_Allocate` gives a scene (its tables read from the code at the decomp's addresses), the list nodes the triangles take, and the limits `install` refuses a stepped scene over.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
@@ -43,7 +43,7 @@
   - `ctr.hpp`: 3DS kernel calls and service IPC from inside a title.
   - `cstick.hpp`: the New 3DS C-stick, read from `ir:rst`'s shared memory.
 - `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), the chord item page (`chord_items.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
-- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), the chord item page (`chord_items.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), the chord item page (`chord_items.cpp`), the game's own A button hidden (`base_hud.cpp`), its switches (`options.toml`), hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).
   - `core_settings`: the core's settings and user path from the config, applied first; a game's settings before it loads.

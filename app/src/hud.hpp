@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -73,15 +74,13 @@ private:
     // changes with one (a wallet's size).
     std::vector<std::string> art;
     GuestValue tier;
-    // Counter: the most it holds, drawn in the full colour: the game's table by `tier`, or ours.
+    // Counter: the most it holds, drawn in the full colour: the game's table by `tier`.
     GuestValue limit;
-    std::vector<uint32_t> limits;
-    // Button: its frame (hud set), the 3DS button that presses it (if one does), the item
-    // button it is (if it is one), and the item value that means empty.
+    // Button: its frame (hud set), the 3DS button that presses it (if one does) and the item
+    // button it is (if it is one). An item without an icon is an empty button.
     std::string frame;
     std::optional<Settings::NativeButton::Values> button;
     std::optional<ItemButton> itemButton;
-    uint32_t none = 0;
     // Button: the game's array of counts, the index in it of each item that has one, and the
     // button's status with the value that dims it.
     GuestValue ammo;
@@ -93,10 +92,11 @@ private:
     GuestValue chordValue;
     GuestValue chordStatus;
     std::optional<ItemButton> chordItem;
-    // Button: the game's number of the action it does now, and the word for each.
+    // Button: the game's number of the action it does now; its word is the game's art.
     GuestValue label;
-    std::vector<std::string> labels;
   };
+
+  void requireArt();
 
   [[nodiscard]] std::optional<uint32_t> read(const GuestValue &value) const;
   [[nodiscard]] bool hold(const std::vector<Condition> &conditions) const;
@@ -118,8 +118,10 @@ private:
   std::vector<Element> elements_;
   // A game without an overlay table (screen_overlay.hpp) is in play while all of these hold.
   std::vector<Condition> show_;
-  // <icons>/<item id>.png: the game's or the pack's icon of each item.
+  // <icons>/<name>.png: the game's or the pack's art, an item's icon by its id; `art_` names
+  // what is there.
   std::filesystem::path icons_;
+  std::set<std::string> art_;
   unsigned width_ = 0;
   unsigned height_ = 0;
   std::vector<Settings::OverlayQuad> quads_;

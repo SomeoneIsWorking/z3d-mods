@@ -29,6 +29,15 @@ heart_2 = [240, 112, 12, 12]
 heart_3 = [240, 128, 12, 12]
 heart_4 = [240, 144, 12, 12]
 
+# The A button's words: an action's number is its word's cell.
+[words]
+sheet = "menu/01_US_ENGLISH/hud_all00.ctxb"
+first = [0, 93]
+cell = [64, 18]
+rows = 9
+count = "DO_ACTION_WORDS"
+none = "DO_ACTION_NONE"
+
 [[element]]
 kind = "hearts"
 rect = [8, 8, 11, 11]
@@ -70,7 +79,7 @@ when = [
 # The four buttons, top right, as the pad's diamond. A is the action and B the sword; while the
 # chord is held they show the items the chord gives them (the I and II buttons', which the patch
 # has then traded for the second page's). The first page's I and II items have no button here.
-# The action's words follow DO_ACTION_*; -1 and DO_ACTION_NONE have none.
+# The action's word is the cell of its DO_ACTION_* ([words]); -1 and DO_ACTION_NONE have none.
 
 [[element]]
 kind = "button"
@@ -78,8 +87,6 @@ frame = "ring"
 button = "A"
 rect = [346, 56, 24, 24]
 label = { at = ["gTopHud", "TopHud.doAction"], bytes = 4 }
-labels = ["Attack", "Check", "Enter", "Return", "Open", "Jump", "Decide", "Dive", "Faster", "Throw", "",
-          "Climb", "Drop", "Down", "Save", "Speak", "Next", "Grab", "Stop", "Put Away", "Reel"]
 chord = { item_button = "I", value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 3], bytes = 1 }, status = { at = ["gSaveContext", "SaveContext.buttonStatus", 3], bytes = 1 } }
 ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
 ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]

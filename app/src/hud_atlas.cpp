@@ -219,9 +219,36 @@ HudSprite HudAtlas::image(const std::filesystem::path &file, int width, int heig
     return found->second;
   }
   SDL_Surface *loaded = IMG_Load(file.c_str());
+  if (loaded != nullptr && width <= 0 && loaded->h > 0) {
+    width = std::max(1, static_cast<int>(std::lround(static_cast<float>(loaded->w) * static_cast<float>(height) /
+                                                     static_cast<float>(loaded->h))));
+  }
   SDL_Surface *scaled = loaded != nullptr ? SDL_ScaleSurface(loaded, width, height, SDL_SCALEMODE_LINEAR) : nullptr;
   SDL_DestroySurface(loaded);
   return place(key, scaled);
+}
+
+void HudAtlas::requireSvg(const std::string &set, const std::string &name) const {
+  constexpr int kProbe = 16;
+  const std::filesystem::path file = assets_ / "sets" / set / (name + ".svg");
+  SDL_IOStream *stream = SDL_IOFromFile(file.c_str(), "rb");
+  SDL_Surface *surface = stream != nullptr ? IMG_LoadSizedSVG_IO(stream, kProbe, kProbe) : nullptr;
+  if (stream != nullptr) {
+    SDL_CloseIO(stream);
+  }
+  if (surface == nullptr) {
+    throw std::runtime_error("HUD art is missing or unreadable: " + file.string() + " (" + SDL_GetError() + ")");
+  }
+  SDL_DestroySurface(surface);
+}
+
+void HudAtlas::requireImage(const std::filesystem::path &file) {
+  SDL_Surface *surface = IMG_Load(file.c_str());
+  if (surface == nullptr) {
+    throw std::runtime_error("HUD art is missing or unreadable: " + file.string() + " (" + SDL_GetError() +
+                             "); install the game's set again");
+  }
+  SDL_DestroySurface(surface);
 }
 
 std::shared_ptr<const Settings::OverlayImage> HudAtlas::image() {

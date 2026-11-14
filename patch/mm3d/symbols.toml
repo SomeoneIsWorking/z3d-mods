@@ -13,8 +13,12 @@ kPlaySaveAtStatue = "Play_SaveAtStatue"
 
 [globals]
 kCommonData = "gCommonData"
+kUiCommonLayouts = "gUiCommonLayouts"
 
 [offsets]
+kPlayHudAActionButton = "PlayHud.aActionButton"
+kUiWidgetFlags = "UiWidget.flags"
+kUiWidgetActiveFlags = "UiWidget.activeFlags"
 kGameMode = "CommonData.setup"
 kPlayInputHeld = "PlayState.buttonsHeld"
 kPlayInputPressed = "PlayState.buttonsPressed"
@@ -49,6 +53,9 @@ kCsActorCueSize = "CsCmdActorCue"
 
 [defines]
 kButtonChord = "PAD_DEBUG"
+kUiLayoutHud = "UI_LAYOUT_HUD"
+kUiWidgetFlagsHidden = "UI_WIDGET_FLAGS_HIDDEN"
+kUiWidgetActiveFlagsHidden = "UI_WIDGET_ACTIVE_FLAGS_HIDDEN"
 kEquipButtonY = "EQUIP_BUTTON_Y"
 kEquipButtonII = "EQUIP_BUTTON_II"
 kItemNone = "ITEM_NONE"

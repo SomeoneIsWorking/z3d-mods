@@ -211,7 +211,11 @@ Item icons, the rupee, the key and the hearts are the game's own art, the textur
 when it has one: the install cuts them into `<mods>/z3d-hud-icons/` (`hud_icons.py`), an item's
 icon as `<item id>.png` by the game's table of a frame per item (`[icons]` in `hud.toml`; where
 the game has no table an item's frame is its id, OoT3D) and a named piece as `<name>.png` by its
-rectangle in the HUD's sheet (`[art]`). Everything lands in one RGBA atlas, and `Hud` gives the
+rectangle in the HUD's sheet (`[art]`), and the A button's words as `word_<action number>.png`,
+each a cell of the game's word sheet in the player's language (`[words]`). At startup `Hud` reads
+every piece the elements name (the SVGs, and every file of the installed folder) and refuses to
+start with the file's name when one is missing or unreadable; an item without an icon is an empty
+button. Everything lands in one RGBA atlas, and `Hud` gives the
 core that image and a list of quads every frame (`Settings::values.overlay_image`,
 `overlay_quads`). It reads the game after every frame through `Emulator::read`, and draws only
 while the overlay's layout is play's (`hud = true` in `overlay.toml`), or, for a game without
@@ -224,11 +228,13 @@ ends, so it covers none of the icon, and the ring's rim never shows between its 
 (`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100, released and with the chord). `hearts` picks one of the game's five hearts (empty,
 a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can read one entry
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
-a `limit` (the game's table by tier, OoT3D's `gUpgradeCapacities`) or `limits` (ours, MM3D).
+a `limit` (the game's table by tier, `gUpgradeCapacities` in both games).
 
 The buttons are four, the same in both games: A, B, X and Y in the pad's diamond, top right. A
-button's glyph never changes. Released, A writes the word of the game's action number under it
-(`label`, `labels`; OoT3D only so far), B shows the sword and X and Y their items; while the
+button's glyph never changes. Released, A shows the game's own word for its action under it
+(`label`, the action's number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`;
+MM3D's patch hides the game's own A button, `patch/mm3d/base_hud.cpp`), B shows the sword and X
+and Y their items; while the
 chord is held (`PadInput::chord()`), A and B show what `chord` names in `hud.toml`, the items of
 the game's I and II buttons, onto which the patch has then traded the second page. With the
 keyboard last used a button shows a key cap instead of the pad's glyph: the key of what it shows
@@ -243,9 +249,18 @@ pack's rupee with the count in white below the wallet's capacity; "Check" under 
 (OoT3D); the Kokiri Sword on B (MM3D). Earlier, on the layout before the diamond: MM3D's blue
 gem and a green 200 with the second wallet (`hud-mmart3`), OoT3D's key counter in the Forest
 Temple and the pause screen hiding the HUD (`mm-oothud3`).
-Not seen: items equipped through the game's item screen, a count changing in play, the HUD
-across a scene change, real keys in a window on this layout. MM3D's own A ring still draws,
-bottom right.
+Live state, both games at scale 3, items given to the file and then equipped in the game's own
+item screen (`hud-ootlive3`: Slingshot and bombs in Kokiri Forest; `hud-mmlive3`: bow and bombs
+at South Clock Town's owl statue): the buttons show them; a seed or arrow fired reads 29 of 30
+and a bomb 19 of 20; the blast leaves two and a half hearts; the HUD is the same after the scene
+change into a shop; buying there (Deku Seeds, Deku Nuts, 30 rupees) takes the counter from 50
+to 20. The words under A are the game's art: Return while aiming, Drop with a bomb held, Grab
+beside it, and at the counter Speak (MM3D) and Talk (OoT3D, `hud-ootcount3`). MM3D's own A ring
+is gone and its clock stays. OoT3D's plates: `hud-ootcount3`.
+With `heart_2.png` taken out of the installed folder the app does not start and logs "HUD art
+is missing or unreadable: <the file>; install the game's set again" (`hud-mm-refuse`).
+Not seen: real keys in a window on this layout. Our HUD stays up through a shop's text in both
+games.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`

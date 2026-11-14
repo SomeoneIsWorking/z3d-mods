@@ -37,5 +37,6 @@ actor_update:
     push {r3, lr}
     mov r0, r7
     bl _ZN7z3dmods4mm3d16updateChordItemsEPv
+    bl _ZN7z3dmods4mm3d11hideBaseHudEv
     pop {r3, lr}
     b kActorUpdateFirstCall

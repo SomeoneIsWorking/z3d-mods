@@ -43,16 +43,26 @@ value = { at = ["gCommonData", "CommonData.save", "SaveData.magic"], bytes = 1 }
 when = [{ at = ["gCommonData", "CommonData.save", "SaveData.magicAcquired"], bytes = 1, least = 1 }]
 longer = { at = ["gCommonData", "CommonData.save", "SaveData.doubleMagicAcquired"], bytes = 1 }
 
-# The wallet picks the gem and what fills it; the third wallet's 500 is the N64's.
+# The A button's words: an action's number is its word's cell.
+[words]
+sheet = "layout/US_English/Joker.Main.Play.gar/hud_patrs00_action_text.ctxb"
+first = [0, 93]
+cell = [64, 18]
+rows = 9
+count = "DO_ACTION_WORDS"
+none = "DO_ACTION_NONE"
+
+# The wallet picks the gem; green at its capacity, gUpgradeCapacities[UPGRADE_WALLET] (four u16).
 [[element]]
 kind = "counter"
 art = ["rupee_green", "rupee_blue", "rupee_red"]
 rect = [8, 198, 40, 13]
 value = { at = ["gCommonData", "CommonData.save", "SaveData.rupees"], bytes = 2 }
 tier = { at = ["gCommonData", "CommonData.save", "SaveData.upgrades"], bytes = 4, mask = "UPGRADE_WALLET_MASK", shift = "UPGRADE_WALLET_SHIFT" }
-limits = [99, 200, 500]
+limit = { at = ["gUpgradeCapacities", 32], bytes = 2 }
 
-# The four buttons, top right, as the pad's diamond. A is the action and B the sword; while the
+# The four buttons, top right, as the pad's diamond. A is the action with its word (the game's
+# own A button is hidden by the patch, base_hud.cpp) and B the sword; while the
 # chord is held they show the items the chord gives them (the I and II buttons', which the patch
 # has then traded for the second page's). The first page's I and II items have no button here.
 
@@ -61,7 +71,8 @@ kind = "button"
 frame = "ring"
 button = "A"
 rect = [346, 56, 24, 24]
-chord = { item_button = "I", value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }, status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_I"], bytes = 1 } }
+label = { at = ["PlayState.aButtonDoAction"], through = "gPlayState", bytes = 2 }
+chord ={ item_button = "I", value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_I"], bytes = 1 }, status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_I"], bytes = 1 } }
 ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
 ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
 disabled = 0xFF

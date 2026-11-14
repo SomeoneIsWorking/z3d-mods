@@ -9,7 +9,11 @@ names it: `frames` (the decomp's global), `count` and `none` (its length and its
 Without one, an item's frame is its id.
 
 `[art]` names the HUD's sheet (`sheet`) and each piece's rectangle in the sheet's own pixels
-(`<name> = [x, y, w, h]`)."""
+(`<name> = [x, y, w, h]`).
+
+`[words]` names the sheet of the A button's words: cells of `cell` pixels from `first`, `rows` to
+a column, counted down each column; an action's number is its word's cell. `count` is how many
+cells are words and `none` the number that shows no word (the decomp's defines)."""
 
 from __future__ import annotations
 
@@ -55,7 +59,33 @@ def build(repo: Path, game: str, romfs: ctr.Romfs, pack: TexturePack | None, cod
         out.update({name: _png(sheet, scale, *box) for name, box in art.items() if name != "sheet"})
     if (table := tables.get("icons")) is not None:
         out.update(_items(repo, game, romfs, pack, code, table))
+    if (table := tables.get("words")) is not None:
+        out.update(_words(symbols.load(repo, game), romfs, pack, table))
     return out
+
+
+# Alpha above this is a word's ink.
+INK = 32
+
+
+def _words(decomp: symbols.Decomp, romfs: ctr.Romfs, pack: TexturePack | None, table: dict) -> dict[str, bytes]:
+    """`word_<number>`: each action word, its cell cut to the ink's width at the cell's height."""
+    sheet, scale = _sheet(romfs, pack, table["sheet"])
+    (left, top), (width, height) = table["first"], table["cell"]
+    none = decomp.define(table["none"])
+    words = {}
+    for number in range(decomp.define(table["count"])):
+        x, y = left + number // table["rows"] * width, top + number % table["rows"] * height
+        cell = sheet.crop(tuple(round(side * scale) for side in (x, y, x + width, y + height))).convert("RGBA")
+        ink = cell.getchannel("A").point(lambda alpha: 255 if alpha > INK else 0).getbbox()
+        if number == none or ink is None:
+            continue
+        word = cell.crop((ink[0], 0, ink[2], cell.height))
+        word.thumbnail((LARGEST, LARGEST), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        word.save(buffer, "PNG")
+        words[f"word_{number}"] = buffer.getvalue()
+    return words
 
 
 def _items(repo: Path, game: str, romfs: ctr.Romfs, pack: TexturePack | None, code: bytes,

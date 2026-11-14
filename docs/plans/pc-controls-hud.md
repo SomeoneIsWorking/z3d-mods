@@ -39,8 +39,19 @@ Same layout in both games; this supersedes the bindings in the sections below.
 | R | Ocarina |
 | Tab | Item screen; M map; Esc pause |
 
-Not done on purpose: no hotkey for a song (a stray Song of Time wipes a cycle), no item on a
-trigger or on R3, no radial wheel, nothing equips boots or masks by context.
+Songs on slots (user: "Imo songs can be added to item slots"). Not built.
+- Any learned song can be assigned to any slot, like an item: in the Quest screen's song list
+  the player presses the slot's input on a song.
+- Pressing the slot plays the song through the game's own path: the ocarina comes out and the
+  notes are played as the game plays them, so the game's own effects and prompts happen. MM3D's
+  Song of Time asks "return to the first day?" through the game; that prompt is kept, never
+  skipped.
+- The HUD shows a note icon with the song's colour or initial on the slot.
+- Proof: a slot plays the Song of Storms or Epona's Song in OoT3D and the Song of Time in MM3D,
+  with its prompt showing.
+
+Not done on purpose: no item on a trigger or on R3, no radial wheel, nothing equips boots or
+masks by context.
 
 ## Chord + ABXY
 - Holding the chord turns A, B, X and Y into four more item buttons; released, they are the
@@ -191,8 +202,11 @@ OoT3D; the chord page; key caps; the clock and minimap; hiding the games' own.
 ### Open
 - Which guest state each element reads (button items, counts, the minimap's ownership) and the
   item icons' files: per game, into the decomps first.
-- OoT3D's words for the A button are English in `hud.toml`; the game's other languages need
-  their own lists, or the words cut from the game's `hud_all00.ctxb`.
+- The A button's words are cut from the US English sheet (`[words]` in `hud.toml`); another
+  language's file needs its sheet named by the file's language.
+- OoT3D's item screen labels its two round buttons for the 3DS under The One Screen's X/Y trade:
+  the pad's X assigns into the one labelled Y (`hud-ootlive3`). The labels are `sets/hud`'s; they
+  are redone with the slot model's assignment.
 
 ## Outline fonts
 User: "And SVG fonts" (an outline font, crisp at any resolution). Every piece of text the HUD
@@ -229,19 +243,20 @@ draw in the app only what that cannot reach.
   from state: hearts by quarters, magic, rupees (the wallet's gem in MM3D, green at the wallet's
   capacity), the A, B, X and Y diamond with item icons and counts on plates, the chord's alt
   contents on the same four buttons, key caps (`hud-ootlook3`, `hud-ootlook5`, `hud-mmlook3`,
-  `hud-mmlook5`). OoT3D also: small keys in the dungeons and the action's word under A. The rupee,
-  key and hearts are the pack's copies of the game's art. The cut-out touch-screen pieces are
-  gone from play, and The One Screen's own HUD is switched off in the patch (`base_hud`).
-- Missing from both: our own item slots (above); an item equipped through the item screen, a
-  count changing in play and a scene change were not seen, only values written into memory; the
-  first page's I and II items are not drawn; item counts are not coloured at capacity.
-- Missing from MM3D's HUD: the A button's word (the number is found, its mapping is not), View,
-  the minimap (what decides it is not found), the ice and light arrows' and the powder keg's
-  counts; the third wallet's red gem and 500 were not run. The game's own A ring and clock still
-  draw: hiding the A button's widget is found, the clock alone is not, and no code patch has been
-  built yet.
-- Missing from OoT3D's HUD: the carrots, the D-pad cross and View; the bow's, bombchus' and beans'
-  counts and the action words past "Check" follow the N64's numbering and were not seen.
+  `hud-mmlook5`), the action's word under A in the game's own art, and in OoT3D small keys in the
+  dungeons. The rupee, key and hearts are the pack's copies of the game's art. The cut-out
+  touch-screen pieces are gone from play, The One Screen's own HUD is switched off in the patch
+  and MM3D's own A button is hidden by its patch (`base_hud` in both).
+- Seen live, with items equipped in the item screen (`hud-ootlive3`, `hud-mmlive3`): counts
+  falling as ammo is used, damage, a scene change, a purchase.
+- Missing from both: the decided layout (above): our own item slots, RB and the D-pad cross on
+  the HUD, the keyboard table; item counts are not coloured at capacity (the capacity tables are
+  in both decomps).
+- Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
+  arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
+  game's own clock still draws and is not ours yet.
+- Missing from OoT3D's HUD: the carrots and View; the bow's, bombchus' and beans' counts follow
+  the N64's slots and were not seen.
 - Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
   command, not with real keys in a window.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the

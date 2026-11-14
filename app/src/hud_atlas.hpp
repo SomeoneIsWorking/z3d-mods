@@ -46,8 +46,11 @@ public:
   [[nodiscard]] HudSprite text(const std::string &text, int height, HudInk ink);
   // The outline's width around lettering of that height that has one; a plate's edge is as far out.
   [[nodiscard]] static int outline(int height);
-  // A raster image (an item icon) scaled to the size.
+  // A raster image (an item icon) scaled to the size; `width` 0 keeps its shape at `height`.
   [[nodiscard]] HudSprite image(const std::filesystem::path &file, int width, int height);
+  // At startup: throw, naming the file, unless that art can be read.
+  void requireSvg(const std::string &set, const std::string &name) const;
+  static void requireImage(const std::filesystem::path &file);
 
   // Drops every sprite: the window changed size.
   void clear();
