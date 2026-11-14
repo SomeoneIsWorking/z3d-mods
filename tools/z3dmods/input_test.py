@@ -18,8 +18,9 @@ from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, config, play, shortcut
+from z3dmods import app, config, games, harness, play, shortcut, steps, symbols
 from z3dmods.config import Config
+from z3dmods.install import GameSet
 
 WIDTH, HEIGHT = 1280, 720
 # The player's Azahar keys (pad_input.cpp kKeys), as X keysyms.
@@ -196,9 +197,78 @@ def _oot3d(session: Session, pad: Gamepad) -> None:
     session.shot("pad-moved-link")
 
 
+OOT3D_BOOT = ["wait:20", "start", "wait:3", "a", "wait:2", "a", "wait:8"]
+# chord_items.cpp's Store in the save's unused bytes: the marker, then the child's away page,
+# a slot for each of Y, X, I and II and the grid node each waits in.
+OOT3D_STORE = "c4ffff{slot:02x}ff00000000"
+OOT3D_AMMO = 30
+# Inside the Deku Tree: a file saved in a dungeon loads there, and the Slingshot is usable.
+OOT3D_DEKU_TREE = 0x0
+
+
+def _harness_file(cfg: Config, name: str, script: list[str], out: Path) -> Path:
+    """Runs `script` on the harness and returns the save folder of its user folder."""
+    game = GameSet.named(cfg.repo, name)
+    run_name = f"input-test-{name}"
+    with harness.HarnessSession(cfg, game, run_name, out / "file-harness.log") as session:
+        steps.run(session, script, out, games.layout(cfg.repo, name))
+    low = game.title_id[8:].lower()
+    return next((cfg.repo / "scratch" / "harness" / run_name).rglob(f"title/*/{low}/data/00000001"))
+
+
+def _copy_file(made: Path, user: Path) -> None:
+    """Puts a save folder made on the harness into a test's user folder."""
+    target = next(user.rglob(f"title/*/{made.parent.parent.name}/data/00000001"))
+    shutil.copytree(made, target, dirs_exist_ok=True)
+
+
+def _oot3d_chord_file(cfg: Config, user: Path, out: Path) -> None:
+    """File 1 with a Slingshot on item I of the child's second page, written by the game's own
+    save: the item goes into the inventory, the game puts it in the item screen's grid, the
+    page's bytes name it, and autosave writes the file on a scene change."""
+    d = symbols.load(cfg.repo, "oot3d")
+    save = symbols.global_(d, "gSaveContext")
+    inventory = save + symbols.offset(d, "SaveContext.inventory")
+    slot = d.define("SLOT_SLINGSHOT")
+    script = OOT3D_BOOT + [
+        f"poke:{inventory + symbols.offset(d, 'Inventory.items') + slot:#x},{d.define('ITEM_SLINGSHOT'):02x}",
+        f"poke:{inventory + symbols.offset(d, 'Inventory.ammo') + slot:#x},{OOT3D_AMMO:02x}",
+        "wait:1",
+        f"poke:{save + symbols.offset(d, 'SaveContext.unused_6C'):#x},{OOT3D_STORE.format(slot=slot)}",
+        "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
+    _copy_file(_harness_file(cfg, "oot3d", script, out), user)
+
+
+# A new file, out of the opening to South Clock Town's owl statue, past its first-visit cutscene.
+MM3D_BOOT = ["wait:20", "start", "wait:4", "a", "wait:2", "a", "wait:2", "a", "wait:3", "start", "wait:2", "a",
+             "wait:2", "a", "wait:3", "a", "wait:3", "a", "wait:8", "warp:0xD800", "wait:10", "warp:0xD890",
+             "wait:10", "waitcs:60,a", "wait:3"]
+# Up to the statue, "Check", then "Yes" to its save prompt.
+MM3D_SAVE = ["stick:0,-32767,0.5", "wait:1", "a", "wait:3", "a", "wait:4"]
+MM3D_AMMO = 30
+# The equipment row whose slot bytes hold the page that is away (patch/mm3d/chord_items.cpp).
+MM3D_AWAY_ROW = 1
+
+
+def _mm3d_chord_file(cfg: Config, user: Path, out: Path) -> None:
+    """File 1 at South Clock Town's owl statue with a bow on Y of the second page, written by
+    the game's own save there."""
+    d = symbols.load(cfg.repo, "mm3d")
+    save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
+    slot, item = d.define("SLOT_BOW"), d.define("ITEM_BOW")
+    away = (save + symbols.offset(d, "SaveData.equipment") + symbols.offset(d, "EquipmentData.buttonSlots")
+            + MM3D_AWAY_ROW * (d.define("EQUIP_BUTTON_II") + 1) + d.define("EQUIP_BUTTON_Y"))
+    script = MM3D_BOOT + [
+        f"poke:{save + symbols.offset(d, 'SaveData.items') + slot:#x},{item:02x}",
+        f"poke:{save + symbols.offset(d, 'SaveData.ammo') + item:#x},{MM3D_AMMO:02x}",
+        f"poke:{away:#x},{slot:02x}", "wait:1"] + MM3D_SAVE
+    _copy_file(_harness_file(cfg, "mm3d", script, out), user)
+
+
 def _chord(session: Session, pad: Gamepad) -> None:
-    """The chord takes the face buttons from the game: with LB held the pad's A does not read
-    Link's bed in File 1, and released it does."""
+    """The second item page from a real pad, in a file with a Slingshot on its item I: with LB
+    held the HUD shows the page and the pad's A, held, aims the Slingshot; released, the first
+    page is back and A is the game's A again."""
     session.wait(20)
     session.key("start")
     session.wait(3)
@@ -206,13 +276,19 @@ def _chord(session: Session, pad: Gamepad) -> None:
     session.wait(2)
     session.key("a")
     session.wait(10)
+    session.shot("page-1")
     pad.hold("lb", True)
     session.wait(1)
-    pad.button("a")
+    session.shot("chord-page")
+    pad.hold("a", True)
     session.wait(2)
-    session.shot("chord-a")
+    session.shot("chord-a-aims")
+    pad.hold("a", False)
+    session.wait(2)
+    session.shot("chord-a-released")
     pad.hold("lb", False)
     session.wait(1)
+    session.shot("released")
     pad.button("a")
     session.wait(2)
     session.shot("a")
@@ -236,6 +312,36 @@ def _mm3d(session: Session, pad: Gamepad) -> None:
     session.key("start")
     session.wait(5)
     session.shot("skipped-to-woods")
+
+
+def _chord_mm3d(session: Session, pad: Gamepad) -> None:
+    """The second item page from a real pad in MM3D, in a file with a bow on its Y: with LB held
+    the HUD shows the page and the pad's Y, held, aims the bow; released, the first page is back."""
+    session.wait(30)
+    session.key("start")
+    session.wait(12)
+    session.key("a")
+    session.wait(5)
+    session.shot("files")
+    session.key("a")
+    session.wait(4)
+    session.shot("file-1")
+    session.key("a")
+    session.wait(15)
+    session.shot("page-1")
+    pad.hold("lb", True)
+    session.wait(1)
+    session.shot("chord-page")
+    pad.hold("y", True)
+    session.wait(2)
+    session.shot("chord-y-aims")
+    pad.hold("y", False)
+    session.wait(2)
+    pad.button("b")
+    session.wait(2)
+    pad.hold("lb", False)
+    session.wait(1)
+    session.shot("released")
 
 
 def _hotswap(session: Session, pad: Gamepad) -> None:
@@ -340,15 +446,19 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord}
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord, "chord-mm3d": _chord_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
-DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d"}
+DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d"}
+# What a scenario puts in its user folder before the app starts.
+PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file}
 SCENARIOS = {**DIRECT, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:
     user = out / "user"
     app.seed_user(cfg, user, fresh=True)
+    if scenario in PREPARE:
+        PREPARE[scenario](cfg, user, out)
     if scenario in DIRECT:
         return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user))
     entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"

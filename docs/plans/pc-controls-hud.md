@@ -25,9 +25,16 @@ glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mo
   the chord button and, per face button, the `ItemButton` it presses. The chord is held while
   `state().buttons[NativeButton::Debug]` is set. Until our HUD draws from it, the sets' HUD art
   is out of date: The One Screen's LB on item I and MM3D's LB badge on View name the old button.
-- Shown with a real pad's events (`z3dmods inputtest chord`, OoT3D, File 1 beside Link's bed):
-  LB held, the pad's A does not read the bed; released, it does. Not shown: an item used from
-  A or B on the chord page (the test's file has no items), and MM3D.
+- Shown with a real pad's events, in a file the test makes on the harness with the game's own
+  save (an item poked into the inventory and named on the second page):
+  - OoT3D (`z3dmods inputtest chord`, File 1 saved inside the Deku Tree, a Slingshot on item I of
+    the second page): LB held, the HUD draws the Slingshot and its 30 seeds; LB and A held, Link
+    aims it in first person; both released, the buttons are empty and A is the game's A.
+  - MM3D (`z3dmods inputtest chord-mm3d`, File 1 saved at South Clock Town's owl statue, a bow
+    on Y of the second page): LB held, the HUD draws the bow and its 30 arrows on Y; LB and Y
+    held, Link aims it; released, Y is empty again.
+  - The Slingshot is not usable in Link's house, where a child's file saved outdoors loads.
+- Not shown: B on the chord page (item II).
 
 ## Our own HUD
 - One HUD per game drawn from the game's own state and art, with port-assets' Xbox glyphs on every
