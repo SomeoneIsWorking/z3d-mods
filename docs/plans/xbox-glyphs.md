@@ -68,6 +68,11 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
 - The Spanish sheets are in the table (`{language}` in a path, `languages`): the pack has them
   and the prompts sit in the same cells. Seen only as textures, not in a game set to Spanish.
 
+## The item-button cells (2026-11-14)
+With our own item slots the text sheets' four item-button cells (X, Y, I, II) name where the
+slots start, Y, B, RB and the D-pad, in both tables; the dialogs named above now read that way
+(OoT3D `ctl-text5`). What a cell cannot say: pc-controls-hud.md, "The game's own prompts".
+
 ## Still open
 - MM3D, not seen in game yet: the map's zoom prompts. A fresh file owns no map; with the words
   at `SaveData` + 0x11B0 filled by hand (`mm-map3`) Clock Town's map shows but no zoom buttons.
