@@ -155,6 +155,12 @@ class HarnessSession:
         """Holds the New 3DS C-stick at (x, y), as `stick` holds the circle pad."""
         return self._hold_analog("cstick", x, y, seconds)
 
+    def gyro(self, x: str, y: str, z: str, seconds: str) -> str:
+        """Turns the 3DS at (x, y, z) degrees a second for `seconds` (app/src/pad_input.hpp, PadState::gyro)."""
+        self._send(f"gyro {float(x)} {float(y)} {float(z)}")
+        self.run_frames(max(1, round(float(seconds) * FPS)))
+        return self._send("gyro 0 0 0")
+
     def _hold_analog(self, command: str, x: str, y: str, seconds: str) -> str:
         self._send(f"{command} {int(x)} {int(y)}")
         self.run_frames(max(1, round(float(seconds) * FPS)))

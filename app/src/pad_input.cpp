@@ -134,6 +134,32 @@ private:
   size_t index_;
 };
 
+// The 3DS lying flat and turning as the pad's state says.
+class MotionDevice final : public Input::MotionDevice {
+public:
+  explicit MotionDevice(std::shared_ptr<const PadState> state) : state_(std::move(state)) {
+  }
+  [[nodiscard]] std::tuple<Common::Vec3<float>, Common::Vec3<float>> GetStatus() const override {
+    const auto &[x, y, z] = state_->gyro;
+    return {Common::MakeVec(0.0F, -1.0F, 0.0F), Common::MakeVec(x, y, z)};
+  }
+
+private:
+  std::shared_ptr<const PadState> state_;
+};
+
+class MotionFactory final : public Input::Factory<Input::MotionDevice> {
+public:
+  explicit MotionFactory(std::shared_ptr<const PadState> state) : state_(std::move(state)) {
+  }
+  std::unique_ptr<Input::MotionDevice> Create(const Common::ParamPackage & /*params*/) override {
+    return std::make_unique<MotionDevice>(state_);
+  }
+
+private:
+  std::shared_ptr<const PadState> state_;
+};
+
 template <typename Device, typename Base> class Factory final : public Input::Factory<Base> {
 public:
   Factory(std::shared_ptr<const PadState> state, const char *key, size_t count)
@@ -162,11 +188,13 @@ PadInput::PadInput() : state_(std::make_shared<PadState>()) {
   Input::RegisterFactory<Input::AnalogDevice>(
       kEngine, std::make_shared<Factory<AnalogDevice, Input::AnalogDevice>>(
                    state_, "stick", Settings::NativeAnalog::NumAnalogs));
+  Input::RegisterFactory<Input::MotionDevice>(kEngine, std::make_shared<MotionFactory>(state_));
 }
 
 PadInput::~PadInput() {
   Input::UnregisterFactory<Input::ButtonDevice>(kEngine);
   Input::UnregisterFactory<Input::AnalogDevice>(kEngine);
+  Input::UnregisterFactory<Input::MotionDevice>(kEngine);
   for (SDL_Gamepad *pad : pads_) {
     SDL_CloseGamepad(pad);
   }
@@ -181,6 +209,7 @@ Settings::InputProfile PadInput::profile() {
   for (size_t i = 0; i < profile.analogs.size(); ++i) {
     profile.analogs[i] = std::string("engine:") + kEngine + ",stick:" + std::to_string(i);
   }
+  profile.motion_device = std::string("engine:") + kEngine;
   profile.touch_device = "engine:emu_window";
   return profile;
 }
@@ -249,6 +278,10 @@ void PadInput::setButtons(uint32_t mask) {
 
 void PadInput::setStick(Stick stick, float x, float y) {
   state_->sticks[stick] = {std::clamp(x, -1.0F, 1.0F), std::clamp(y, -1.0F, 1.0F)};
+}
+
+void PadInput::setGyro(float x, float y, float z) {
+  state_->gyro = {x, y, z};
 }
 
 } // namespace z3d::app

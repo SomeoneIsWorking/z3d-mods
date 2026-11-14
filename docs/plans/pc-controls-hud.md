@@ -41,6 +41,42 @@ glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mo
   the window's size, never a bitmap scaled up. The item icons stay the game's or the pack's
   raster art.
 
+### Design (one owner for both games)
+- Step one, built (f93caea): MM3D's overlay draws the touch screen's elements one by one from
+  `patch/mm3d/overlay.toml` (docs/app.md, "Overlay layout"). It is still the game's bitmap art;
+  the steps below replace the `play` layout's pieces and leave the menus' layouts.
+- `app/src/hud` is the one HUD owner. It knows element kinds, not games: a button (ring, glyph,
+  item icon, count), hearts, a magic bar, a rupee counter, a clock, a minimap frame. A game is
+  data: `patch/<game>/hud.toml` places elements on the top screen's 400x240 and names what each
+  reads; the install resolves those names to guest addresses from the decomp and writes them
+  into `z3d-options.json` as `"hud"`, the way `"screens"` is written.
+- Art: port-assets SVGs (`gamepad-xbox360`, `keyboard`; hearts, frames, the clock and what else
+  is missing are added there), installed beside the app with its fonts and rasterized at the
+  window's size into one atlas (SDL3_image). The atlas is redrawn on a resize and on a device
+  change; a frame only moves quads.
+- The core draws it: one more `renderer_vulkan` commit next to `custom_bottom_pieces`, an RGBA
+  atlas the frontend hands over and a list of quads (atlas rectangle, window rectangle, opacity)
+  drawn after the screens. Tool screenshots go through the same pass, so a HUD frame is a proof.
+- Item icons stay raster: the install copies each item's icon (the pack's copy where it has one)
+  into the app's data by item ID; the HUD draws the icon of the item the game has on a button.
+- Buttons: the HUD asks `PadInput::chord()` for the bound game's `ChordLayout` and
+  `PadState::buttons[Debug]` for whether the chord is held, and draws that page's four items on
+  A, B, X and Y. The table stays where the other agent put it (`kChords`, `pad_input.cpp`); the
+  keyboard's 1 to 8 go into the same file's key table, each pressing a `ChordSlot`'s buttons.
+- Last device: `PadInput` records whether the last press came from a pad or the keyboard; the HUD
+  reads it every frame and swaps the glyph set.
+- The game's own HUD has to go where ours replaces it (MM3D's A button and clock on the top
+  screen, all of OoT3D's with The One Screen): a patch switch per element, found per game.
+
+Order: the core's atlas pass; hearts, rupees and the item buttons for MM3D; the same table for
+OoT3D; the chord page; key caps; the clock and minimap; hiding the games' own.
+
+### Open
+- Which guest state each element reads (button items, counts, the minimap's ownership) and the
+  item icons' files: per game, into the decomps first.
+- OoT3D runs The One Screen, whose HUD is drawn by the game on the top screen: ours replaces it
+  only once a patch can switch its elements off.
+
 ## Outline fonts
 User: "And SVG fonts" (an outline font, crisp at any resolution). Every piece of text the HUD
 draws, and the game's own text (dialog, menus, item names), renders from an outline font
@@ -58,6 +94,14 @@ draw in the app only what that cannot reach.
   turns the aim. Both games already aim with the gyroscope, so the app feeds mouse motion to the
   3DS gyro input first; patch code only if that cannot give 1:1 aim. Outside aiming, the mouse may
   drive the free camera.
+- Built so far: the pad owner feeds the core a gyroscope (`PadState::gyro`, the `gyro:` step),
+  and the core's HID reads it about 100 times a second with the value set (`mm-gyro4`). The mouse
+  is not wired to it yet, because the game does not answer: in MM3D's first-person view, with
+  Motion Controls on (`mm-opt3`), 40 degrees a second for half a second on each axis and
+  direction leaves the view where it was (`mm-gyro3`). OoT3D's first-person view was not reached
+  (`mm-ootgyro1`: D-pad left is the overhead view). Next: decompile what the first-person camera
+  reads of the gyroscope in each game (OoT3D has `CalculateGyroscopeAxisStatus`) and find what
+  it waits for: a steady rate may be taken for drift, or the accelerometer may have to agree.
 
 ## Status
 Chord + ABXY: bindings built; the face buttons leaving the game is shown, an item on A or B is not. The rest not started.

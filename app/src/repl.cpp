@@ -85,6 +85,16 @@ std::string Repl::execute(const std::string &line) {
     pad_.setStick(analog, static_cast<float>(x) / kStickFull, -static_cast<float>(y) / kStickFull);
     return "ok";
   }
+  if (command == "gyro") {
+    float x = 0.0F;
+    float y = 0.0F;
+    float z = 0.0F;
+    if (!(args >> x >> y >> z)) {
+      return "err gyro <x> <y> <z>";
+    }
+    pad_.setGyro(x, y, z);
+    return "ok";
+  }
   if (command == "touch") {
     std::string first;
     int y = 0;

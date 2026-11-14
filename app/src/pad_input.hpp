@@ -23,6 +23,9 @@ struct PadState {
   std::array<std::array<float, 2>, Settings::NativeAnalog::NumAnalogs> sticks{};
   // The C-stick as the game gets it: each axis turned around or not.
   std::array<bool, 2> cStickInverted{};
+  // The 3DS turning, in degrees a second, on the core's axes: x points left along the D-pad, y
+  // out of the touch screen, z up along the D-pad; right-handed.
+  std::array<float, 3> gyro{};
 };
 
 // An item button of a game's second page (plans/pad-features.md), by the name its HUD gives it.
@@ -64,6 +67,8 @@ public:
   // NativeButton bits.
   void setButtons(uint32_t mask);
   void setStick(Settings::NativeAnalog::Values stick, float x, float y);
+  // PadState::gyro, held until set again.
+  void setGyro(float x, float y, float z);
   // The chord layout of the game with this title ID from here on; none for a game without one.
   void bindGame(std::string_view titleId);
   // The bound game's chord, for whoever draws it; null without one. It is held while

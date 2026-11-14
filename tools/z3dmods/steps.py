@@ -11,6 +11,7 @@ name, the block list goes to <name>.arena.txt).
 Harness only: savestate:<name>, loadstate:<name>, watch:<addr>,<size>, hits, keydown:<button>,
 keyup:<button> (hold across other steps), stick:<x>,<y>,<s> (circle pad, -32767..32767, y down),
 cstick:<x>,<y>,<s> (the New 3DS C-stick, the same way),
+gyro:<x>,<y>,<z>,<s> (the 3DS turning, degrees a second on the core's axes),
 record:<name> (every frame from here into <name>.mp4), stoprecord,
 option:<id>,<value> (a game option, docs/app.md "Options"),
 touch:<x>,<y>[,<s>] (the stylus on the 320x240 touch screen),
@@ -244,7 +245,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             (out / f"{arg}.save.bin").write_bytes(data)
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
-        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick", "cstick",
+        elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick", "cstick", "gyro",
                       "record", "stoprecord", "option", "touch", "patch", "textures"):
             extra = getattr(session, kind, None)
             if extra is None:
