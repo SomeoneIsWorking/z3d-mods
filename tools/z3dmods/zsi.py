@@ -7,7 +7,7 @@ src/OcarinaOfTime3D/zsi.ts (MIT, Jasper St. Pierre and contributors).
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 # OoT3D, MM3D.
 MAGICS = (b"ZSI\x01", b"ZSI\x09")
@@ -111,6 +111,8 @@ POLYGON_SIZE = 20
 # before the normal in OoT3D, after it (always zero) in MM3D.
 POLYGON_WORD_FIRST = {MAGICS[0]: True, MAGICS[1]: False}
 VERTEX_INDEX = 0x1FFF
+# In the first corner's flags: actors pass through the triangle; the camera and projectiles do not.
+IGNORE_ENTITY = 0x4000
 MAX_VERTICES = VERTEX_INDEX + 1
 NORMAL_ONE = 32767
 
@@ -128,6 +130,9 @@ class Polygon:
 
     def vertices(self) -> tuple[int, int, int]:
         return tuple(corner & VERTEX_INDEX for corner in self.corners)
+
+    def passed_by_actors(self) -> Polygon:
+        return replace(self, corners=(self.corners[0] | IGNORE_ENTITY, *self.corners[1:]))
 
     def facing(self, positions: list[tuple[int, int, int]], flags: Polygon) -> Polygon:
         """This triangle over `positions`, with its plane computed and `flags`' corner flags."""

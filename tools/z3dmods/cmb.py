@@ -252,7 +252,10 @@ class Cmb:
 
         index_count = struct.unpack_from("<I", self.data, INDEX_COUNT)[0]
         index_data = bytearray(self.data[self.index_offset:self.index_offset + index_count * 2])
-        if index_count + len(indices) > 0xFFFF:
+        # Whole triangles per set, each under the game's signed count.
+        per_set = -(-len(indices) // 3 // len(shape.prm_chunks)) * 3
+        # A set names its first index in 16 bits.
+        if index_count + (len(shape.prm_chunks) - 1) * per_set > 0xFFFF:
             raise ValueError("index buffer outgrows 16-bit primitive offsets")
         index_data.extend(struct.pack(f"<{len(indices)}H", *(base + i for i in indices)))
         texture_data = struct.unpack_from("<I", self.data, layout.texture_data)[0]
@@ -271,8 +274,6 @@ class Cmb:
         struct.pack_into("<I", out, 4, len(out))
         struct.pack_into("<I", out, INDEX_COUNT, index_count + len(indices))
         struct.pack_into("<I", out, layout.index, new_index)
-        # Whole triangles per set, each under the game's signed count.
-        per_set = -(-len(indices) // 3 // len(shape.prm_chunks)) * 3
         for i, prm in enumerate(shape.prm_chunks):
             count = len(indices[i * per_set:(i + 1) * per_set])
             struct.pack_into("<H", out, prm + 0x10, UNSIGNED_SHORT)

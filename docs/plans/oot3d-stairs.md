@@ -55,23 +55,62 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
 
 ## Collision (2026-11-14)
 - The scene file (`scene/<scene>_info.zsi`) holds the collision for all its rooms (decomp/oot3d
-  `docs/notes/scene_collision.md`). `stairs.collision` takes each sloped floor triangle that lies
-  on a drawn stair ramp (all three corners within 4 units of it) and folds it with the same
-  cuts as the drawn steps, reading the step positions from the drawn triangle under it: flat
-  treads and vertical risers, each inheriting the ramp triangle's surface type and flags. The
-  steps' end faces are left out: they are lower than the height the game checks walls at. The
-  curbs stay ramps, as drawn.
+  `docs/notes/scene_collision.md`). `stairs.collision` works in three passes:
+  1. The drawn ramp triangles are joined into convex outlines (same plane, same painted steps),
+     and the scene's sloped floor triangles into convex pieces (same type, flags and plane). Each
+     piece is cut at the outlines seen from above: a part over an outline and within 4 units of
+     the drawn ramp becomes steps, the parts beside it stay as they were. The collision is
+     coarser than the drawn ramp in most scenes (one triangle can span a flight and the floor
+     beside it), which is why it is cut and not picked by its corners.
+  2. The parts over a ramp are folded with the same cuts as the drawn steps, the step positions
+     read from the drawn ramp under them: flat treads and upright risers, each with the ramp
+     triangle's surface type and flags. No step folds below the flight's foot. The faces that
+     close a step up to the ramp where no other step continues it are kept when they face up
+     (they fill the plan a step leaves at the ramp's ends) and dropped when upright.
+  3. Walls and ceilings lose their parts between a ramp and one step below it. The ROM had
+     solid ground there, so its walls end anywhere in it: in the Stock Pot Inn the upper floor's
+     ceiling and the wall under it reach 4 units below the ramp and stopped Link on the last
+     tread but two (`mm-st13-yadoya`).
+- Every step face the game takes for a wall (steeper than 60 degrees) is flagged so actors
+  pass it (the first corner's 0x4000, decomp/mm3d `docs/formats/scene_files.md`): Link's feet
+  rise with the floor from tread to tread. As walls, the risers of a steep flight stack up to a
+  ledge: in the Milk Bar he hopped three steps at a time until they were flagged. A narrow riser
+  leans once its corners are integers, so the test is the game's, not "upright": a leaning one
+  left unflagged stopped Link on Kakariko's flight to the mountain gate (`oot-st16-spot01`).
+- The step faces of one plane are joined back into whole treads and risers, and a curb is not
+  cut at the steps beside it. The game keeps a list node for every triangle in every grid cell
+  it touches and does not check the list's end (decomp/oot3d `docs/notes/scene_collision.md`):
+  uncut, Kakariko needed 54760 nodes of 36097 and the game stopped on the second visit
+  (`oot-bg1`, `oot-as10`). Joined it needs 28584 of 37914; Ganon's Castle 17944 of 23197; every
+  other scene of either game is under half. `install` does not compute this: a new scene or a
+  finer texture has to be read in game (`peek:play+0xA98,0x50` in OoT3D, `play+0xAB0` in MM3D;
+  the u16 at +0x44 is the list's length, at +0x46 the nodes used).
+- A ramp is stairs only when its painted steps rise 3 to 20 units each. The Astral
+  Observatory's entrance has a plank ramp with a `step` texture that paints a 59 unit "step"
+  and six small ramps whose rows run up the slope; stepped, the first stopped Link
+  (`mm-st13-tenmon0`). Desert Colossus has eight triangles at 24 units. They stay ramps, drawn
+  and walked.
 - The longer vertex and triangle lists are written after the end of the scene file and the
-  collision header pointed at them; nothing else in the file moves. `z3dmods install oot3d`
-  writes the seven scenes beside their stepped rooms.
-- Counts: Kakariko 1222 → 5581 triangles and 786 → 4601 vertices (a triangle can name 8192);
-  Zora's Domain 1421 → 2306; Ganon's Castle 5434 → 7349. Desert Colossus's stair shapes have no
-  collision triangle on them, so nothing changes there.
-- Shown in game (`oot-st1`, Kakariko, the flight by the well): dropped onto the flight every 4
-  units along it, Link lands at 42, 50, 57, 65, 72 and 80, three or four drops on each, where the
-  ramp gave a new height every drop; walked up it, his height goes 35, 42, 50, 57, 65, 72, 80
-  without stopping at a riser. `oot-st2`, Zora's Domain's rock stairs: 417, 427, 437, 447, 457.
-- Not seen: the other five scenes, an adult, Epona or a rolling bomb on the steps, enemies.
+  collision header pointed at them; nothing else in the file moves. A triangle names its
+  corners in 13 bits, so a scene holds at most 8192 vertices: Kakariko has 7869.
+- A shape's indices are 16 bit and a primitive set holds at most 32767 of them (`cmb.py`
+  spreads a larger shape over several sets, each starting within the first 65536 indices).
+
+- Measured 2026-11-14 on the layer as committed. Each flight: Link dropped along it every few
+  units (the heights he lands on), then walked from its foot to its top with the circle pad.
+  - Kakariko (`oot-st17-spot01`): eleven flights, 256 drops on 67 heights, every walk reaches
+    the top; the frames show the stepped flights by the well, the windmill, the shop and the
+    mountain gate, Link standing on treads. The two long flights outside the gate (x below
+    -2700) have no floor in the ROM either: Link falls through them with the option off too
+    (`oot-kk0`, `oot-kk1`).
+  - Zora's Domain (`oot-st17-spot07`): 26 heights 10 apart, both flights walked. Desert Colossus
+    (`oot-st17-spot11`), Gerudo's Fortress (`oot-st17-spot12`), Ganon's Castle and its collapse
+    (`oot-st17-ganontika`, `oot-st17-sonogo`, steps 13.4 apart): walked. Hyrule Castle
+    (`oot-st17-spot15`): steps 7 apart, the walk ends on the top landing 4 units beside its
+    target. Death Mountain Trail (`oot-st17-spot16`): the short flight by the Kakariko exit
+    lands on 1181 to 1201; the drop next to the exit left the scene, so the long upper flight
+    is not measured.
+- Not seen: an adult, Epona or a rolling bomb on the steps, enemies, arrows against a riser.
 
 ## Still open
 - Our own stair texture: the steps use the game's (or the pack's) painted texture. The eight
@@ -93,12 +132,19 @@ File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm
 - Drawn steps, seen (`mm-st3-1` against `mm-st3-0` with `--option stairs=0`, South Clock Town,
   `warp:0xD800`): the flight beside the tower has risers, treads and a stepped edge; off, it is
   the flat painted ramp. East, West and North Clock Town load from their stepped rooms (`mm-st2`).
-- Collision: written for `z2_danpei`, `z2_miturin` and `z2_tenmon_dai`, the three scenes whose
-  collision triangles lie on the drawn ramps. The Astral Observatory loads and plays with it
-  (`mm-st4-1`: the passage, the water), but Link was not walked up a flight and no height was
-  read: the run steps have no MM3D player position (`teleport` and `where` are OoT3D only).
-- Still open: the other ten scenes keep the ramp's collision, so Link walks the old slope through
-  the drawn steps there. Their collision is coarser than the drawn ramp (two triangles reach 14
-  units past the flight's side in `z2_kindan2`; none stays near the flight in `z2_yadoya`), so
-  the triangles have to be cut at the ramp's outline before they can be folded. The player's
-  position for the MM3D run steps, then heights on a flight in each of the three scenes.
+- Collision: every scene with a floor under its drawn flights, by the same three passes as
+  OoT3D. The first version (c3b4fef) wrote OoT3D's triangle layout into MM3D's scenes, which
+  dropped Link through the Observatory's stairs (`mm-st5-1`); the layout is per game now
+  (decomp/mm3d `docs/formats/scene_files.md`).
+- Measured 2026-11-14 (`mm-st15-<scene>`, drops and a walk up each flight; node use under 37%):
+  Stock Pot Inn (steps 13 apart, walked to the upper floor), Milk Bar, Music Box House, Ranch
+  house (both flights), Astral Observatory rooms 0 and 1 (32 heights 7.5 apart, four flights
+  walked), Woodfall Temple (four flights), Ikana Graveyard's Dampe passage (30 steps of 13.3),
+  Ancient Castle of Ikana, Beneath the Graveyard: all walked without a stop. The frames show
+  stepped stairs with Link on a tread in the Inn, the Milk Bar, the Music Box House and the
+  Observatory; in the dungeons the flight's room is not loaded from the entrance used, so those
+  frames are black and only the heights speak.
+- South Clock Town (`mm-st15-clocktower`): drops land 4.2 apart (39, 44, 48, 52, 56). Not
+  walked: Tatl's first-day talk holds Link there and the runs did not get past it.
+- East, West and North Clock Town draw every district's flights, but only their own have a
+  floor; West's one flight lands on 8 heights (`mm-st15-ichiba`), the other two have none.
