@@ -66,7 +66,9 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
   RB over Start on Gear, RB over Back on Map, Back on Items. The notebook (Start) and the ocarina
   (RB with A) have no button to put one on.
 - The Spanish sheets are in the table (`{language}` in a path, `languages`): the pack has them
-  and the prompts sit in the same cells. Seen only as textures, not in a game set to Spanish.
+  and the prompts sit in the same cells. French has none: it is drawn on the English copy where
+  the pixels agree (`stand_in`). Both seen in a game set to that language (`txt-mm-fr`,
+  `txt-mm-es`).
 
 ## The item-button cells (2026-11-14)
 With our own item slots the text sheets' four item-button cells (X, Y, I, II) name where the
@@ -76,5 +78,4 @@ slots start, Y, B, RB and the D-pad, in both tables; the dialogs named above now
 ## Still open
 - MM3D, not seen in game yet: the map's zoom prompts. A fresh file owns no map; with the words
   at `SaveData` + 0x11B0 filled by hand (`mm-map3`) Clock Town's map shows but no zoom buttons.
-- MM3D: the pack has no French sheets, so French keeps the 3DS prompts.
 - The Gossip Stone model's button texture (not in a layout archive) is not looked at.

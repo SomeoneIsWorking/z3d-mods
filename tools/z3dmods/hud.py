@@ -9,7 +9,9 @@ the mod's texture, so the pack covers the mod's version too.
 
 With no base mod behind a texture (MM3D) only the prompts change, and the replacement carries the
 name of the pack's own copy, which the install then leaves out. A texture inside a GAR archive is named
-`<archive>.gar/<file>.ctxb`.
+`<archive>.gar/<file>.ctxb`. A language the pack has no copies of ("stand_in": language -> another) is
+drawn at the pack's scale from the other language's copy where the two textures' pixels agree, and from
+its own pixels enlarged where they differ (its words).
 
 A texture whose prompt cells each name the app's key binding for that prompt (`"key"`: "<table> <name>"
 lines of `z3d --keys`, several for one cell) also gets a keyboard image: each cell a key cap labelled
@@ -385,11 +387,35 @@ def _per_language(document: dict) -> dict[str, list[dict]]:
     """The table's textures; a path with {language} stands for one per entry of "languages"."""
     edits = {}
     for path, cells in document.items():
-        if path in ("about", "languages"):
+        if path in ("about", "languages", "stand_in"):
             continue
         for language in document.get("languages", [""]) if "{language}" in path else [""]:
             edits[path.replace("{language}", language)] = cells
     return edits
+
+
+def _stand_ins(document: dict) -> dict[str, str]:
+    """Each texture of a language the pack has no copies of -> the same texture in the language
+    that stands in for it ("stand_in")."""
+    pairs = {}
+    for path in document:
+        if "{language}" in path:
+            for language, other in document.get("stand_in", {}).items():
+                pairs[path.replace("{language}", language)] = path.replace("{language}", other)
+    return pairs
+
+
+def _stood_in(vanilla: Image.Image, other: Image.Image, other_hires: Image.Image) -> Image.Image:
+    """A texture at the scale of another language's pack copy: that copy where the two textures'
+    pixels are the same, the texture's own pixels enlarged where they differ (its words)."""
+    if other.size != vanilla.size:
+        raise ValueError("its stand-in is another size")
+    size = other_hires.size
+    out = vanilla.convert("RGBa").resize(size, Image.LANCZOS).convert("RGBA")
+    same = ImageChops.difference(vanilla.convert("RGBA"), other.convert("RGBA")).convert("L").point(
+        lambda v: 255 if v == 0 else 0)
+    out.paste(other_hires, mask=same.resize(size, Image.NEAREST))
+    return out
 
 
 def _keyed(cells: list[dict]) -> bool:
@@ -413,6 +439,7 @@ def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack, table: P
     those whose prompts name keys."""
     document = json.loads(table.read_text())
     edits = _per_language(document)
+    stand_ins = _stand_ins(document)
 
     def base(path: str) -> bytes:
         return (base_romfs / path).read_bytes()
@@ -426,6 +453,14 @@ def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack, table: P
         if modded_format != gl_format or modded.size != vanilla.size:
             raise ValueError(f"{path}: the base mod changed the texture's format or size")
         hires = pack.replacement(vanilla, data, gl_format)
+        if hires is None and path in stand_ins:
+            other, other_format, other_data = ctxb.image(_bundle(romfs.read, stand_ins[path]))
+            other_hires = pack.replacement(other, other_data, other_format)
+            if other_hires is not None:
+                try:
+                    hires = _stood_in(vanilla, other, other_hires)
+                except ValueError as error:
+                    raise ValueError(f"{path}: {error}") from error
         if hires is None:
             raise ValueError(f"{path}: the texture pack has no copy of the vanilla texture")
         textures[path] = Texture(vanilla, modded, modded_data, gl_format, hires)
