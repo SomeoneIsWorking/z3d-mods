@@ -18,6 +18,14 @@ glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mo
   menus may still show the touch screen.
 - Each element sits where a console HUD puts it and occludes as little of the 3D view as possible.
 
+## Outline fonts
+User: "And SVG fonts" (an outline font, crisp at any resolution). Every piece of text the HUD
+draws, and the game's own text (dialog, menus, item names), renders from an outline font
+(TTF/OTF, SDF or MSDF) at the output resolution instead of the game's bitmap font scaled up. The
+font is permissively licensed and close to the game's look; first check whether the game's text
+sheets can be regenerated at the pack's scale from the outline font (texture replacement), and
+draw in the app only what that cannot reach.
+
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.
   The switch is immediate (hotswap), with no restart.
