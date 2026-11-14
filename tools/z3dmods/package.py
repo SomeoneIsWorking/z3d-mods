@@ -22,7 +22,6 @@ is read-only, so it always uses the data folder.
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -93,9 +92,7 @@ LICENSE_NAMES = ("license", "licence", "copying", "copyright", "notice")
 
 
 def _run(*command: str) -> str:
-    # The package's interpreter leaves no bytecode in it, which would name this folder.
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    return subprocess.run(command, check=True, capture_output=True, text=True, env=env).stdout
+    return subprocess.run(command, check=True, capture_output=True, text=True).stdout
 
 
 def _python(out: Path) -> Path:
@@ -116,6 +113,9 @@ def _python(out: Path) -> Path:
     _run("uv", "pip", "install", "--python", str(interpreter), "--target", str(site), "--require-hashes",
          "-r", str(requirements))
     requirements.unlink()
+    # uv runs the interpreter to ask what it is, which leaves bytecode naming this folder.
+    for cache in list((out / "python").rglob("__pycache__")):
+        shutil.rmtree(cache)
     # The tools stay beside the sets they read (config.REPO is two folders above them).
     (site / "z3d.pth").write_text("../../../../tools\n")
     for built in (out / "python" / "lib").glob("python*/_sysconfigdata_*.py"):
@@ -279,6 +279,6 @@ def build(cfg: Config, out: Path) -> Path:
     _check_floor(out)
     # The mark comes last: a folder with it is a whole package.
     (out / config.PACKAGE_MARK).write_text(json.dumps({"revision": revision, "azahar": app.AZAHAR_REVISION}) + "\n")
-    _run(str(interpreter), "-I", "-c", "import z3dmods.packed")
+    _run(str(interpreter), "-I", "-B", "-c", "import z3dmods.packed")
     _check_private(cfg, out)
     return out
