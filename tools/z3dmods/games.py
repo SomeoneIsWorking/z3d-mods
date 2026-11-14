@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,7 +34,10 @@ class Layout:
     # and where the app's overlay layout puts the touch screen for each entry (screen_overlay.hpp).
     active_screen: int | None = None
     screens: int | None = None
-    screen_placements: tuple[str, ...] | None = None
+    # overlay.toml's layouts, the entry of each of the table's screens and the one outside play.
+    screen_layouts: dict[str, dict] | None = None
+    screen_placements: tuple[dict[str, str], ...] | None = None
+    screen_outside: str | None = None
     # CommonData.hudVisibility and its values that leave the main touch screen blank or dimmed.
     hud_visibility: int | None = None
     hud_hidden: tuple[int, ...] | None = None
@@ -49,7 +53,7 @@ def _player_list_head(d: symbols.Decomp) -> int:
             + PLAYER_CATEGORY * symbols.size(d, "ActorListEntry") + symbols.offset(d, "ActorListEntry.head"))
 
 
-def _oot3d(d: symbols.Decomp) -> Layout:
+def _oot3d(_repo: Path, d: symbols.Decomp) -> Layout:
     cutscene = symbols.offset(d, "PlayState.csCtx")
     return Layout(
         play_pointer=symbols.global_(d, "gPlayState"),
@@ -70,21 +74,20 @@ def _oot3d(d: symbols.Decomp) -> Layout:
     )
 
 
-# The touch screen is blank, the HUD (an inset the HUD visibility can hide), an inset that always
-# shows, a menu of its own, or half of a two-screen view.
-_MM3D_PLACEMENTS = {"UI_SCREEN_BLACK": "top_only", "UI_SCREEN_MAIN": "hud", "UI_SCREEN_OCARINA": "inset",
-                    "UI_SCREEN_GEAR": "menu", "UI_SCREEN_ITEMS": "menu", "UI_SCREEN_MASKS": "menu",
-                    "UI_SCREEN_MAP": "split"}
+def _overlay(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object]:
+    """overlay.toml as the app reads it: each of the decomp's UI screens gets its layout."""
+    table = tomllib.loads((repo / "patch" / game / "overlay.toml").read_text())
+    layouts = table["layouts"]
+    placements = [{"layout": table["outside"]} for _ in range(d.define("UI_SCREEN_COUNT"))]
+    for name, entry in table["screens"].items():
+        placements[d.define(name)] = {"layout": entry} if isinstance(entry, str) else entry
+    for used in [table["outside"]] + [name for entry in placements for name in entry.values()]:
+        if used not in layouts and used != "split":
+            raise SystemExit(f"patch/{game}/overlay.toml names a layout that is not there: {used}")
+    return {"screen_layouts": layouts, "screen_placements": tuple(placements), "screen_outside": table["outside"]}
 
 
-def _mm3d_placements(d: symbols.Decomp) -> tuple[str, ...]:
-    placements = ["split"] * d.define("UI_SCREEN_COUNT")
-    for name, placement in _MM3D_PLACEMENTS.items():
-        placements[d.define(name)] = placement
-    return tuple(placements)
-
-
-def _mm3d(d: symbols.Decomp) -> Layout:
+def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
     cutscene = symbols.offset(d, "PlayState.csCtx")
     return Layout(
         play_pointer=symbols.global_(d, "gPlayState"),
@@ -105,7 +108,7 @@ def _mm3d(d: symbols.Decomp) -> Layout:
         camera_eye=symbols.offset(d, "PlayState.viewEye"),
         active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
         screens=symbols.global_(d, "gUiScreens"),
-        screen_placements=_mm3d_placements(d),
+        **_overlay(repo, "mm3d", d),
         hud_visibility=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.hudVisibility"),
         hud_hidden=(d.define("HUD_VISIBILITY_NONE"), d.define("HUD_VISIBILITY_NONE_ALT")),
     )
@@ -115,7 +118,7 @@ _LAYOUTS = {"oot3d": _oot3d, "mm3d": _mm3d}
 
 
 def layout(repo: Path, game: str) -> Layout:
-    return _LAYOUTS[game](symbols.load(repo, game))
+    return _LAYOUTS[game](repo, symbols.load(repo, game))
 
 
 TRANSITION_START = 20

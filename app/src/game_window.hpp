@@ -21,12 +21,6 @@ namespace z3d::app {
 
 class PadInput;
 
-// A pixel of the 320x240 touch screen.
-struct TouchPoint {
-  uint16_t x = 0;
-  uint16_t y = 0;
-};
-
 // Keys the player's loop acts on while a game runs (mod_swap.hpp): F5 reads the patch again from
 // disk, F6 takes it out or puts it back, F7 turns the texture pack off or on.
 enum class ModKey : uint8_t { ReloadPatch, TogglePatch, ToggleTextures };
@@ -48,8 +42,8 @@ public:
   // A game's title on the window and the window in its layout's shape (core_settings.hpp).
   void boot(const std::string &title);
 
-  // Where the overlay layout puts the touch screen from now on.
-  void placeOverlay(OverlayPlacement placement);
+  // Where the overlay layout draws the screens from now on.
+  void placeOverlay(const OverlayLayout &layout);
 
   // A stylus held at a point of the 320x240 touch screen, wherever the layout draws it, or lifted.
   void touchScreen(std::optional<TouchPoint> at);
@@ -89,7 +83,7 @@ private:
   bool menuRequested_ = false;
   std::optional<ModKey> modKey_;
   bool touching_ = false;
-  OverlayPlacement overlay_ = OverlayPlacement::Split;
+  OverlayLayout overlay_ = splitLayout();
   std::vector<SDL_FPoint> clicks_;
 };
 

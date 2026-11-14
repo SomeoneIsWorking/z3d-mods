@@ -66,11 +66,9 @@ void applyCoreSettings(const AppConfig &config) {
 void applyGameSettings(const GameSetup &game) {
   Settings::values.layout_option = layoutOption(game.layout);
   if (game.layout == ScreenLayout::Overlay) {
-    // The window takes its shape from this: the top screen's (the inset lies inside it), at the
-    // render scale.
+    // The window takes its shape from this: the top screen's, at the render scale.
     const uint32_t scale = Settings::values.resolution_factor.GetValue();
-    placeOverlay(Core::kScreenTopWidth * scale, Core::kScreenTopHeight * scale,
-                 OverlayPlacement::Inset);
+    placeOverlay(Core::kScreenTopWidth * scale, Core::kScreenTopHeight * scale, {});
   }
   Settings::values.custom_textures = game.customTextures;
   Settings::values.romfs_layers = game.romfsLayers;

@@ -92,13 +92,13 @@ std::vector<SDL_FPoint> GameWindow::pollMenu() {
   return std::exchange(clicks_, {});
 }
 
-void GameWindow::placeOverlay(OverlayPlacement placement) {
-  overlay_ = placement;
+void GameWindow::placeOverlay(const OverlayLayout &layout) {
+  overlay_ = layout;
   updateLayout();
 }
 
 void GameWindow::boot(const std::string &title) {
-  overlay_ = OverlayPlacement::Split;
+  overlay_ = splitLayout();
   SDL_SetWindowTitle(window_, title.c_str());
   if (!hidden_) {
     fitToDisplay();
@@ -211,6 +211,20 @@ void GameWindow::touchScreen(std::optional<TouchPoint> at) {
 
 void GameWindow::touch(SDL_FPoint at, bool pressed) {
   const float density = SDL_GetWindowPixelDensity(window_);
+  if (pressed &&
+      Settings::values.layout_option.GetValue() == Settings::LayoutOption::CustomLayout) {
+    int width = 0;
+    int height = 0;
+    SDL_GetWindowSizeInPixels(window_, &width, &height);
+    const std::optional<TouchPoint> point =
+        overlayTouch(static_cast<unsigned>(std::max(width, 1)),
+                     static_cast<unsigned>(std::max(height, 1)), overlay_, at.x * density,
+                     at.y * density);
+    if (point || touching_) {
+      touchScreen(point);
+    }
+    return;
+  }
   const auto px = static_cast<unsigned>(std::max(at.x * density, 0.0F));
   const auto py = static_cast<unsigned>(std::max(at.y * density, 0.0F));
   if (!pressed) {

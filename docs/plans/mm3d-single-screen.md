@@ -17,15 +17,16 @@ to the packed app (docs/plans/packed-app.md), drawn by the app. The code-patch r
 fallback for plain Azahar.
 
 Status (2026-11-14): the app's `overlay` layout is MM3D's set default (docs/app.md, "Overlay
-layout"): the game's own touch screen drawn over the top screen, small in play and large in a
-menu, placed from `gUiScreenContext.activeScreen` (mm3d-decomp `docs/ui.md`). It is the game's
-touch screen composited, not a redrawn HUD.
+layout"): pieces of the game's own touch screen drawn on the top screen from a table,
+`patch/mm3d/overlay.toml`, by which touch screen is up (`gUiScreenContext.activeScreen`,
+mm3d-decomp `docs/ui.md`): the HUD's elements one by one in play, the whole screen in a menu. The
+user rejected the first form, the whole touch screen as one inset with its empty middle panel.
+It is still the game's touch screen composited; the HUD drawn by us is plans/pc-controls-hud.md.
 
-Seen (`mm-ov-final`, `mm-ov-screens`, South Clock Town): the area's title card and its cutscene
-draw the top screen alone (`hudVisibility` 2), play has the inset, Gear, Items and Masks are large,
-the map puts the two screens side by side with the map itself on the top one, the ocarina keeps
-the top screen. The pad reaches the touch-only buttons through Project Restoration: ZL is View,
-ZR with X is item I and ZR with Y is item II (`mm-zl`, `mm-zr3`).
+Seen (`mm-ov3`): play has the elements along the edges, Items and Masks are large, the area's
+title card draws the top screen alone (`hudVisibility` 2). The pad reaches the touch-only buttons
+through Project Restoration: ZL is View, ZR with X is item I and ZR with Y is item II (`mm-zl`,
+`mm-zr3`).
 
 The Bombers' Notebook (table entry 2) is side by side: its list is on the top screen and the entry
 with Return and Schedule on the touch screen (`mm-pad2`). The ocarina's screen is an inset for as
@@ -37,8 +38,10 @@ Left:
 - The map tabs have no pad button of their own; Project Restoration opens Items with Select, the
   notebook with Start, Gear with ZR and Start, the map with ZR and Select and the ocarina with ZR
   and A (`mm-pad1`).
-- A redrawn HUD (hearts, rupees and buttons as their own elements on the top screen) needs the
-  game's layouts drawn by the app or moved by a patch.
+- The minimap is not drawn in play: the panel it shares is empty without the area's map, and what
+  says the map is owned is not found yet. The black box under Gear is not drawn either; what it
+  shows is not known.
+- The hearts keep the touch screen's dark strip behind them until the HUD is ours.
 
 Fallback: an MIT code patch that moves the bottom-screen UI (items, masks, map, notebook, Ocarina,
 file select) onto the top screen in the game's own code, in the same `code.ips` as the skip, on

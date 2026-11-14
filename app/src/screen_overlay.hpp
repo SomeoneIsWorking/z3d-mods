@@ -1,8 +1,7 @@
 // The app's own single screen for a game that keeps its HUD and menus on the touch screen: the
-// top screen fills the window and the touch screen lies over it, small in a corner while the
-// game's main touch screen is up and large while one of its menus is. Outside play (title, file
-// select) and for a screen that uses both (the map) the two sit side by side, and a blanked touch
-// screen is left out.
+// window has the top screen's shape, and pieces of the touch screen are drawn over or beside the
+// top screen where the game's layout table puts them for the touch screen that is up: HUD
+// elements in play, the whole screen large in a menu, nothing while the game blanks it.
 #pragma once
 
 #include "app_config.hpp"
@@ -17,38 +16,75 @@ namespace z3d::app {
 class Emulator;
 class GameWindow;
 
-// TopOnly leaves the touch screen out: the game blanks or dims it (cutscenes).
-enum class OverlayPlacement : uint8_t { Split, Inset, Menu, TopOnly };
+// A pixel of the 320x240 touch screen.
+struct TouchPoint {
+  uint16_t x = 0;
+  uint16_t y = 0;
+};
+
+// A layout is laid out on the top screen's own 400x240 pixels, whatever the window's size.
+inline constexpr float kOverlayWidth = 400.0F;
+inline constexpr float kOverlayHeight = 240.0F;
+
+struct OverlayRect {
+  float x = 0.0F;
+  float y = 0.0F;
+  float w = 0.0F;
+  float h = 0.0F;
+};
+
+// A part of the touch screen (`from`, in its pixels) drawn at `to`. `radius` rounds the corners,
+// in the piece's own pixels.
+struct OverlayPiece {
+  OverlayRect from;
+  OverlayRect to;
+  float radius = 0.0F;
+  float opacity = 1.0F;
+};
+
+struct OverlayLayout {
+  OverlayRect top{0.0F, 0.0F, kOverlayWidth, kOverlayHeight};
+  std::vector<OverlayPiece> pieces;
+};
+
+// The two screens side by side: the layout named "split", and the one before a game's table is read.
+[[nodiscard]] OverlayLayout splitLayout();
 
 // Writes the core's custom layout for a `width` x `height` window.
-void placeOverlay(unsigned width, unsigned height, OverlayPlacement placement);
+void placeOverlay(unsigned width, unsigned height, const OverlayLayout &layout);
+
+// The touch screen's pixel drawn at a window pixel, through the topmost piece there.
+[[nodiscard]] std::optional<TouchPoint> overlayTouch(unsigned width, unsigned height,
+                                                     const OverlayLayout &layout, float x, float y);
 
 class ScreenOverlay {
 public:
   // Follows the running game when `setup` asks for the overlay layout and `manifest`
-  // (z3d-options.json, "screens") names where the game keeps its touch screen.
+  // (z3d-options.json, "screens") names the game's touch screens and a layout for each.
   ScreenOverlay(GameWindow &window, Emulator &emulator, const GameSetup &setup,
                 const std::filesystem::path &manifest);
 
 private:
   struct ScreenPlacement {
-    OverlayPlacement placement = OverlayPlacement::Split;
-    // The main screen: left out while the game's HUD visibility hides it.
-    bool followsHud = false;
+    size_t layout = 0;
+    // The layout while the game's HUD visibility hides this screen, if it has one.
+    std::optional<size_t> hidden;
   };
 
   struct Screens {
     // Guest addresses of the pointer to the screen that is up and of the table of play's
-    // screens, and where the overlay puts the touch screen for each of the table's entries.
+    // screens, the layout for each of the table's entries and the one outside play.
     uint32_t active = 0;
     uint32_t table = 0;
+    std::vector<OverlayLayout> layouts;
     std::vector<ScreenPlacement> placements;
-    // The game's 16-bit HUD visibility and its values that blank or dim the main screen.
+    size_t outside = 0;
+    // The game's 16-bit HUD visibility and its values that blank or dim a screen.
     uint32_t hud = 0;
     std::vector<uint16_t> hudHidden;
   };
 
-  [[nodiscard]] OverlayPlacement placement() const;
+  [[nodiscard]] size_t layout() const;
   [[nodiscard]] bool hudHidden() const;
 
   void update();
@@ -56,7 +92,7 @@ private:
   GameWindow &window_;
   Emulator &emulator_;
   std::optional<Screens> screens_;
-  OverlayPlacement placement_ = OverlayPlacement::Split;
+  std::optional<size_t> layout_;
 };
 
 } // namespace z3d::app
