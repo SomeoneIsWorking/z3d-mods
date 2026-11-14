@@ -83,7 +83,8 @@ int picker(const AppConfig &config, PadInput &pad) {
   GameLibrary library = GameLibrary::load(config.library);
   if (library.games().empty()) {
     // The tools know no dump yet: the player says where theirs are, and the tools list them.
-    if (!config.tools.empty() && !FolderSetup(window, pad, config).run(FolderSetup::Asking::First)) {
+    if (!config.tools.empty() &&
+        !FolderSetup(window, pad, config).run(FolderSetup::Asking::First)) {
       return 0;
     }
     library = GameLibrary::load(config.library);
@@ -126,7 +127,8 @@ int picker(const AppConfig &config, PadInput &pad) {
       const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
                                   config.userDir / game.setup.options);
       const SlotLink link(emulator, pad, config.userDir / game.setup.options);
-      const Hud hud(window, emulator, pad, link, overlay, config.assets, config.userDir / game.setup.options);
+      const Hud hud(window, emulator, pad, link, overlay, config.assets,
+                    config.userDir / game.setup.options);
       ModSwap mods(emulator, (config.userDir / game.setup.options).parent_path(),
                    options[*chosen].blockAddress());
       const MouseAim aim(window, emulator, pad, config.userDir / game.setup.options);

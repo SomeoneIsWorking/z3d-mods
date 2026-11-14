@@ -69,10 +69,10 @@ struct TitlePicker::Layout {
 };
 
 TitlePicker::TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad,
-                         const GameLibrary &library, std::vector<GameOptions> &options, SetInstall &install,
-                         bool folders)
-    : canvas_(canvas), renderer_(canvas.renderer()), font_(canvas.font()), window_(window), pad_(pad),
-      library_(library), options_(options), install_(install), folders_(folders) {
+                         const GameLibrary &library, std::vector<GameOptions> &options,
+                         SetInstall &install, bool folders)
+    : canvas_(canvas), renderer_(canvas.renderer()), font_(canvas.font()), window_(window),
+      pad_(pad), library_(library), options_(options), install_(install), folders_(folders) {
   TTF_SetFontWrapAlignment(font_, TTF_HORIZONTAL_ALIGN_CENTER);
   for (const Game &game : library_.games()) {
     SDL_Texture *icon = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_ABGR8888,
@@ -219,8 +219,7 @@ void TitlePicker::draw(const Layout &layout) {
     const SDL_FRect &tile = layout.tiles[i];
     if (i == selected_) {
       const float ring = layout.iconInset * 0.35F;
-      canvas_.fill(kSelected,
-           {tile.x - ring, tile.y - ring, tile.w + 2 * ring, tile.h + 2 * ring});
+      canvas_.fill(kSelected, {tile.x - ring, tile.y - ring, tile.w + 2 * ring, tile.h + 2 * ring});
     }
     canvas_.fill(kTile, tile);
     const float inset = layout.iconInset;

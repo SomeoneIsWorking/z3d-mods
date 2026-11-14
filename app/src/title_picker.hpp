@@ -26,8 +26,9 @@ class SetInstall;
 class TitlePicker {
 public:
   // `options` holds one entry per game of the library, in its order.
-  TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad, const GameLibrary &library,
-              std::vector<GameOptions> &options, SetInstall &install, bool folders);
+  TitlePicker(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad,
+              const GameLibrary &library, std::vector<GameOptions> &options, SetInstall &install,
+              bool folders);
   ~TitlePicker();
   TitlePicker(const TitlePicker &) = delete;
   TitlePicker &operator=(const TitlePicker &) = delete;
