@@ -151,8 +151,9 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
 ### Open
 - Which guest state each element reads (button items, counts, the minimap's ownership) and the
   item icons' files: per game, into the decomps first.
-- The A button's words are cut from the US English sheet (`[words]` in `hud.toml`); another
-  language's file needs its sheet named by the file's language.
+- The A button's words are cut from each language's sheet (`[words]` in `hud.toml`) and shown
+  in the console's system language (docs/app.md "HUD"); French has no pack copy in either
+  game, so its words are the game's pixels enlarged.
 - The item screens are the game's art: their BACK and Return tabs carry a circled B, which in
   an item screen is slot 2's button; Menu leaves them.
 
@@ -284,8 +285,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   harness's system language (`run --language fr|es`, tools/z3dmods/system_config.py):
   OoT3D 0x103B (Pause) and 0x1036 through a sign (`txt-oot-fr`, `txt-oot-es`), MM3D 0x0270
   (Pause) and 0x0078 (Masks) through the owl statue (`txt-mm-fr`, `txt-mm-es`,
-  `txt-mm-es2`), with the pad and the keyboard. The A button's word on our HUD is still the
-  English sheet's ("Open" below).
+  `txt-mm-es2`), with the pad and the keyboard. The A button's word on our HUD is the
+  language's own ("Voir", "Mirar"; `pol-word-*`).
 - The MM3D pack has no French copies of the prompt textures; the French ones are drawn on the
   English copies where their pixels agree, every prompt cell, and from the French pixels
   enlarged where they differ, their words (`stand_in` in `sets/hud/mm3d-usa-rev1.json`), so

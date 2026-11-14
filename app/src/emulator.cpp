@@ -10,6 +10,7 @@
 #include "core/frontend/image_interface.h"
 #include "core/hle/kernel/kernel.h"
 #include "core/hle/kernel/process.h"
+#include "core/hle/service/cfg/cfg.h"
 #include "core/loader/loader.h"
 #include "core/memory.h"
 #include "video_core/gpu.h"
@@ -123,6 +124,10 @@ Emulator::Emulator(const AppConfig &config, const std::filesystem::path &rom, Ga
   }
   system_.RegisterCoreLoopThreadId();
   watches_ = std::make_unique<WriteWatches>(system_);
+}
+
+uint8_t Emulator::systemLanguage() const {
+  return static_cast<uint8_t>(Service::CFG::GetModule(system_)->GetSystemLanguage());
 }
 
 Emulator::~Emulator() {

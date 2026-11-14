@@ -42,9 +42,11 @@ heart_2 = [240, 112, 12, 12]
 heart_3 = [240, 128, 12, 12]
 heart_4 = [240, 144, 12, 12]
 
-# The A button's words: an action's number is its word's cell.
+# The A button's words: an action's number is its word's cell; a sheet a system language, the
+# first the one shown in a language not listed.
 [words]
-sheet = "menu/01_US_ENGLISH/hud_all00.ctxb"
+sheet = "menu/{language}/hud_all00.ctxb"
+languages = { en = "01_US_ENGLISH", fr = "05_US_FRENCH", es = "07_US_SPANISH" }
 first = [0, 93]
 cell = [64, 18]
 rows = 9

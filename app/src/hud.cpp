@@ -39,7 +39,8 @@ constexpr float kDigitShare = 0.62F;
 constexpr float kCounterGap = 0.3F;
 // A meter's art is this many times as long as it is tall (port-assets hud/bar).
 constexpr float kMeterAspect = 9.0F;
-// The game's word art for an action is <kWordArt><number>; its cell's height against the button.
+// The game's word art for an action is word_<system language>_<number>; its cell's height
+// against the button.
 constexpr const char *kWordArt = "word_";
 constexpr float kLabelShare = 0.5F;
 
@@ -57,6 +58,23 @@ uint32_t integer(const lucent::json::Value &object, std::string_view key, uint32
 std::string text(const lucent::json::Value &object, std::string_view key) {
   const lucent::json::Value *value = object.find(key);
   return value != nullptr && value->string() != nullptr ? *value->string() : std::string();
+}
+
+// The word art of `language` where the install cut it ("words": the languages, the first for any
+// other); empty when it cut none.
+std::string wordsPrefix(const lucent::json::Value &hud, uint8_t language) {
+  const lucent::json::Value *words = hud.find("words");
+  if (words == nullptr || words->array() == nullptr || words->array()->empty()) {
+    return {};
+  }
+  const lucent::json::Value &first = words->array()->front();
+  int64_t chosen = first.integer() ? *first.integer() : 0;
+  for (const lucent::json::Value &entry : *words->array()) {
+    if (entry.integer() && *entry.integer() == language) {
+      chosen = language;
+    }
+  }
+  return kWordArt + std::to_string(chosen) + "_";
 }
 
 // What stands for the chord on the keyboard.
@@ -232,6 +250,7 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
     elements_.push_back(std::move(element));
   }
   icons_ = manifest.parent_path() / text(*hud, "icons");
+  words_ = wordsPrefix(*hud, emulator_.systemLanguage());
   atlas_.emplace(assets);
   requireArt();
   emulator_.onFrame([this] {
@@ -529,11 +548,12 @@ void Hud::button(const Element &element, const OverlayRect &box) {
     turned.y = middle + (turned.y - middle) * share;
     turned.height *= share;
   }
-  if (const std::optional<uint32_t> action = slot ? std::nullopt : read(element.label);
-      action && art_.contains(kWordArt + std::to_string(*action))) {
+  if (const std::optional<uint32_t> action =
+          slot || words_.empty() ? std::nullopt : read(element.label);
+      action && art_.contains(words_ + std::to_string(*action))) {
     // The game's word for the action, centred under the button.
     const float height = std::round(box.h * kLabelShare);
-    const HudSprite word = art(kWordArt + std::to_string(*action), 0.0F, height);
+    const HudSprite word = art(words_ + std::to_string(*action), 0.0F, height);
     quad(word, squashed({std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h},
                         share));
   }

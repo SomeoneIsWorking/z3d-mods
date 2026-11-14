@@ -258,8 +258,14 @@ Item icons, the rupee, the key and the hearts are the game's own art, the textur
 when it has one: the install cuts them into `<mods>/z3d-hud-icons/` (`hud_icons.py`), an item's
 icon as `<item id>.png` by the game's table of a frame per item (`[icons]` in `hud.toml`; where
 the game has no table an item's frame is its id, OoT3D) and a named piece as `<name>.png` by its
-rectangle in the HUD's sheet (`[art]`), and the A button's words as `word_<action number>.png`,
-each a cell of the game's word sheet in the player's language (`[words]`). At startup `Hud` reads
+rectangle in the HUD's sheet (`[art]`), and the A button's words as
+`word_<language>_<action number>.png`, each a cell of the game's word sheet in each system
+language the title offers (`[words]`, the CFG module's language number; the pack's copy where it
+has one, so French is the game's own pixels enlarged). The manifest's `"words"` lists those
+languages; `Hud` shows the console's (`Emulator::systemLanguage`), or the first for another one.
+Seen on the harness with `--language` (`pol-word-oot-fr`, `-es`: "Voir" and "Mirar" in Link's
+house; `pol-word-mm-fr2`, `pol-word-mm-es`: the same at South Clock Town's owl statue, "Check"
+in English, `pol-word-mm-en`). At startup `Hud` reads
 every piece the elements name (the SVGs, and every file of the installed folder) and refuses to
 start with the file's name when one is missing or unreadable; an item without an icon is an empty
 button. Everything lands in one RGBA atlas, and `Hud` gives the

@@ -61,6 +61,10 @@ public:
   // After code was written: the CPU drops what it translated.
   void codeChanged();
 
+  // The console's system language as the game reads it (the CFG module's number: 1 English,
+  // 2 French, 5 Spanish).
+  [[nodiscard]] uint8_t systemLanguage() const;
+
   [[nodiscard]] std::optional<std::vector<uint8_t>> saveState();
   [[nodiscard]] bool loadState(std::vector<uint8_t> state);
 

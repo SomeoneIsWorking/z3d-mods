@@ -6,7 +6,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import symbols
+from z3dmods import symbols, system_config
 
 
 @dataclass(frozen=True)
@@ -125,13 +125,16 @@ def _resolved(d: symbols.Decomp, value: object) -> object:
 
 
 def _hud(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object] | None:
-    """hud.toml as the app reads it: every guest value resolved to its address."""
+    """hud.toml as the app reads it: every guest value resolved to its address, and the system
+    languages the A button's words are cut for (`words`, the first for any other language)."""
     path = repo / "patch" / game / "hud.toml"
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
     shared = {key: _resolved(d, table[key]) for key in HUD_SHARED if key in table}
-    return {"icons": HUD_ICONS, "show": _resolved(d, table.get("show", [])), "elements": _resolved(d, table["element"])} | shared
+    words = [system_config.LANGUAGES[language] for language in table["words"]["languages"]] if "words" in table else []
+    return {"icons": HUD_ICONS, "words": words, "show": _resolved(d, table.get("show", [])),
+            "elements": _resolved(d, table["element"])} | shared
 
 
 def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:

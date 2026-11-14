@@ -148,6 +148,8 @@ private:
   // what is there.
   std::filesystem::path icons_;
   std::set<std::string> art_;
+  // The A button's words in the console's language: <words_><action>.
+  std::string words_;
   // A button that swaps with the chord turns over like a card: 0 is its own page, 1 the chord's,
   // and between them the ring is squashed to |cos(pi x flip)| of its height. It steps toward the
   // chord's state by the frames shown, so a quick re-press turns it back from where it is.

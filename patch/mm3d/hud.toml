@@ -57,9 +57,11 @@ value = { at = ["gCommonData", "CommonData.save", "SaveData.magic"], bytes = 1 }
 when = [{ at = ["gCommonData", "CommonData.save", "SaveData.magicAcquired"], bytes = 1, least = 1 }]
 longer = { at = ["gCommonData", "CommonData.save", "SaveData.doubleMagicAcquired"], bytes = 1 }
 
-# The A button's words: an action's number is its word's cell.
+# The A button's words: an action's number is its word's cell; a sheet a system language, the
+# first the one shown in a language not listed.
 [words]
-sheet = "layout/US_English/Joker.Main.Play.gar/hud_patrs00_action_text.ctxb"
+sheet = "layout/{language}/Joker.Main.Play.gar/hud_patrs00_action_text.ctxb"
+languages = { en = "US_English", fr = "US_French", es = "US_Spanish" }
 first = [0, 93]
 cell = [64, 18]
 rows = 9

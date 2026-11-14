@@ -13,7 +13,9 @@ Without one, an item's frame is its id.
 
 `[words]` names the sheet of the A button's words: cells of `cell` pixels from `first`, `rows` to
 a column, counted down each column; an action's number is its word's cell. `count` is how many
-cells are words and `none` the number that shows no word (the decomp's defines)."""
+cells are words and `none` the number that shows no word (the decomp's defines). `{language}` in
+`sheet` is each of `languages` (system language -> the sheet's folder); a word is cut once a
+language, as `word_<the CFG module's language number>_<action>`."""
 
 from __future__ import annotations
 
@@ -21,7 +23,7 @@ import io
 import tomllib
 from pathlib import Path
 
-from z3dmods import ctr, ctxb, gar, symbols
+from z3dmods import ctr, ctxb, gar, symbols, system_config
 from z3dmods.texture_pack import TexturePack
 
 from PIL import Image
@@ -60,7 +62,10 @@ def build(repo: Path, game: str, romfs: ctr.Romfs, pack: TexturePack | None, cod
     if (table := tables.get("icons")) is not None:
         out.update(_items(repo, game, romfs, pack, code, table))
     if (table := tables.get("words")) is not None:
-        out.update(_words(symbols.load(repo, game), romfs, pack, table))
+        decomp = symbols.load(repo, game)
+        for language, folder in table["languages"].items():
+            sheet = table["sheet"].replace("{language}", folder)
+            out.update(_words(decomp, romfs, pack, table, sheet, f"word_{system_config.LANGUAGES[language]}_"))
     return out
 
 
@@ -68,9 +73,11 @@ def build(repo: Path, game: str, romfs: ctr.Romfs, pack: TexturePack | None, cod
 INK = 32
 
 
-def _words(decomp: symbols.Decomp, romfs: ctr.Romfs, pack: TexturePack | None, table: dict) -> dict[str, bytes]:
-    """`word_<number>`: each action word, its cell cut to the ink's width at the cell's height."""
-    sheet, scale = _sheet(romfs, pack, table["sheet"])
+def _words(decomp: symbols.Decomp, romfs: ctr.Romfs, pack: TexturePack | None, table: dict, name: str,
+           prefix: str) -> dict[str, bytes]:
+    """`<prefix><number>`: each action word of the sheet `name`, its cell cut to the ink's width at the
+    cell's height."""
+    sheet, scale = _sheet(romfs, pack, name)
     (left, top), (width, height) = table["first"], table["cell"]
     none = decomp.define(table["none"])
     words = {}
@@ -84,7 +91,7 @@ def _words(decomp: symbols.Decomp, romfs: ctr.Romfs, pack: TexturePack | None, t
         word.thumbnail((LARGEST, LARGEST), Image.Resampling.LANCZOS)
         buffer = io.BytesIO()
         word.save(buffer, "PNG")
-        words[f"word_{number}"] = buffer.getvalue()
+        words[f"{prefix}{number}"] = buffer.getvalue()
     return words
 
 
