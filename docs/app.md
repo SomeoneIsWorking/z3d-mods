@@ -283,7 +283,14 @@ number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's p
 game's own A button, `patch/mm3d/base_hud.cpp`), X the sword, and Y, B, RB and the cross's four
 rings their slots' items from `SlotLink`, a note for a slot with a song, and a gold arc over
 the rim of a slot that plays only once held (`charge`). While the chord is held
-the diamond shows slots 8 to 11. Each ring's prompt is what `PadInput::slotPrompt` or
+the diamond shows slots 8 to 11. A ring whose two pages draw differently turns over like a card
+when the chord is pressed or let go: the ring, its icon, its count and A's word squash to no
+height and back over 10 frames shown (167 ms), the page swapping at the middle, while its prompt
+stays whole so it reads throughout; a ring whose pages look alike does not move. The turn steps
+by `GameWindow::framesShown`, toward the chord's state, so a quick re-press turns back from
+where it is; the input never waits on it. Seen on the harness in both games at 2x and 4x, press,
+release and a 3-frame re-press (`txt-flip-oot2b`, `txt-flip-oot4b`, `txt-flip-mm2b`,
+`txt-flip-mm4b`: X with the sword and A with Check turn, empty Y and B stay). Each ring's prompt is what `PadInput::slotPrompt` or
 `verbPrompt` says presses it, drawn by `prompt_art`: the pad's glyph, or with the keyboard last
 used the key's cap (the mouse's button for the sword). While a screen assigns slots (`PadMode::
 Assign`) a panel beside it shows all eleven. The game's own text prompts follow the same

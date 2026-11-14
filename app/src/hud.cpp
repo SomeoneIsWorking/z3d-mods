@@ -13,6 +13,7 @@
 #include <cmath>
 #include <fstream>
 #include <iterator>
+#include <numbers>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
@@ -64,6 +65,14 @@ constexpr const char *kChordKey = "Shift";
 constexpr const char *kNote = "note";
 // How many arcs a filling hold is drawn in.
 constexpr int kChargeSteps = 24;
+// Frames a chord flip takes: 10 at 60 a second is 167 ms.
+constexpr float kFlipFrames = 10.0F;
+
+// `at` squashed to `share` of its height about its middle row.
+OverlayRect squashed(const OverlayRect &at, float share) {
+  const float height = at.h * share;
+  return {at.x, at.y + (at.h - height) / 2.0F, at.w, height};
+}
 
 std::optional<Verb> verbNamed(const std::string &name) {
   for (const auto &[text, verb] : kVerbNames) {
@@ -323,7 +332,32 @@ bool Hud::hold(const std::vector<Condition> &conditions) const {
   });
 }
 
+// Only what is drawn counts: an item without an icon (the game's "none") is an empty ring.
+Hud::Face Hud::face(const Element &element, std::optional<size_t> slot) const {
+  const auto drawn = [this](std::optional<uint32_t> value, std::string_view prefix) {
+    return value && art_.contains(std::string(prefix) + std::to_string(*value)) ? value : std::nullopt;
+  };
+  if (slot) {
+    const SlotLink::Slot &held = link_.slot(*slot);
+    if (held.song) {
+      return {std::nullopt, held.song, std::nullopt};
+    }
+    return {drawn(held.item ? std::optional<uint32_t>(*held.item) : std::nullopt, ""), std::nullopt,
+            std::nullopt};
+  }
+  return {drawn(read(element.value), ""), std::nullopt, drawn(read(element.label), kWordArt)};
+}
+
+void Hud::turn() {
+  const uint64_t shown = window_.framesShown();
+  const auto frames = static_cast<float>(shown - std::min(flipFrame_, shown));
+  flipFrame_ = shown;
+  const float step = frames / kFlipFrames;
+  flip_ = pad_.chordHeld() ? std::min(1.0F, flip_ + step) : std::max(0.0F, flip_ - step);
+}
+
 void Hud::update() {
+  turn();
   quads_.clear();
   // A screen that assigns slots shows the slots; play shows the rest.
   const bool assign = link_.mode() == PadMode::Assign;
@@ -464,32 +498,44 @@ void Hud::draw(const Element &element) {
 }
 
 void Hud::button(const Element &element, const OverlayRect &box) {
-  quad(atlas_->svg(kHudSet, element.frame, static_cast<int>(box.w), static_cast<int>(box.h)), box);
   // What it shows: a slot's content (the chord's slot while that is held), else the item it reads.
-  const std::optional<size_t> slot =
-      pad_.chordHeld() && element.chordSlot && !element.assign ? element.chordSlot : element.slot;
+  // A button whose two pages differ turns over, and shows the chord's page from the turn's middle.
+  const std::optional<size_t> chordSlot = element.assign ? std::nullopt : element.chordSlot;
+  const bool flips = chordSlot && face(element, element.slot) != face(element, chordSlot);
+  const bool chordPage = flips ? flip_ >= 0.5F : chordSlot && pad_.chordHeld();
+  const std::optional<size_t> slot = chordPage ? chordSlot : element.slot;
+  const float share = flips ? std::abs(std::cos(std::numbers::pi_v<float> * flip_)) : 1.0F;
+  // The ring, its icon and its count turn about the ring's middle row, the action's word about
+  // its own; the prompt stays whole, so it reads all the way through.
+  const size_t card = quads_.size();
+  quad(atlas_->svg(kHudSet, element.frame, static_cast<int>(box.w), static_cast<int>(box.h)), box);
   if (slot) {
     const SlotLink::Slot &held = link_.slot(*slot);
     content(box, held.item, held.song, held.lane);
     if (const int step = static_cast<int>(std::ceil(held.charge * kChargeSteps)); step > 0) {
       quad(atlas_->arc(static_cast<int>(box.w), step, kChargeSteps), box);
     }
-  } else {
+  } else if (const std::optional<uint32_t> item = read(element.value);
+             item && art_.contains(std::to_string(*item))) {
     const bool dimmed = element.status.bytes != 0 && read(element.status) == disabled_;
-    if (const std::optional<uint32_t> item = read(element.value);
-        item && art_.contains(std::to_string(*item))) {
-      const float size = std::round(box.w * kIconShare);
-      const float inset = std::round((box.w - size) / 2.0F);
-      quad(art(std::to_string(*item), size, size), {box.x + inset, box.y + inset, size, size},
-           dimmed ? kDimmed : 1.0F);
-    }
-    if (const std::optional<uint32_t> action = read(element.label);
-        action && art_.contains(kWordArt + std::to_string(*action))) {
-      // The game's word for the action, centred under the button.
-      const float height = std::round(box.h * kLabelShare);
-      const HudSprite word = art(kWordArt + std::to_string(*action), 0.0F, height);
-      quad(word, {std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h});
-    }
+    const float size = std::round(box.w * kIconShare);
+    const float inset = std::round((box.w - size) / 2.0F);
+    quad(art(std::to_string(*item), size, size), {box.x + inset, box.y + inset, size, size},
+         dimmed ? kDimmed : 1.0F);
+  }
+  const float middle = box.y + box.h / 2.0F;
+  for (size_t i = card; i < quads_.size() && share < 1.0F; ++i) {
+    Settings::OverlayQuad &turned = quads_[i];
+    turned.y = middle + (turned.y - middle) * share;
+    turned.height *= share;
+  }
+  if (const std::optional<uint32_t> action = slot ? std::nullopt : read(element.label);
+      action && art_.contains(kWordArt + std::to_string(*action))) {
+    // The game's word for the action, centred under the button.
+    const float height = std::round(box.h * kLabelShare);
+    const HudSprite word = art(kWordArt + std::to_string(*action), 0.0F, height);
+    quad(word, squashed({std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h},
+                        share));
   }
   if (element.bare && pad_.lastDevice() != HostDevice::Keyboard) {
     return;

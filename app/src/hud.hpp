@@ -99,9 +99,21 @@ private:
     bool assign = false;
   };
 
+  // What a button's ring shows on one page: a slot's item or song, or the item and action word
+  // its element reads.
+  struct Face {
+    std::optional<uint32_t> item;
+    std::optional<uint8_t> song;
+    std::optional<uint32_t> action;
+    bool operator==(const Face &) const = default;
+  };
+
   void requireArt();
 
   [[nodiscard]] std::optional<uint32_t> read(const GuestValue &value) const;
+  [[nodiscard]] Face face(const Element &element, std::optional<size_t> slot) const;
+  // Moves the chord's flip on by the frames shown since the last update.
+  void turn();
   [[nodiscard]] bool hold(const std::vector<Condition> &conditions) const;
   void update();
   void draw(const Element &element);
@@ -136,6 +148,11 @@ private:
   // what is there.
   std::filesystem::path icons_;
   std::set<std::string> art_;
+  // A button that swaps with the chord turns over like a card: 0 is its own page, 1 the chord's,
+  // and between them the ring is squashed to |cos(pi x flip)| of its height. It steps toward the
+  // chord's state by the frames shown, so a quick re-press turns it back from where it is.
+  float flip_ = 0.0F;
+  uint64_t flipFrame_ = 0;
   unsigned width_ = 0;
   unsigned height_ = 0;
   std::vector<Settings::OverlayQuad> quads_;
