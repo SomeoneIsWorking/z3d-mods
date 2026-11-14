@@ -32,7 +32,20 @@
     b play_entry
 .section .expect.play_entry, "", %progbits
     .word 0xE92D4FF0 @ push {r4-r11, lr}
+@ MessagePrinter_Update's first instruction; r0 is the printer, s0 the frame's seconds.
+.section .patch.printer_update, "ax", %progbits
+    b printer_update
+.section .expect.printer_update, "", %progbits
+    .word 0xE92D4010 @ push {r4, lr}
 .text
+printer_update:
+    push {r0-r3, r12, lr}
+    vpush {d0}
+    bl _ZN7z3dmods4mm3d16quickTextPrinterEPv
+    vpop {d0}
+    pop {r0-r3, r12, lr}
+    push {r4, lr}
+    b kPrinterUpdate + 4
 play_entry:
     push {r0-r3, r12, lr}
     bl _ZN7z3dmods4mm3d15updateSlotItemsEPv

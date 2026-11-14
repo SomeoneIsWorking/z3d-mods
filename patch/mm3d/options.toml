@@ -8,6 +8,12 @@ field = "cutsceneSkip"
 label = "Cutscene skip (Start)"
 default = true
 
+[[option]]
+id = "quick_text"
+field = "quickText"
+label = "Quick Text"
+default = true
+
 # The game turns its camera with the C-stick itself; the app turns the stick around.
 [[option]]
 id = "camera_invert_x"

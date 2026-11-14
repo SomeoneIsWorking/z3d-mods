@@ -1,7 +1,8 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or player+<offset>, from the player actor), warp:<entrance>, teleport:<x>,<y>,<z> (the player), where (print the player's position),
+poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or player+<offset>, from the player actor,
+and <addr>-><offset>[-><offset>...] follows the pointer kept there), warp:<entrance>, teleport:<x>,<y>,<z> (the player), where (print the player's position),
 walk:<x>,<z>[,<s>] (harness: the circle pad steered until the player stands at x, z, printing the way), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
@@ -56,7 +57,14 @@ def _player(session: Session, layout: Layout) -> int:
 
 
 def _address(session: Session, layout: Layout, text: str) -> int:
-    """An absolute address, play+<offset> from the current play state or player+<offset> from the player actor."""
+    """An absolute address, play+<offset> from the current play state or player+<offset> from the player actor;
+    <address>-><offset> is the pointer kept at the address plus the offset, and chains."""
+    if "->" in text:
+        first, *offsets = text.split("->")
+        address = _address(session, layout, first)
+        for offset in offsets:
+            address = session.u32(address) + int(offset, 0)
+        return address
     if text.startswith("play+"):
         return _play(session, layout) + int(text[5:], 0)
     if text.startswith("player+"):
