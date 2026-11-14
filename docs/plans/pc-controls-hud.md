@@ -372,7 +372,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   (Tingle's). Seen in South Clock Town, Termina Field and Woodfall Temple (`mmmap7`, `mmmap3`)
   and in the window (`map-zoom-mm3d`, `play-minimap`), the Map screen's own map unchanged.
 - Missing from MM3D's HUD: View; the third wallet's red gem and 500 were not run. The
-  game's own clock still draws and is not ours yet.
+  clock stays the game's own, drawn with the 4K pack's art ("doesn't the 4k pack have one?"); the
+  decomp names its widgets (`PlayHud.gameTimerGroup`) should it ever need to go.
 - Missing from OoT3D's HUD: the carrots and View; the bow's, bombchus' and beans' counts follow
   the N64's slots and were not seen.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the
