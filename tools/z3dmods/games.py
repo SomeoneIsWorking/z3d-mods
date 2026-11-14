@@ -19,8 +19,8 @@ class Layout:
     cutscene_frames: int
     cutscene_script: int
     scene: int
-    # OoT3D only: PlayState offsets of the player actor pointer and the main camera's look-at and
-    # eye, and the actor's world position.
+    # PlayState offset of the player actor pointer and the actor's world position; OoT3D only: the
+    # main camera's look-at and eye.
     player: int | None = None
     actor_position: int | None = None
     # A teleport writes all three: the player restores its position from home while it stands,
@@ -43,6 +43,12 @@ class Layout:
 PLAYER_CATEGORY = 2
 
 
+def _player_list_head(d: symbols.Decomp) -> int:
+    """PlayState offset of the player category's first actor."""
+    return (symbols.offset(d, "PlayState.actorCtx") + symbols.offset(d, "ActorContext.actorLists")
+            + PLAYER_CATEGORY * symbols.size(d, "ActorListEntry") + symbols.offset(d, "ActorListEntry.head"))
+
+
 def _oot3d(d: symbols.Decomp) -> Layout:
     cutscene = symbols.offset(d, "PlayState.csCtx")
     return Layout(
@@ -55,8 +61,7 @@ def _oot3d(d: symbols.Decomp) -> Layout:
         cutscene_frames=cutscene + symbols.offset(d, "CutsceneContext.frames"),
         cutscene_script=cutscene + symbols.offset(d, "CutsceneContext.segment"),
         scene=symbols.offset(d, "PlayState.sceneNum"),
-        player=(symbols.offset(d, "PlayState.actorCtx") + symbols.offset(d, "ActorContext.actorLists")
-                + PLAYER_CATEGORY * symbols.size(d, "ActorListEntry") + symbols.offset(d, "ActorListEntry.head")),
+        player=_player_list_head(d),
         actor_position=symbols.offset(d, "Actor.world"),
         actor_previous=symbols.offset(d, "Actor.prevPos"),
         actor_home=symbols.offset(d, "Actor.home"),
@@ -91,6 +96,10 @@ def _mm3d(d: symbols.Decomp) -> Layout:
         cutscene_frames=cutscene + symbols.offset(d, "CutsceneContext.frames"),
         cutscene_script=cutscene + symbols.offset(d, "CutsceneContext.script"),
         scene=symbols.offset(d, "PlayState.sceneNum"),
+        player=_player_list_head(d),
+        actor_position=symbols.offset(d, "Actor.world"),
+        actor_previous=symbols.offset(d, "Actor.prevPos"),
+        actor_home=symbols.offset(d, "Actor.home"),
         active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
         screens=symbols.global_(d, "gUiScreens"),
         screen_placements=_mm3d_placements(d),

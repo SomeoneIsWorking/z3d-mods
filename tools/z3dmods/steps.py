@@ -1,7 +1,7 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state), warp:<entrance>, teleport:<x>,<y>,<z> (the player, OoT3D), where (print the player's position), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
+poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or player+<offset>, from the player actor), warp:<entrance>, teleport:<x>,<y>,<z> (the player), where (print the player's position), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
@@ -40,10 +40,18 @@ def _play(session: Session, layout: Layout) -> int:
     return session.u32(layout.play_pointer)
 
 
+def _player(session: Session, layout: Layout) -> int:
+    if layout.player is None:
+        raise RuntimeError("no player actor layout for this game")
+    return session.u32(_play(session, layout) + layout.player)
+
+
 def _address(session: Session, layout: Layout, text: str) -> int:
-    """An absolute address, or play+<offset> from the current play state."""
+    """An absolute address, play+<offset> from the current play state or player+<offset> from the player actor."""
     if text.startswith("play+"):
         return _play(session, layout) + int(text[5:], 0)
+    if text.startswith("player+"):
+        return _player(session, layout) + int(text[7:], 0)
     return int(text, 0)
 
 
@@ -132,17 +140,13 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             session.write(play + layout.transition_trigger, bytes([TRANSITION_START]))
             log(f"warp to entrance {arg}")
         elif kind == "teleport":
-            if layout.player is None:
-                raise RuntimeError("teleport needs the player's actor layout")
-            player = session.u32(_play(session, layout) + layout.player)
+            player = _player(session, layout)
             position = struct.pack("<3f", *(float(part) for part in arg.split(",")))
             for field in (layout.actor_home, layout.actor_position, layout.actor_previous):
                 session.write(player + field, position)
             log(f"teleport player 0x{player:08X} to {arg}")
         elif kind == "where":
-            if layout.player is None:
-                raise RuntimeError("where needs the player's actor layout")
-            player = session.u32(_play(session, layout) + layout.player)
+            player = _player(session, layout)
             x, y, z = struct.unpack("<3f", session.read(player + layout.actor_position, 12))
             log(f"player at {x:.1f} {y:.1f} {z:.1f}")
         elif kind == "csframe":
