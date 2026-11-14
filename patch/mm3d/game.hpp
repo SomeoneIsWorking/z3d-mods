@@ -17,7 +17,8 @@ inline constexpr int8_t kTransitionStart = 20;
 
 inline constexpr uint8_t kCsStateRunning = 2;
 
-// Message_GetState() while a choice waits for the player
+// Message_GetState() with no text box up, and while a choice waits for the player
+inline constexpr int32_t kMessageStateNone = 0;
 inline constexpr int32_t kMessageStateChoice = 4;
 
 } // namespace z3dmods::mm3d

@@ -16,3 +16,15 @@
     b _ZN7z3dmods4mm3d12stepCutsceneEPvS1_PKv
 .section .expect.interpreter_tail, "", %progbits
     .word 0xEAF64B0E @ b 0x1846B4
+@ Actor_UpdateAll's first call, once a frame in play; r7 is the play state.
+.section .patch.actor_update, "ax", %progbits
+    bl actor_update
+.section .expect.actor_update, "", %progbits
+    .word 0xEBFFE947 @ bl 0x16EBAC
+.text
+actor_update:
+    push {r3, lr}
+    mov r0, r7
+    bl _ZN7z3dmods4mm3d16updateChordItemsEPv
+    pop {r3, lr}
+    b kActorUpdateFirstCall

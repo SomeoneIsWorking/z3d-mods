@@ -20,7 +20,7 @@ from pathlib import Path
 _LD_LINE = re.compile(r"^\s+([A-Za-z_]\w*) 0x([0-9A-Fa-f]+)\s*$", re.M)
 _STRUCT_OPEN = re.compile(r"^\s*(?:typedef\s+)?struct\s*(\w*)\s*\{")
 _STRUCT_CLOSE = re.compile(r"^\s*\}\s*(\w*)\s*;")
-_FIELD = re.compile(r"/\*\s*0x([0-9A-Fa-f]+)\s*\*/[^;]*?\b(\w+)\s*(?:\[[^\]]*\])?\s*;")
+_FIELD = re.compile(r"/\*\s*0x([0-9A-Fa-f]+)\s*\*/[^;]*?\b(\w+)\s*(?:\[[^\]]*\])*\s*;")
 _EXTERN = re.compile(r"^\s*extern\s+[^;]*?\b(\w+)\s*(?:\[[^\]]*\])?\s*;\s*//\s*0x([0-9A-Fa-f]+)")
 _DEFINE = re.compile(r"^\s*#define\s+(\w+)\s+([^/\n]+?)\s*(?://.*)?$")
 _ENUMERATOR = re.compile(r"^\s*/\*\s*0x([0-9A-Fa-f]+)\s*\*/\s*([A-Z][A-Z0-9_]*)\s*(?:=[^,]*)?,?\s*(?://.*)?$")

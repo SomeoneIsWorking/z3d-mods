@@ -105,7 +105,29 @@ Deku Nuts and the Slingshot poked into the inventory (run `oot-ch7`, Kokiri Fore
 - Not seen: the way back to a child through the pedestal (Sheik stands on it until the Forest
   Temple is done; the age set back by hand keeps the child's pages, `oot-ad2`), a real pad's
   stick click, a full grid.
-- MM3D: not started.
+
+### Status (MM3D, 2026-11-14)
+Built (`patch/mm3d/chord_items.cpp`), human Link only, option "Second item page" off by default.
+- MM3D keeps an item and its inventory slot per button and leaves the item in the Items screen's
+  grid (decomp/mm3d `docs/items.md`), so a page is four slots. The page that is away sits in the
+  slot bytes of the equipment's second row, which read 0xFF in a fresh file; the item is read
+  back from the inventory by slot when the page returns, so a bottle's new contents or a lost
+  item are followed.
+- The pages trade from a hook in `Actor_UpdateAll`, in plain play only: no cutscene, no scene
+  change, the HUD up and no text box. Anything else puts the first page back on that frame. A
+  save is offered in a text box, which is what keeps the second page out of a file; there is no
+  hook in the save routine, which is not found yet.
+- Seen on the harness (`mm-ch3`, South Clock Town, a bow and bombs poked into the inventory):
+  the bow assigned to X in the Items screen; chord held, the HUD's buttons empty and the Items
+  screen opened with it held shows them empty; bombs assigned to Y there show on the HUD; released,
+  the bow is back on X; held again, the bombs on Y. The equipment bytes follow (`4D FF 01 FF FF`
+  with slot 6 away, `4D 06 FF FF FF` with slot 1 away).
+- Not shown: a save. The South Clock Town owl statue is reached (`warp:0xD800` then `warp:0xD890`,
+  runs `mm-owl4` to `mm-owl6`) but A shows no prompt there and the sword does nothing, so no
+  save file was written and the diff against an unpatched load is still owed. That is why the
+  option is off by default.
+- Not checked: the other forms (the feature stays off for them), whether the game ever reads the
+  second row's slot bytes, a real pad's stick click.
 
 ## When
 After the title picker; free camera first (OoT3D), then the chord buttons, then the glyphs.
