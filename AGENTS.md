@@ -42,7 +42,7 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
 - `uv run --frozen z3dmods sources`: on a machine without them, clones the checkouts a package is
   built from (the core, Lucent, setup-ui, RmlUi, port-assets) at their pinned revisions and
   downloads the AppImage runtime.
-- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|options|options-oot3d|slots|slots-small|slots-mm3d|slots-mm3d-small|aim|aim-mm3d|setup|setup-wrong-dump|setup-missing-mod|setup-different-mod|setup-archive|menu-pad|first-run|first-run-appimage>`: the
+- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|options|options-oot3d|slots|slots-small|slots-mm3d|slots-mm3d-small|verbs-mm3d|aim|aim-mm3d|setup|setup-wrong-dump|setup-missing-mod|setup-different-mod|setup-archive|menu-pad|first-run|first-run-appimage>`: the
   windowed app's input path with real key, mouse and pad events, off the player's desktop; `picker`
   runs the installed shortcut's Exec line, `first-run` the package `z3dmods package` built. Shots in `scratch/input-test/<scenario>/`.
 

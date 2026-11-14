@@ -29,7 +29,8 @@ struct Lane {
   uint32_t pad;
   uint8_t touch;
 };
-// The touch screen's two first: the pad cannot press them, so the game's own X and Y keep theirs longest.
+// The touch screen's two first: the pad cannot press them, so the game's own X and Y keep theirs
+// longest.
 constexpr Lane kLanes[] = {
     {kEquipButtonI, 0, kTouchButtonI},
     {kEquipButtonII, 0, kTouchButtonII},
@@ -59,6 +60,10 @@ constexpr uint8_t kStoreMarker = 0x5A;
 
 constexpr uint32_t kNoteButtons[kSongNotes] = {kButtonL, kButtonR, kButtonY, kButtonX, kButtonA};
 constexpr uint32_t kNoRow = UINT32_MAX;
+// The Song of Time's row of the song table: it ends the three days without a question, so its
+// slot plays only once held this many updates, half a second.
+constexpr uint32_t kSongOfTime = 6;
+constexpr uint8_t kHoldUpdates = 15;
 constexpr uint32_t kItemGridColumns = 5;
 constexpr uint32_t kMaskGridColumns = 6;
 
@@ -69,7 +74,13 @@ public:
     const uint16_t held = link.held;
     const uint16_t pressed = held & static_cast<uint16_t>(~held_);
     held_ = held;
+    link.beat = static_cast<uint8_t>(link.beat + 1);
     link.mode = static_cast<uint8_t>(PadMode::ByName);
+    for (uint32_t slot = 0; slot < kSlotCount; ++slot) {
+      if (((held >> slot) & 1U) == 0) {
+        charge_[slot] = 0;
+      }
+    }
     auto *common = reinterpret_cast<uint8_t *>(kCommonData);
     if (guest::read<int32_t>(common, kGameMode) != kGameModeNormal) {
       // The title screen: the next file loads with its own items on the buttons.
@@ -88,11 +99,13 @@ public:
     if (screen == screenAt(kUiScreenItems)) {
       editing = true;
       link.mode = static_cast<uint8_t>(PadMode::Assign);
-      table.assign(0, kSlotCount, pressed, cellUnderCursor(screen, save, kSaveItemGrid, kItemGridColumns, 0));
+      table.assign(0, kSlotCount, pressed,
+                   cellUnderCursor(screen, save, kSaveItemGrid, kItemGridColumns, 0));
     } else if (screen == screenAt(kUiScreenMasks)) {
       editing = true;
       link.mode = static_cast<uint8_t>(PadMode::Assign);
-      table.assign(0, kSlotCount, pressed, cellUnderCursor(screen, save, kSaveMaskGrid, kMaskGridColumns, kMaskSlotsFirst));
+      table.assign(0, kSlotCount, pressed,
+                   cellUnderCursor(screen, save, kSaveMaskGrid, kMaskGridColumns, kMaskSlotsFirst));
     } else if (screen == screenAt(kUiScreenOcarina)) {
       if (guest::read<int32_t>(screen, kOcarinaScreenPlayPage) == 0) {
         link.mode = static_cast<uint8_t>(PadMode::Assign);
@@ -128,7 +141,8 @@ private:
 
   static volatile uint8_t *storeByte(uint8_t *save, uint32_t index) {
     return reinterpret_cast<volatile uint8_t *>(save + kSaveEquipment + kEquipButtonSlots +
-                                                (1 + index / kStoreColumns) * kRowButtons + 1 + index % kStoreColumns);
+                                                (1 + index / kStoreColumns) * kRowButtons + 1 +
+                                                index % kStoreColumns);
   }
 
   static Store load(uint8_t *save) {
@@ -166,8 +180,10 @@ private:
     for (uint32_t slot = 0; slot < kSlotCount; ++slot) {
       table.set(slot, kNoValue);
     }
-    constexpr uint8_t kFrom[][2] = {
-        {kSlotY, kEquipButtonY}, {kSlotB, kEquipButtonX}, {kSlotRB, kEquipButtonI}, {kSlotUp, kEquipButtonII}};
+    constexpr uint8_t kFrom[][2] = {{kSlotY, kEquipButtonY},
+                                    {kSlotB, kEquipButtonX},
+                                    {kSlotRB, kEquipButtonI},
+                                    {kSlotUp, kEquipButtonII}};
     bool ocarina = false;
     for (const auto &[slot, button] : kFrom) {
       const uint8_t inventorySlot = buttonSlots(save)[button];
@@ -184,16 +200,18 @@ private:
 
   // The Items or Masks screen: the slot value of the cell under the cursor; none on an empty
   // cell and on the item buttons' column.
-  static uint8_t cellUnderCursor(const uint8_t *screen, const uint8_t *save, uint32_t grid, uint32_t columns,
-                                 uint32_t firstSlot) {
+  static uint8_t cellUnderCursor(const uint8_t *screen, const uint8_t *save, uint32_t grid,
+                                 uint32_t columns, uint32_t firstSlot) {
     const int32_t column = guest::read<int8_t>(screen, kItemScreenCursorColumn);
     const int32_t row = guest::read<int8_t>(screen, kItemScreenCursorRow);
     if (column < 0 || static_cast<uint32_t>(column) >= columns || row < 0) {
       return kNoValue;
     }
-    const uint32_t inventorySlot = firstSlot + guest::read<uint8_t>(save, grid + static_cast<uint32_t>(row) * columns +
-                                                                              static_cast<uint32_t>(column));
-    return inventorySlot < kInventorySlots && itemIn(save, static_cast<uint8_t>(inventorySlot)) != kItemNone
+    const uint32_t inventorySlot =
+        firstSlot + guest::read<uint8_t>(save, grid + static_cast<uint32_t>(row) * columns +
+                                                   static_cast<uint32_t>(column));
+    return inventorySlot < kInventorySlots &&
+                   itemIn(save, static_cast<uint8_t>(inventorySlot)) != kItemNone
                ? static_cast<uint8_t>(inventorySlot)
                : kNoValue;
   }
@@ -207,7 +225,6 @@ private:
     const uint32_t learned = guest::read<uint32_t>(save, kSaveQuestItems);
     // The two songs after the quest's twelve are the Song of Time played another way; then the
     // Goron Lullaby's intro.
-    constexpr uint32_t kSongOfTime = 6;
     uint32_t bit = 0;
     if (row < kQuestSongCount) {
       bit = kQuestSongFirst + row;
@@ -234,8 +251,8 @@ private:
     return guest::read<uint8_t>(play, kPlayCutscene + kCsState) == 0 &&
            guest::read<int8_t>(play, kPlayTransitionTrigger) == 0 &&
            guest::read<uint16_t>(common, kCommonHudVisibility) == kHudVisibilityAll &&
-           guest::function<MessageStateFn>(kMessageGetState)(static_cast<uint8_t *>(play) + kPlayMessageContext) ==
-               kMessageStateNone;
+           guest::function<MessageStateFn>(kMessageGetState)(
+               static_cast<uint8_t *>(play) + kPlayMessageContext) == kMessageStateNone;
   }
 
   // Whether a slot value presses the game's ocarina button instead of an item button.
@@ -255,7 +272,8 @@ private:
   void drop(uint8_t *save, const Slots &table) {
     for (uint32_t lane = 0; lane < kLaneCount; ++lane) {
       const uint8_t slot = lanes_.slot(lane);
-      if (slot != kSlotEmpty && (onOcarina(table.get(slot)) || itemOf(save, table.get(slot)) == kItemNone)) {
+      if (slot != kSlotEmpty &&
+          (onOcarina(table.get(slot)) || itemOf(save, table.get(slot)) == kItemNone)) {
         unapply(save, lane);
         lanes_.drop(lane);
       }
@@ -312,10 +330,19 @@ private:
         continue;
       }
       if (onOcarina(value)) {
-        if ((held >> slot) & 1U) {
+        bool starts = (pressed >> slot) & 1U;
+        bool down = (held >> slot) & 1U;
+        if (value >= kFirstSong && songRow(save, value - kFirstSong) == kSongOfTime) {
+          starts = down && charge_[slot] + 1 == kHoldUpdates;
+          if (down && charge_[slot] < kHoldUpdates) {
+            ++charge_[slot];
+          }
+          down = charge_[slot] == kHoldUpdates;
+        }
+        if (down) {
           touchHeld |= kTouchButtonOcarina;
         }
-        if ((pressed >> slot) & 1U) {
+        if (starts) {
           touchPressed |= kTouchButtonOcarina;
           if (value >= kFirstSong) {
             song_.play(reinterpret_cast<const uint8_t *>(
@@ -342,8 +369,10 @@ private:
         touchHeld |= kLanes[lane].touch;
       }
     }
-    guest::write<uint32_t>(play, kPlayInputHeld, guest::read<uint32_t>(play, kPlayInputHeld) | padHeld);
-    guest::write<uint32_t>(play, kPlayInputPressed, guest::read<uint32_t>(play, kPlayInputPressed) | padPressed);
+    guest::write<uint32_t>(play, kPlayInputHeld,
+                           guest::read<uint32_t>(play, kPlayInputHeld) | padHeld);
+    guest::write<uint32_t>(play, kPlayInputPressed,
+                           guest::read<uint32_t>(play, kPlayInputPressed) | padPressed);
     auto *touch = reinterpret_cast<volatile uint8_t *>(kTouchButtonsHeld);
     *touch = *touch | touchHeld | touchPressed;
     touch = reinterpret_cast<volatile uint8_t *>(kTouchButtonsPressed);
@@ -353,9 +382,10 @@ private:
   // A song under way: its notes go into the next pad update while the ocarina takes them.
   void playNotes(const uint8_t *screen) {
     const auto *message = guest::read<const uint8_t *>(kMessageObject);
-    const bool ready = screen == screenAt(kUiScreenOcarina) && guest::read<int32_t>(screen, kOcarinaScreenPlayPage) != 0 &&
-                       message != nullptr &&
-                       guest::read<uint32_t>(message, kMessageOcarinaMode) == kMessageOcarinaModeFreePlay;
+    const bool ready =
+        screen == screenAt(kUiScreenOcarina) &&
+        guest::read<int32_t>(screen, kOcarinaScreenPlayPage) != 0 && message != nullptr &&
+        guest::read<uint32_t>(message, kMessageOcarinaMode) == kMessageOcarinaModeFreePlay;
     if (const uint32_t notes = song_.next(ready, kNoteButtons); notes != 0) {
       auto *injected = reinterpret_cast<volatile uint32_t *>(kPadInjected);
       *injected = *injected | notes;
@@ -371,6 +401,7 @@ private:
       link.items[slot] = song ? kSlotEmpty : itemOf(save, value);
       link.songs[slot] = song ? static_cast<uint8_t>(value - kFirstSong + 1) : 0;
       link.lanes[slot] = 0;
+      link.charge[slot] = static_cast<uint8_t>(charge_[slot] * kSlotCharged / kHoldUpdates);
     }
     for (uint32_t lane = 0; lane < kLaneCount; ++lane) {
       if (lanes_.slot(lane) != kSlotEmpty) {
@@ -380,11 +411,14 @@ private:
   }
 
   SlotLanes<kLaneCount> lanes_;
-  // The game's own item and slot of each lane's button, while a bit of applied_ says the slot's is there.
+  // The game's own item and slot of each lane's button, while a bit of applied_ says the slot's is
+  // there.
   uint8_t ownItems_[kLaneCount] = {};
   uint8_t ownSlots_[kLaneCount] = {};
   uint32_t applied_ = 0;
   uint16_t held_ = 0;
+  // How many updates each slot that must be held has been.
+  uint8_t charge_[kSlotCount] = {};
   SongSequence song_;
 };
 

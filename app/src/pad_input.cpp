@@ -59,10 +59,10 @@ struct PlayKey {
 
 // A verb's first key is the one its prompt shows.
 constexpr std::array kPlayKeys{
-    PlayKey{SDL_SCANCODE_E, Verb::Action},       PlayKey{SDL_SCANCODE_SPACE, Verb::Action},
-    PlayKey{SDL_SCANCODE_Q, Verb::Target},       PlayKey{SDL_SCANCODE_F, Verb::FirstPerson},
-    PlayKey{SDL_SCANCODE_R, Verb::Ocarina},      PlayKey{SDL_SCANCODE_TAB, Verb::ItemScreen},
-    PlayKey{SDL_SCANCODE_M, Verb::Map},          PlayKey{SDL_SCANCODE_ESCAPE, Verb::Pause},
+    PlayKey{SDL_SCANCODE_E, Verb::Action},  PlayKey{SDL_SCANCODE_SPACE, Verb::Action},
+    PlayKey{SDL_SCANCODE_Q, Verb::Target},  PlayKey{SDL_SCANCODE_F, Verb::FirstPerson},
+    PlayKey{SDL_SCANCODE_R, Verb::Ocarina}, PlayKey{SDL_SCANCODE_TAB, Verb::ItemScreen},
+    PlayKey{SDL_SCANCODE_M, Verb::Map},     PlayKey{SDL_SCANCODE_ESCAPE, Verb::Pause},
 };
 
 struct PlayMouse {
@@ -70,7 +70,8 @@ struct PlayMouse {
   Verb verb;
 };
 
-constexpr std::array kPlayMouse{PlayMouse{SDL_BUTTON_LEFT, Verb::Sword}, PlayMouse{SDL_BUTTON_RIGHT, Verb::Shield},
+constexpr std::array kPlayMouse{PlayMouse{SDL_BUTTON_LEFT, Verb::Sword},
+                                PlayMouse{SDL_BUTTON_RIGHT, Verb::Shield},
                                 PlayMouse{SDL_BUTTON_MIDDLE, Verb::Target}};
 
 // 1 to 8 are slots 0 to 7; with Shift, 1 to 3 are slots 8 to 10 and the others stay.
@@ -135,13 +136,13 @@ struct MenuKey {
 // The picker's keys: confirm and back as in a game's menus, X for a game's options. A button's
 // first key is the one its hint shows.
 constexpr std::array kMenuKeys{
-    MenuKey{SDL_SCANCODE_E, &MenuPad::a},        MenuKey{SDL_SCANCODE_RETURN, &MenuPad::a},
-    MenuKey{SDL_SCANCODE_SPACE, &MenuPad::a},    MenuKey{SDL_SCANCODE_BACKSPACE, &MenuPad::b},
-    MenuKey{SDL_SCANCODE_X, &MenuPad::x},        MenuKey{SDL_SCANCODE_Y, &MenuPad::y},
-    MenuKey{SDL_SCANCODE_W, &MenuPad::up},       MenuKey{SDL_SCANCODE_S, &MenuPad::down},
-    MenuKey{SDL_SCANCODE_A, &MenuPad::left},     MenuKey{SDL_SCANCODE_D, &MenuPad::right},
-    MenuKey{SDL_SCANCODE_UP, &MenuPad::up},      MenuKey{SDL_SCANCODE_DOWN, &MenuPad::down},
-    MenuKey{SDL_SCANCODE_LEFT, &MenuPad::left},  MenuKey{SDL_SCANCODE_RIGHT, &MenuPad::right},
+    MenuKey{SDL_SCANCODE_E, &MenuPad::a},       MenuKey{SDL_SCANCODE_RETURN, &MenuPad::a},
+    MenuKey{SDL_SCANCODE_SPACE, &MenuPad::a},   MenuKey{SDL_SCANCODE_BACKSPACE, &MenuPad::b},
+    MenuKey{SDL_SCANCODE_X, &MenuPad::x},       MenuKey{SDL_SCANCODE_Y, &MenuPad::y},
+    MenuKey{SDL_SCANCODE_W, &MenuPad::up},      MenuKey{SDL_SCANCODE_S, &MenuPad::down},
+    MenuKey{SDL_SCANCODE_A, &MenuPad::left},    MenuKey{SDL_SCANCODE_D, &MenuPad::right},
+    MenuKey{SDL_SCANCODE_UP, &MenuPad::up},     MenuKey{SDL_SCANCODE_DOWN, &MenuPad::down},
+    MenuKey{SDL_SCANCODE_LEFT, &MenuPad::left}, MenuKey{SDL_SCANCODE_RIGHT, &MenuPad::right},
 };
 
 struct MenuButton {
@@ -163,8 +164,9 @@ constexpr std::array kMenuButtons{
 
 // MenuPad's buttons by name, for listKeys.
 constexpr std::array kMenuNames{
-    std::pair{"a", &MenuPad::a},       std::pair{"b", &MenuPad::b},       std::pair{"x", &MenuPad::x},
-    std::pair{"y", &MenuPad::y},       std::pair{"up", &MenuPad::up},     std::pair{"down", &MenuPad::down},
+    std::pair{"a", &MenuPad::a},       std::pair{"b", &MenuPad::b},
+    std::pair{"x", &MenuPad::x},       std::pair{"y", &MenuPad::y},
+    std::pair{"up", &MenuPad::up},     std::pair{"down", &MenuPad::down},
     std::pair{"left", &MenuPad::left}, std::pair{"right", &MenuPad::right},
 };
 
@@ -348,7 +350,9 @@ void PadInput::readHost() {
     held |= leaves ? game_->leave : game_->buttons[static_cast<size_t>(verb)];
   };
   const bool *keys = SDL_GetKeyboardState(nullptr);
-  const bool shift = std::ranges::any_of(kChordKeys, [keys](SDL_Scancode key) { return keys[key]; });
+  const bool shift = std::ranges::any_of(kChordKeys, [keys](SDL_Scancode key) {
+    return keys[key];
+  });
   bool keyHeld = false;
   if (play) {
     for (const PlayKey &binding : kPlayKeys) {
@@ -363,7 +367,8 @@ void PadInput::readHost() {
         slots |= static_cast<uint16_t>(1U << (shift && i < kShiftSlots ? kSlotKeys.size() + i : i));
       }
     }
-    const SDL_MouseButtonFlags mouse = mode_ == PadMode::Play ? SDL_GetMouseState(nullptr, nullptr) : 0;
+    const SDL_MouseButtonFlags mouse =
+        mode_ == PadMode::Play ? SDL_GetMouseState(nullptr, nullptr) : 0;
     for (const PlayMouse &binding : kPlayMouse) {
       if ((mouse & SDL_BUTTON_MASK(binding.button)) != 0) {
         keyHeld = true;
@@ -485,13 +490,16 @@ Prompt PadInput::slotPrompt(size_t slot) {
 
 Prompt PadInput::verbPrompt(Verb verb) {
   Prompt prompt;
-  if (const auto *pad = std::ranges::find(kPlayButtons, std::optional(verb), &PlayButton::verb); pad != kPlayButtons.end()) {
+  if (const auto *pad = std::ranges::find(kPlayButtons, std::optional(verb), &PlayButton::verb);
+      pad != kPlayButtons.end()) {
     prompt.pad = pad->pad;
   }
-  if (const auto *key = std::ranges::find(kPlayKeys, verb, &PlayKey::verb); key != kPlayKeys.end()) {
+  if (const auto *key = std::ranges::find(kPlayKeys, verb, &PlayKey::verb);
+      key != kPlayKeys.end()) {
     prompt.key = key->key;
   }
-  if (const auto *mouse = std::ranges::find(kPlayMouse, verb, &PlayMouse::verb); mouse != kPlayMouse.end()) {
+  if (const auto *mouse = std::ranges::find(kPlayMouse, verb, &PlayMouse::verb);
+      mouse != kPlayMouse.end()) {
     prompt.mouse = mouse->button;
   }
   return prompt;
@@ -499,10 +507,12 @@ Prompt PadInput::verbPrompt(Verb verb) {
 
 Prompt PadInput::menuPrompt(bool MenuPad::*held) {
   Prompt prompt;
-  if (const auto *pad = std::ranges::find(kMenuButtons, held, &MenuButton::held); pad != kMenuButtons.end()) {
+  if (const auto *pad = std::ranges::find(kMenuButtons, held, &MenuButton::held);
+      pad != kMenuButtons.end()) {
     prompt.pad = pad->pad;
   }
-  if (const auto *key = std::ranges::find(kMenuKeys, held, &MenuKey::held); key != kMenuKeys.end()) {
+  if (const auto *key = std::ranges::find(kMenuKeys, held, &MenuKey::held);
+      key != kMenuKeys.end()) {
     prompt.key = key->key;
   }
   return prompt;
@@ -513,11 +523,16 @@ void PadInput::listKeys(std::ostream &out) {
     out << table << '\t' << name << '\t' << key << '\n';
   };
   for (const MenuKey &binding : kMenuKeys) {
-    line("menu", std::ranges::find(kMenuNames, binding.held, &std::pair<const char *, bool MenuPad::*>::second)->first,
+    line("menu",
+         std::ranges::find(kMenuNames, binding.held,
+                           &std::pair<const char *, bool MenuPad::*>::second)
+             ->first,
          SDL_GetScancodeName(binding.key));
   }
   for (const KeyBinding &binding : kNameKeys) {
-    line("name", std::string_view(Settings::NativeButton::mapping[binding.button]).substr(kButtonPrefix.size()),
+    line("name",
+         std::string_view(Settings::NativeButton::mapping[binding.button])
+             .substr(kButtonPrefix.size()),
          SDL_GetScancodeName(binding.key));
   }
   const auto verbName = [](Verb verb) {
@@ -550,16 +565,22 @@ const std::array<PadInput::GameVerbs, 2> PadInput::kGames{
     // Ocarina of Time 3D, The One Screen (its source/input/shortcuts.h): the D-pad's Left is
     // View, Up the item screen, Right the ocarina; Select the map.
     GameVerbs{"0004000000033500",
-              {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B), bit(Settings::NativeButton::R),
-               bit(Settings::NativeButton::L), bit(Settings::NativeButton::Left), bit(Settings::NativeButton::Start),
+              {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B),
+               bit(Settings::NativeButton::R), bit(Settings::NativeButton::L),
+               bit(Settings::NativeButton::Left), bit(Settings::NativeButton::Start),
                bit(Settings::NativeButton::Select), bit(Settings::NativeButton::Up),
                bit(Settings::NativeButton::Right)},
               bit(Settings::NativeButton::Start)},
-    // Majora's Mask 3D, Project Restoration: ZL is View, Select the Items screen.
+    // Majora's Mask 3D, Project Restoration: ZL is View, Select the Items screen, and ZR with
+    // Start the Gear screen, with Select the map, with A the ocarina.
     GameVerbs{"0004000000125500",
-              {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B), bit(Settings::NativeButton::R),
-               bit(Settings::NativeButton::L), bit(Settings::NativeButton::ZL), bit(Settings::NativeButton::Start),
-               0, bit(Settings::NativeButton::Select), 0},
+              {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B),
+               bit(Settings::NativeButton::R), bit(Settings::NativeButton::L),
+               bit(Settings::NativeButton::ZL),
+               bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::Start),
+               bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::Select),
+               bit(Settings::NativeButton::Select),
+               bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::A)},
               bit(Settings::NativeButton::Select)},
 };
 

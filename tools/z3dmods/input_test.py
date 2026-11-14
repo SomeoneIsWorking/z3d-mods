@@ -13,6 +13,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import threading
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -472,8 +473,8 @@ def _slots_mm3d(session: Session, pad: Gamepad) -> None:
     a bottle and songs and no slot set but the ocarina's: Menu opens the Items screen, where
     Y takes the bow, RB and the D-pad's Right the bombs and LB with A the bottle; in play each
     uses its item, and 1 on the keyboard the bow with the HUD on key caps. The D-pad's Down
-    brings the ocarina out, a click its song list, where the D-pad's Up takes the Song of Time,
-    and Up in play plays it."""
+    brings the ocarina out, a click its song list, where the D-pad's Up takes the Song of Time;
+    in play a tap of Up does nothing and Up held plays it."""
     _mm3d_file_1(session)
     session.shot("play")
     pad.button("start")
@@ -531,9 +532,31 @@ def _slots_mm3d(session: Session, pad: Gamepad) -> None:
     session.wait(2.5)
     session.shot("play-song-slot")
     pad.dpad("up")
-    for shot in range(8):
+    session.wait(3)
+    session.shot("song-tapped")
+    held = threading.Thread(target=pad.dpad, args=("up", 1.0))
+    held.start()
+    session.wait(0.3)
+    session.shot("song-holding")
+    held.join()
+    for shot in range(6):
         session.wait(5)
         session.shot(f"song-{shot}")
+
+
+def _verbs_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D's screens from play: M and the pad's View open the map, R brings the ocarina out,
+    LB with Menu opens Gear; the sword's button leaves each."""
+    _mm3d_file_1(session)
+    for name, press in (("key-map", lambda: session.key("play", "map")), ("pad-view", lambda: pad.button("select")),
+                        ("key-ocarina", lambda: session.key("play", "ocarina")),
+                        ("pad-pause", lambda: _chorded(pad, "start")), ("key-pause", lambda: session.key("play", "pause"))):
+        press()
+        session.wait(3)
+        session.shot(name)
+        pad.button("b")
+        session.wait(3)
+    session.shot("play-again")
 
 
 SETUP_GAME = "mm3d"
@@ -969,16 +992,17 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
-               "aim": "oot3d", "aim-mm3d": "mm3d"}
+               "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
 PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-mm3d": _mm3d_slots_file,
-           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "setup": _without_set,
+           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "verbs-mm3d": _mm3d_slots_file,
+           "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}
 # Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.

@@ -25,8 +25,8 @@ prints the keyboard's and the mouse's.
 | D-pad | Item slots 4 to 7 (Up, Right, Down, Left); a new file has the ocarina on Down |
 | LB held | Chord: A, B, X, Y are item slots 8 to 11; the HUD shows them while held |
 | Menu | Item screen; a slot's input there assigns the cursor's item to it, Menu again leaves |
-| LB and Menu | Pause |
-| View | Map (OoT3D; MM3D has none bound yet) |
+| LB and Menu | Pause (MM3D: the Gear screen, where its options are) |
+| View | Map |
 
 | Keyboard and mouse | Job |
 |---|---|
@@ -38,7 +38,7 @@ prints the keyboard's and the mouse's.
 | Q or middle mouse | Target / recenter |
 | F | First person |
 | 1 to 8, then Shift+1 to 3 | Item slots 1 to 11 |
-| R | Ocarina (OoT3D; MM3D has none bound yet) |
+| R | Ocarina |
 | Tab | Item screen; M map; Esc pause |
 
 Menu is the item screen and not Pause as first decided: the game's Start in play is only OoT3D's
@@ -53,6 +53,9 @@ Songs on slots (user: "Imo songs can be added to item slots"). Built, both games
   notes are played as the game plays them, so the game's own effects and prompts happen. MM3D's
   Song of Time ends in the game's own "Do you want to save?" (`ctl-pad2`, the same by hand in
   `ctl-mm9`); the game asks nothing before the return, and nothing is skipped.
+- So MM3D's Song of Time is the one slot that must be held: half a second (`kHoldUpdates` in
+  `patch/mm3d/slot_items.cpp`), the slot's ring filling in gold on the HUD meanwhile; a tap or a
+  shorter hold does nothing (`ctl-hold3`). Every other song plays on the press.
 - The HUD shows a note on the slot.
 
 Not done on purpose: no item on a trigger or on R3, no radial wheel, nothing equips boots or
@@ -158,12 +161,14 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
   (`sets/hud/*.json`, plans/xbox-glyphs.md). The four item-button cells (X, Y, I, II) name where
   our slots start: Y, B, RB and the D-pad. OoT3D, the Know-It-All Brothers (`ctl-text5`): "The
   RB, Y, B, and D-pad icons on the lower screen are your item slots", "Assign items you use often
-  to Y or B". MM3D's sheet has the same four cells changed ("Set it to Y, B, RB or D-pad"); seen
-  as the installed texture only, since the owl statue rewrites its message every frame.
+  to Y or B". MM3D's item messages name the X and Y item buttons with the plain X and Y cells
+  and only I and II with their own: the Hero's Bow message (`ctl-text7`, a poster in South Clock
+  Town given its text) reads "Set it to X, Y, RB or D-pad on the Select Item Screen". Y, RB and
+  the D-pad are slots; X is the sword.
 - Cannot change by a cell: the words ("tap", "the lower screen", "Select Item Screen") are the
   game's message data; and the plain A, B, X, Y, L, R cells serve the menus, where the pad is by
-  name, and play alike, so a play prompt for the sword still shows B (the pad's X) and one for
-  the game's X or Y button shows X or Y. The fix is the outline-font pass below, which redraws
+  name, and play alike, so a play prompt for the sword still shows B (the pad's X) and MM3D's
+  item messages show X for a button that is no slot. The fix is the outline-font pass below, which redraws
   message text.
 - No key caps in text boxes: the sheet is a texture made at install, not swapped by device.
 - MM3D's touch-screen HUD sheet still labels I, II, View, Gear and Map with Project
@@ -212,9 +217,12 @@ draw in the app only what that cannot reach.
   (OoT3D `ctl-save3`; MM3D `ctl-mmsave2`, `ctl-mmload`).
 - Menu hints: `inputtest picker`, `options`, `options-oot3d` show pad glyphs, then caps after a
   key, and back.
-- Not done: MM3D has no Map or Ocarina verb on the keyboard (M and R do nothing there); MM3D's Masks screen and the X and Y lanes were not run
+- MM3D's map, ocarina and Gear verbs press Project Restoration's own shortcuts (ZR with
+  Select, A and Start; `kGames` in `pad_input.cpp`), seen with real keys and a pad (`inputtest
+  verbs-mm3d`).
+- Not done: MM3D's Masks screen and the X and Y lanes were not run
   with a pad; R3 and the mouse's free camera are unseen in a window; with
-  the patch taken out (F6) the HUD draws stale slots; item counts are not coloured at capacity.
+  item counts are not coloured at capacity.
 - Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
   game's own clock still draws and is not ours yet.

@@ -42,9 +42,11 @@ public:
 
   // Each draws its art once per size and returns it again after that.
   // `tint` (0xRRGGBB) multiplies the art's colours: white art takes it, dark outlines stay.
-  [[nodiscard]] HudSprite svg(const std::string &set, const std::string &name, int width, int height,
-                              uint32_t tint = kNoTint);
+  [[nodiscard]] HudSprite svg(const std::string &set, const std::string &name, int width,
+                              int height, uint32_t tint = kNoTint);
   static constexpr uint32_t kNoTint = 0xFFFFFF;
+  // The first `step` of `steps` parts of a ring's rim, clockwise from the top: a hold filling up.
+  [[nodiscard]] HudSprite arc(int size, int step, int steps);
   // Lettering in port-assets' key typeface with capitals `height` pixels tall, cut to its ink.
   [[nodiscard]] HudSprite text(const std::string &text, int height, HudInk ink);
   // The outline's width around lettering of that height that has one; a plate's edge is as far out.
@@ -62,7 +64,8 @@ public:
 
 private:
   [[nodiscard]] HudSprite place(const std::string &key, SDL_Surface *surface, float base = 0.0F);
-  [[nodiscard]] SDL_Surface *lettering(const std::string &text, int height, HudInk ink, float &base);
+  [[nodiscard]] SDL_Surface *lettering(const std::string &text, int height, HudInk ink,
+                                       float &base);
 
   std::filesystem::path assets_;
   TTF_Font *font_ = nullptr;

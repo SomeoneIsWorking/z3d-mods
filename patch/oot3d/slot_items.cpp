@@ -57,6 +57,7 @@ public:
     const uint16_t held = link.held;
     const uint16_t pressed = held & static_cast<uint16_t>(~held_);
     held_ = held;
+    link.beat = static_cast<uint8_t>(link.beat + 1);
     link.mode = static_cast<uint8_t>(PadMode::ByName);
     if (guest::read<int32_t>(kSaveContext + kSaveGameMode) != kGameModeNormal ||
         guest::read<int32_t>(kSaveContext + kSaveFileNum) == kFileNumDebug) {
@@ -101,7 +102,8 @@ public:
 
 private:
   static volatile uint8_t *layout(bool child) {
-    return reinterpret_cast<volatile uint8_t *>(kSaveContext + (child ? kSaveItemMenuChild : kSaveItemMenuAdult));
+    return reinterpret_cast<volatile uint8_t *>(kSaveContext +
+                                                (child ? kSaveItemMenuChild : kSaveItemMenuAdult));
   }
 
   static uint8_t itemIn(uint8_t inventorySlot) {
@@ -117,7 +119,10 @@ private:
     for (uint32_t age = 0; age < 2; ++age) {
       const uint32_t first = age * kSlotCount;
       const volatile uint8_t *nodes = layout(age == 0);
-      constexpr uint8_t kFrom[][2] = {{kSlotY, kItemMenuNodeY}, {kSlotB, kItemMenuNodeX}, {kSlotRB, kItemMenuNodeI}, {kSlotUp, kItemMenuNodeII}};
+      constexpr uint8_t kFrom[][2] = {{kSlotY, kItemMenuNodeY},
+                                      {kSlotB, kItemMenuNodeX},
+                                      {kSlotRB, kItemMenuNodeI},
+                                      {kSlotUp, kItemMenuNodeII}};
       for (const auto &[slot, node] : kFrom) {
         if (nodes[node] < kFirstSong) {
           table.set(first + slot, nodes[node]);
@@ -141,7 +146,8 @@ private:
       return kNoValue;
     }
     const uint8_t inventorySlot = layout(child)[node];
-    return inventorySlot < kFirstSong && itemIn(inventorySlot) != kItemNone ? inventorySlot : kNoValue;
+    return inventorySlot < kFirstSong && itemIn(inventorySlot) != kItemNone ? inventorySlot
+                                                                            : kNoValue;
   }
 
   // The ocarina's song list: the slot value of the song on show; none on one not learned.
@@ -150,17 +156,21 @@ private:
     if (entry < 0 || entry >= kSongCount) {
       return kNoValue;
     }
-    const uint32_t item = guest::read<uint32_t>(kOcarinaSongListItems + static_cast<uint32_t>(entry) * sizeof(uint32_t));
+    const uint32_t item = guest::read<uint32_t>(kOcarinaSongListItems +
+                                                static_cast<uint32_t>(entry) * sizeof(uint32_t));
     if (item < kItemSongMinuet || item > kItemSongStorms) {
       return kNoValue;
     }
     const uint32_t song = item - kItemSongMinuet;
-    const uint32_t learned = guest::read<uint32_t>(kSaveContext + kSaveInventory + kInventoryQuestItems);
-    return (learned >> (kQuestSongMinuet + song)) & 1U ? static_cast<uint8_t>(kFirstSong + song) : kNoValue;
+    const uint32_t learned =
+        guest::read<uint32_t>(kSaveContext + kSaveInventory + kInventoryQuestItems);
+    return (learned >> (kQuestSongMinuet + song)) & 1U ? static_cast<uint8_t>(kFirstSong + song)
+                                                       : kNoValue;
   }
 
   // Plain play: each held slot's item on a lane, and the lane's button in the play input.
-  void use(void *play, const Slots &table, uint32_t first, uint16_t held, uint16_t pressed, bool child) {
+  void use(void *play, const Slots &table, uint32_t first, uint16_t held, uint16_t pressed,
+           bool child) {
     uint32_t busy = 0;
     for (uint32_t lane = 0; lane < kLaneCount; ++lane) {
       const uint8_t slot = lanes_.slot(lane);
@@ -212,26 +222,30 @@ private:
       }
     }
     lanesChild_ = child;
-    guest::write<uint32_t>(play, kPlayInputHeld, guest::read<uint32_t>(play, kPlayInputHeld) | buttonsHeld);
-    guest::write<uint32_t>(play, kPlayInputPressed, guest::read<uint32_t>(play, kPlayInputPressed) | buttonsPressed);
+    guest::write<uint32_t>(play, kPlayInputHeld,
+                           guest::read<uint32_t>(play, kPlayInputHeld) | buttonsHeld);
+    guest::write<uint32_t>(play, kPlayInputPressed,
+                           guest::read<uint32_t>(play, kPlayInputPressed) | buttonsPressed);
   }
 
   static uintptr_t playerOf(void *play) {
-    return guest::read<uintptr_t>(
-        play, kPlayActorCtx + kActorCtxLists + kActorCatPlayer * kActorListEntrySize + kActorListHead);
+    return guest::read<uintptr_t>(play, kPlayActorCtx + kActorCtxLists +
+                                            kActorCatPlayer * kActorListEntrySize + kActorListHead);
   }
 
   // The item in Link's hand; none without one.
   static uint8_t itemInHand(void *play) {
     const uintptr_t player = playerOf(play);
-    return player != 0 ? guest::read<uint8_t>(player + kPlayerHeldItemId) : static_cast<uint8_t>(kItemNone);
+    return player != 0 ? guest::read<uint8_t>(player + kPlayerHeldItemId)
+                       : static_cast<uint8_t>(kItemNone);
   }
 
   // Whether Link's hands are empty and done putting an item away.
   static bool handsEmpty(void *play) {
     const uintptr_t player = playerOf(play);
-    return player == 0 || (guest::read<uint8_t>(player + kPlayerHeldItemId) == kItemNone &&
-                           guest::read<int8_t>(player + kPlayerItemAction) == kPlayerItemActionNone);
+    return player == 0 ||
+           (guest::read<uint8_t>(player + kPlayerHeldItemId) == kItemNone &&
+            guest::read<int8_t>(player + kPlayerItemAction) == kPlayerItemActionNone);
   }
 
   // Whether `item` on this lane takes the item in Link's hand off its last button.
@@ -240,7 +254,8 @@ private:
     if (inHand == kItemNone || inHand == item) {
       return false;
     }
-    const auto *items = reinterpret_cast<const volatile uint8_t *>(kSaveContext + kSaveEquips + kEquipsItems);
+    const auto *items =
+        reinterpret_cast<const volatile uint8_t *>(kSaveContext + kSaveEquips + kEquipsItems);
     bool here = false;
     bool elsewhere = false;
     for (uint32_t button = 0; button < kEquipsSlots - kEquipsItems; ++button) {

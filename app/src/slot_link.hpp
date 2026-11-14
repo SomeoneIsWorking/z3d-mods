@@ -1,6 +1,7 @@
 // The item slots' block the running game's patch keeps (tools/z3dmods/slot_link.py, "link" in
 // z3d-options.json): after every frame the pad's held slots go in, and the pad table the game
-// wants and what each slot holds come out.
+// wants and what each slot holds come out. A block whose patch is out or not running (a title
+// screen) has no slots and the pad by name.
 #pragma once
 
 #include "pad_input.hpp"
@@ -16,12 +17,14 @@ class Emulator;
 
 class SlotLink {
 public:
-  // What a slot holds: an item's id, or a song's number; and the index in the game's button
-  // arrays of the item button the item is on now, 0 for none.
+  // What a slot holds: an item's id, or a song's number; the index in the game's button arrays
+  // of the item button the item is on now, 0 for none; and, for a slot that plays only when
+  // held, how far it has been held, 0 to 1.
   struct Slot {
     std::optional<uint8_t> item;
     std::optional<uint8_t> song;
     uint8_t lane = 0;
+    float charge = 0.0F;
   };
 
   // Without "link" in `manifest` the game has no slots and its pad stays by name.
@@ -48,6 +51,8 @@ private:
     uint32_t items = 0;
     uint32_t songs = 0;
     uint32_t lanes = 0;
+    uint32_t beat = 0;
+    uint32_t charge = 0;
   };
 
   void update();
@@ -57,6 +62,9 @@ private:
   std::optional<Layout> layout_;
   std::array<Slot, kSlotCount> slots_{};
   PadMode mode_ = PadMode::ByName;
+  // The block's beat as last read, and the frame it last moved in; none before it ever has.
+  uint8_t beat_ = 0;
+  std::optional<uint64_t> alive_;
 };
 
 } // namespace z3d::app

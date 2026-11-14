@@ -177,8 +177,10 @@ the generated `options.hpp` in the feature; the menu, the manifest and the store
   still needs a reboot.
 - In the window: F5 reads the patch again, F6 takes it out or puts it back, F7 turns the textures
   off or on. Run steps: `patch:<on|off>`, `textures:<on|off>`.
-- A patch that keeps state in the game's own data is swapped as it stands: with the patch out
-  the item slots' block is dead, and the HUD draws what it last read.
+- A patch that keeps state in the game's own data is swapped as it stands. The item slots'
+  block counts the patch's updates (`beat`); one that has not moved for 30 frames is dead to
+  `SlotLink`: no slots on the HUD and the pad by name (`ctl-hold3`: the ocarina leaves the
+  D-pad's ring with `patch:off` and is back with `patch:on`).
 - Not swapped: the base mod (`code.bin`, `exheader.bin`), `romfs/` and its layers, which the game
   reads as it loads.
 
@@ -259,7 +261,8 @@ The buttons are the same in both games, top right: the pad's diamond, RB's ring 
 the D-pad's cross. A shows the game's own word for its action under it (`label`, the action's
 number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's patch hides the
 game's own A button, `patch/mm3d/base_hud.cpp`), X the sword, and Y, B, RB and the cross's four
-rings their slots' items from `SlotLink`, a note for a slot with a song. While the chord is held
+rings their slots' items from `SlotLink`, a note for a slot with a song, and a gold arc over
+the rim of a slot that plays only once held (`charge`). While the chord is held
 the diamond shows slots 8 to 11. Each ring's prompt is what `PadInput::slotPrompt` or
 `verbPrompt` says presses it, drawn by `prompt_art`: the pad's glyph, or with the keyboard last
 used the key's cap (the mouse's button for the sword). While a screen assigns slots (`PadMode::
