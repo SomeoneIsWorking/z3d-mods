@@ -11,7 +11,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 - Windowed (`z3dmods play [game]`): an SDL3 window on the player's session, sound, keyboard,
   gamepads and the mouse as the touch screen. Without a game it opens the title picker: each
   game's icon and title read from the player's own dump (its SMDH), chosen with left/right and A
-  or Start on the pad or keyboard, or a click; X opens the selected game's options. Escape or the gamepad's guide button in a game shuts
+  or Start on the pad or keyboard, or a click; X opens the selected game's options. F10 or the gamepad's guide button in a game shuts
   it down and returns to the picker; closing the window quits.
 - `--hidden` (the tools): the window is never mapped, there is no sound and no pacing, and custom
   textures load before the frame that needs them (asynchronous loading falls behind an unpaced run); the game
@@ -56,7 +56,7 @@ printed lines it reads (`src/tool_process`); a tool's refusal is its lines that 
   events) asks for the dump folder, then the mods folder. Its button opens `FolderBrowser`
   (`src/folder_browser`): the folders of one place as rows with its files listed under them; Up
   and Down pick a row, A opens it, B goes to the parent, X or Start takes the folder shown, a
-  click opens a row, Escape gives up. A name too long for its line loses its middle. A folder
+  click opens a row, F10 or Guide gives up. A name too long for its line loses its middle. A folder
   the tools refuse (no dump of either game in it) stays on the screen with the reason.
 - The options' last row, "Games and mods folders", runs `FolderSetup` again: B or Escape on a
   question keeps that folder, and the picker reopens on the library the tools wrote.

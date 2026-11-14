@@ -1,5 +1,5 @@
 // The options screen of one game, drawn with the title picker's renderer: up and down pick an
-// option, left, right or A change it, B, X or Escape go back. Changes are saved as they are made.
+// option, left, right or A change it, B, X, F10 or Guide go back. Changes are saved as they are made.
 // With `folders`, a last row leaves to change the games and mods folders (folder_setup.hpp).
 #pragma once
 

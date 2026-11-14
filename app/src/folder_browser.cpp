@@ -20,7 +20,7 @@ constexpr const char *kParent = "..";
 // Stands for what is left out of a path or a name too long for its line.
 constexpr std::string_view kElided = "...";
 constexpr const char *kUnreadable = "This folder cannot be read";
-constexpr const char *kHint = "A  Open    B  Up    X  Use this folder    Esc  Cancel";
+constexpr const char *kHint = "A  Open    B  Up    X  Use this folder    F10  Cancel";
 // Text heights as shares of the window's height, capped by its width.
 constexpr float kHeadingShare = 1.0F / 16.0F;
 constexpr float kRowShare = 1.0F / 26.0F;

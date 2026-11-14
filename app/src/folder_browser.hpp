@@ -1,6 +1,6 @@
 // The in-window folder chooser: the folders of one place as rows, its files listed under them,
 // walked with the pad or the mouse. Up and Down pick a row, A opens it, B goes to the parent,
-// X or Start takes the folder shown, Escape gives up.
+// X or Start takes the folder shown, F10 or Guide gives up.
 #pragma once
 
 #include "menu_canvas.hpp"

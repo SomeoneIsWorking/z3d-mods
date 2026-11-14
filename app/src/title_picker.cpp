@@ -27,7 +27,7 @@ constexpr Rgb kText = kMenuText;
 constexpr Rgb kDim = kMenuDim;
 
 constexpr const char *kHeading = "z3d";
-constexpr const char *kHint = "A  Play    X  Options    Esc or Guide  Back";
+constexpr const char *kHint = "A  Play    X  Options    F10 or Guide  Back";
 constexpr const char *kSetUpHint = "A  Set up from your game    X  Options";
 constexpr const char *kUpdateHint = "A  Set up again for this version    X  Options";
 constexpr const char *kSetUpHeading = "Setting up ";
