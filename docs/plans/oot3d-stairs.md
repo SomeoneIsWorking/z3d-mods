@@ -132,9 +132,6 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
 - Not seen: an adult, Epona or a rolling bomb on the steps, enemies, arrows against a riser.
 
 ## Still open
-- Our own stair texture: the steps use the game's (or the pack's) painted texture. The eight
-  stair textures differ by place (wood, dark rock, sandstone, moss); one drawn texture would
-  replace all of them, so this waits for the player's word.
 
 ## Majora's Mask 3D (2026-11-14)
 Same owner and switch as OoT3D: `"stairs": "kaidan|step"` in `sets/mm3d.json` is the pattern a
