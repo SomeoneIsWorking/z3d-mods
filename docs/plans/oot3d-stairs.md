@@ -78,13 +78,30 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
   leans once its corners are integers, so the test is the game's, not "upright": a leaning one
   left unflagged stopped Link on Kakariko's flight to the mountain gate (`oot-st16-spot01`).
 - The step faces of one plane are joined back into whole treads and risers, and a curb is not
-  cut at the steps beside it. The game keeps a list node for every triangle in every grid cell
-  it touches and does not check the list's end (decomp/oot3d `docs/notes/scene_collision.md`):
-  uncut, Kakariko needed 54760 nodes of 36097 and the game stopped on the second visit
-  (`oot-bg1`, `oot-as10`). Joined it needs 28584 of 37914; Ganon's Castle 17944 of 23197; every
-  other scene of either game is under half. `install` does not compute this: a new scene or a
-  finer texture has to be read in game (`peek:play+0xA98,0x50` in OoT3D, `play+0xAB0` in MM3D;
-  the u16 at +0x44 is the list's length, at +0x46 the nodes used).
+  cut at the steps beside it: fewer triangles for the game to sort into its grid.
+- `install` computes what each stepped scene takes of the game's room for collision and
+  refuses a scene over it (`tools/z3dmods/bgcheck.py`; the rules are `BgCheck_Allocate`'s,
+  read from the game's own tables: decomp/oot3d `docs/notes/scene_collision.md`, decomp/mm3d
+  `docs/formats/scene_files.md`). The game keeps a list node for every triangle in every grid
+  cell it reaches and never checks the list's end.
+  - OoT3D: a scene's list has room for 89000 nodes or more, so the limits are the 16 bit node
+    count (65535) and the triangle a node can name (32768). Kakariko uses 28515 nodes (43%)
+    and 5634 triangles, Ganon's Castle 17917 (27%), every other stepped scene under 23%.
+  - MM3D: the list is what 0x40000 bytes leave, about 57000 nodes. Woodfall Temple uses
+    20305 (36%), every other stepped scene under 29%.
+  - The count is the triangle and cell pairs that touch; the game's test lets 0.2% more
+    through (28584 read in Kakariko, 17944 in Ganon's Castle). The refusal goes by every pair
+    the game tests, which its count cannot pass (32611 in Kakariko).
+  - The list length the game shows (`peek:play+0xA98,0x50` in OoT3D, `play+0xAB0` in MM3D; the
+    u16 at +0x44, the nodes used at +0x46) is the real length cut to 16 bits in OoT3D:
+    Kakariko's 37914 stands for 103450. A Kakariko of 9333 triangles used 42355 nodes, past
+    the 36989 it showed, and Link stood on its last triangles on three visits (`oot-n1`). The
+    stop on a second visit once put down to this list was the autosave's leak
+    ([issues/oot3d-autosave-stairs-stop.md](../issues/oot3d-autosave-stairs-stop.md)).
+- A stepped room costs memory: a room takes one block of three times its file's size from the
+  game's system arena. Kakariko's stepped room takes 0x432E70 bytes where the ROM's takes
+  0x2A8F70, and leaves 0x415270 free of the arena's 0x18CBB40 as a child. `install` does not
+  check this.
 - A ramp is stairs only when its painted steps rise 3 to 20 units each. The Astral
   Observatory's entrance has a plank ramp with a `step` texture that paints a 59 unit "step"
   and six small ramps whose rows run up the slope; stepped, the first stopped Link
@@ -136,7 +153,7 @@ File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm
   OoT3D. The first version (c3b4fef) wrote OoT3D's triangle layout into MM3D's scenes, which
   dropped Link through the Observatory's stairs (`mm-st5-1`); the layout is per game now
   (decomp/mm3d `docs/formats/scene_files.md`).
-- Measured 2026-11-14 (`mm-st15-<scene>`, drops and a walk up each flight; node use under 37%):
+- Measured 2026-11-14 (`mm-st15-<scene>`, drops and a walk up each flight):
   Stock Pot Inn (steps 13 apart, walked to the upper floor), Milk Bar, Music Box House, Ranch
   house (both flights), Astral Observatory rooms 0 and 1 (32 heights 7.5 apart, four flights
   walked), Woodfall Temple (four flights), Ikana Graveyard's Dampe passage (30 steps of 13.3),

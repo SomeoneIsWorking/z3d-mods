@@ -9,7 +9,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bps, ctr, hud, ips, lzs, options, patch_build, source_check, stairs, zsi
+from z3dmods import azahar_config, bgcheck, bps, ctr, hud, ips, lzs, options, patch_build, source_check, stairs, symbols, zsi
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -103,10 +103,8 @@ def _apply(patch_name: str, patch: bytes, code: bytes) -> bytes:
     return bps.apply(patch, code) if patch_name.endswith(".bps") else ips.apply(patch, code)
 
 
-def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_exheader: bytes,
-           mods: Path, layers: set[str]) -> None:
-    """Bake the base patch into code.bin and put our patch on top as code.ips."""
-    code = _apply(game.base["code_patch"], base_patch, vanilla)
+def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: Path, layers: set[str]) -> None:
+    """Write the base mod's code as code.bin and put our patch on top as code.ips."""
     exheader = ctr.Exheader.parse(base_exheader)
     data_end = exheader.data.address + exheader.data.pages * PAGE
     payload = data_end + _page(exheader.bss_size)
@@ -123,10 +121,11 @@ def _layer(cfg: Config, game: GameSet, vanilla: bytes, base_patch: bytes, base_e
     (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start, layers))
 
 
-def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str,
-                   pack: TexturePack | None) -> dict[str, bytes]:
+def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: TexturePack | None,
+                   rules: bgcheck.Rules) -> tuple[dict[str, bytes], dict[str, bgcheck.Use]]:
     """Every room with stair ramps, stepped, and its scene with the collision on those ramps
-    stepped; a file the base mod replaces is stepped from its copy."""
+    stepped; a file the base mod replaces is stepped from its copy. With them, what each
+    stepped scene's collision takes of the game's room for it; a scene over that is refused."""
     files = rom.romfs()
 
     def read(path: str) -> bytes:
@@ -143,11 +142,19 @@ def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str,
         if stepped:
             out[path] = data
             drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), named, pack))
+    ids = rules.scene_ids()
+    uses = {}
     for scene, ramps in drawn.items():
         data = stairs.collision(zsi.Scene.parse(read(scene)), ramps)
-        if data is not None:
-            out[scene] = data
-    return out
+        if data is None:
+            continue
+        if scene not in ids:
+            raise RuntimeError(f"{scene}: not in the game's scene table")
+        uses[scene] = rules.use(zsi.Scene.parse(data), ids[scene])
+        if (over := uses[scene].over()) is not None:
+            raise RuntimeError(f"{scene}: stepped, it has {over}")
+        out[scene] = data
+    return out, uses
 
 
 def install(cfg: Config, game: GameSet) -> Path:
@@ -166,7 +173,12 @@ def install(cfg: Config, game: GameSet) -> Path:
     if game.stairs and not game.patch:
         raise RuntimeError(f"{game.title_id}: stairs want the patch whose options.toml switches them")
     stairs_layer = options.layer(cfg.repo, game.patch, STAIRS_OPTION) if game.stairs else None
-    rooms = _stepped_rooms(rom, base_romfs, game.stairs, pack) if game.stairs else {}
+    code = _apply(game.base["code_patch"], code_patch.read_bytes(), vanilla) if game.patch else vanilla
+    rooms, uses = (_stepped_rooms(rom, base_romfs, game.stairs, pack,
+                                  bgcheck.Rules(game.patch, symbols.load(cfg.repo, game.patch), code))
+                   if game.stairs else ({}, {}))
+    for scene, use in uses.items():
+        print(f"{scene}: {use}")
     menus = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
                       cfg.glyph_set())
              if game.hud else {})
@@ -175,7 +187,7 @@ def install(cfg: Config, game: GameSet) -> Path:
     _remove_recorded(mods)
     mods.mkdir(parents=True, exist_ok=True)
     if game.patch:
-        _layer(cfg, game, vanilla, code_patch.read_bytes(), (root / game.base["exheader"]).read_bytes(),
+        _layer(cfg, game, code, (root / game.base["exheader"]).read_bytes(),
                mods, {stairs_layer} if stairs_layer else set())
     else:
         shutil.copyfile(code_patch, mods / Path(game.base["code_patch"]).name)

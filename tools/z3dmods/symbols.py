@@ -40,7 +40,7 @@ SOURCES = {
     "oot3d": Source("decomp/oot3d", ("data/oot3d.ld",),
                     ("include/z3D.hpp", "include/z3Dactor.hpp", "include/z3Dcamera.hpp", "include/z3Dsave.hpp",
                      "include/variables.hpp", "include/regs.hpp", "include/z3Dcutscene.hpp",
-                     "include/z3Dmessage.hpp", "include/z3Ditem.hpp")),
+                     "include/z3Dmessage.hpp", "include/z3Ditem.hpp", "include/z3Dbgcheck.hpp")),
     "mm3d": Source("decomp/mm3d", ("symbols/functions.csv",), ("include/z3D.h",)),
 }
 

@@ -99,6 +99,8 @@ def _model_pointers(data: bytes, header: int) -> list[int]:
 
 
 COLLISION = 0x03
+# Its second byte is the scene's camera type (R_SCENE_CAM_TYPE).
+MISC_SETTINGS = 0x19
 # Collision header fields (decomp/oot3d docs/notes/scene_collision.md).
 # The vertex count, then the triangle count, by the file's magic: MM3D's header has two more
 # bytes before its bounds.
@@ -155,18 +157,23 @@ class Scene:
     header: int
     vertices: list[tuple[int, int, int]]
     polygons: list[Polygon]
+    # The camera type set by the time the game reads the collision command.
+    camera_type_at_collision: int = 0
 
     @classmethod
     def parse(cls, data: bytes) -> Scene:
         if data[0:4] not in MAGICS:
             raise ValueError("not a scene file")
         offset = BASE
+        camera_type = 0
         while True:
-            code, word = struct.unpack_from("<BxxxI", data, offset)
+            code, value, word = struct.unpack_from("<BBxxI", data, offset)
             if code == COLLISION:
                 break
             if code == END:
                 raise ValueError("scene without collision")
+            if code == MISC_SETTINGS:
+                camera_type = value
             offset += 8
         header = BASE + word
         vertex_count, polygon_count = struct.unpack_from("<HH", data, header + COLLISION_COUNTS[data[0:4]])
@@ -177,7 +184,13 @@ class Scene:
             surface, a, b, c, *words, distance = struct.unpack_from("<4H4hf", data, polygons_at + i * POLYGON_SIZE)
             word = words.pop(0 if POLYGON_WORD_FIRST[data[0:4]] else 3)
             polygons.append(Polygon(surface, (a, b, c), tuple(words), distance, word))
-        return cls(data, header, vertices, polygons)
+        return cls(data, header, vertices, polygons, camera_type)
+
+    @property
+    def bounds(self) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+        """The collision's lowest and highest corner, the six words before its counts."""
+        values = struct.unpack_from("<6h", self.data, self.header + COLLISION_COUNTS[self.data[0:4]] - 12)
+        return values[:3], values[3:]
 
     def with_collision(self, vertices: list[tuple[int, int, int]], polygons: list[Polygon]) -> bytes:
         """The scene with new vertex and triangle lists, written after everything else."""

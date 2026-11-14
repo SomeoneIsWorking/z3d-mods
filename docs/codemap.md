@@ -15,6 +15,7 @@
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).
 - `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies and draws port-assets' pad glyphs over the 3DS button prompts (edit tables in `sets/hud/`).
 - `tools/z3dmods/stairs.py`: folds stair-textured ramps in a game's rooms into risers and treads, and the scene's collision triangles on them the same way.
+- `tools/z3dmods/bgcheck.py`: the room a scene's collision has in the game: the grid and memory `BgCheck_Allocate` gives a scene (its tables read from the code at the decomp's addresses), the list nodes the triangles take, and the limits `install` refuses a stepped scene over.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
 - `tools/z3dmods/bps.py`: BPS info and apply, with source and target CRC checks.
 - `tools/z3dmods/install.py`: installs a `sets/<game>.json` set into Azahar's `load/`, with an install record.
