@@ -203,28 +203,44 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   to the game's own font: capitals as tall and on the same row, tracked until a few lines of
   prose are as long (OoT3D: Arimo at 13.08 px an em; MM3D: Jost at 14.29).
 - Prompt words: the table's `edits`, regular expressions over a message's markup, English
-  only. OoT3D, 58 messages: the sword's B is X except in the ocarina's messages; the item
+  only. OoT3D, 71 messages: the sword's B is X except in the ocarina's messages; the item
   buttons are in the slots' order (Y, B, RB, D-pad); "Tap the Items icon on the lower screen"
-  is "Press Menu" (the START icon, drawn as Menu); the map's "Tap ... on the lower screen" is
-  "Press View"; the Know-It-All Brother's item lesson (0x1036) is written again for slots and
-  names the LB chord. MM3D, 78 messages: the sword's and the forms' B is X except where the
-  pad is by name (the ocarina, a cancel, a minigame's Quit); "Set it to X, Y, I or II on the
-  Select Item Screen" is "Set it to Y, B, RB or D-pad on the Items screen".
-- Seen (harness, with the pack): OoT3D's Know-It-All Brother at 1x and 4x (`txt-oot-r1`,
-  `txt-oot-r4`): "Y, B, RB, and each direction of D-pad are your item slots", "first press
-  Menu to open the Items subscreen", "Hold LB, and A, B, X, and Y are four more slots", in
-  Arimo with clean edges at 4x. MM3D's Hero's Bow message on the South Clock Town poster
-  (`txt-mm-r1`, `txt-mm-r4`): "Set it to Y, B, RB or D-pad on the Items screen" and "You can
-  also use LT to automatically aim at a target", in Jost.
+  is "Press Menu" (the START icon, drawn as Menu); the Know-It-All Brother's item lesson
+  (0x1036) is written again for slots and names the LB chord. MM3D, 88 messages: the sword's
+  and the forms' B is X except where the pad is by name (the ocarina, a cancel, a minigame's
+  Quit); "Set it to X, Y, I or II on the Select Item Screen" is "Set it to Y, B, RB or D-pad on
+  the Items screen".
+- The touch icons name the input that does it in our layout, seen in the game first:
+  - OoT3D: Gear is Menu, then RT (the item screen's R); the map is View (Select) in the
+    overworld, and in a dungeon Menu, then LT, with the Circle Pad for the floor; the
+    ocarina's icon is D-pad Down (a new file's ocarina slot); Navi and View are R3. The sheet's
+    Ocarina, Navi, View and Map cells are drawn as those (`sets/hud/the-one-screen-891b60e.json`).
+    0x1039: the minimap is at the bottom right and the D-pad box is gone (The One Screen
+    strips the D-pad in play). Saving is "hold LB and press Menu". The Know-It-All Brother's
+    menu answers "Your item slots", "The Action Icon", "The top-right icon".
+  - MM3D: the Map Screen is View (icon 9, drawn as View); Masks is Menu, then RT; Gear is LB
+    and Menu; the map zooms and pans by mouse, at the right of the split layout; the ocarina
+    and the Pictograph Box are used from a slot; the notebook's screens are "left" and "right".
+- Seen, every reworded message drawn through a sign or statue given its number (decomp
+  `docs/message.md`): OoT3D `txt-oot-w1`, `txt-oot-w2`; MM3D `txt-mm-p7`, `txt-mm-w2`,
+  `txt-mm-w3`, `txt-mm-w5`. Earlier: the Know-It-All Brother at 1x and 4x (`txt-oot-r1`,
+  `txt-oot-r4`) and the Hero's Bow message (`txt-mm-r1`, `txt-mm-r4`), in Arimo and Jost.
+- Left as they are, after a sweep of every English message for touch, tap, lower and upper
+  screen, stylus and Touch Screen: physical touches (enemies, Cuccos, the Triforce, "touched
+  the bottom"), "rapidly tap A", "tap X", OoT3D's 0x0966 motion-control option text, MM3D's
+  "Tap to enter a name" (0x575B, the file select's name entry, not seen), and MM3D's "Press
+  START" for the Bombers' Notebook (0x0050, 0x0737, 0x1796, 0x033F): plain Start reaches
+  nothing in our layout.
+- Layout gaps the text exposed: the keyboard has no R in the item screen (OoT3D's Gear) and no
+  ZR outside play (the song list); MM3D's notebook has no input; OoT3D's View does nothing in
+  a dungeon (The One Screen's map touch); "LB" in the chord's text is a word and does not
+  follow the device; MM3D's map zoom has no pad input.
 - Not done: the prompts do not follow the last device. The prompt sheet is one texture made
   at install; following the device needs the core to swap that one replacement while the game
   runs (a second image of the sheet with key caps, and a setting the app flips), which is not
-  built. French and Spanish are not reworded. OoT3D's Gear, Navi, View and Ocarina touch icons
-  ("Tap ... to open the Gear subscreen", 0x1039's map display on the +Control Pad) still name
-  the touch screen: which input opens each in our layout has to be seen first. MM3D's
-  remaining "Tap ... on the lower screen" messages (six) likewise. The fonts' characters the
-  outline font lacks keep the game's bitmap, enlarged (MM3D's Greek and Cyrillic sheets, the
-  US text uses none). sys8.qbf is not redrawn.
+  built. French and Spanish are not reworded. The fonts' characters the outline font lacks
+  keep the game's bitmap, enlarged (MM3D's Greek and Cyrillic sheets, the US text uses none).
+  sys8.qbf is not redrawn.
 
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.

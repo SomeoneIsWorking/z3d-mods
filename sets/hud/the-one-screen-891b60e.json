@@ -1,5 +1,5 @@
 {
-  "about": "What The One Screen 891b60e changed in each vanilla menu texture, in vanilla pixels [x0, y0, x1, y1]. keep: re-lettered in its own font, the pack's vanilla stays. copy: vanilla art moved from `from`. clear: erased. label: new lettering (Navi too, which the pack's copy lacks). relabel: a letter on vanilla art swapped. shell: the A button circle without its letter. dpad: an outlined cross. glyph: a 3DS button prompt drawn as port-assets' Xbox pad glyph for the pad button the app binds there by name; the text sheet's item-button cells, X, Y, I and II, name where our item slots start: Y, B, RB and the D-pad (dimmed: the prompt's unavailable state).",
+  "about": "What The One Screen 891b60e changed in each vanilla menu texture, in vanilla pixels [x0, y0, x1, y1]. keep: re-lettered in its own font, the pack's vanilla stays. copy: vanilla art moved from `from`. clear: erased. label: new lettering (Navi too, which the pack's copy lacks). relabel: a letter on vanilla art swapped. shell: the A button circle without its letter. dpad: an outlined cross. glyph: a 3DS button prompt drawn as port-assets' Xbox pad glyph for the pad button the app binds there by name; the text sheet's item-button cells, X, Y, I and II, name where our item slots start: Y, B, RB and the D-pad; the touch icons the text names are the input that does it in our layout: the Ocarina's is D-pad Down (a new file's ocarina slot), Navi's and View's R3 (first person), the Map's View (dimmed: the prompt's unavailable state).",
   "menu/01_US_ENGLISH/hud_all00.ctxb": [
     {"keep": [0, 92, 194, 256]},
     {"label": "Navi", "box": [77, 112, 114, 128], "style": "white"},
@@ -73,7 +73,15 @@
     {"glyph": "face_b", "box": [64, 48, 80, 64]},
     {"glyph": "ls_horizontal", "box": [0, 64, 16, 80]},
     {"glyph": "dpad_vertical", "box": [16, 64, 32, 80]},
-    {"glyph": "dpad_horizontal", "box": [32, 64, 48, 80]}
+    {"glyph": "dpad_horizontal", "box": [32, 64, 48, 80]},
+    {"glyph": "dpad_down", "box": [128, 48, 144, 64]},
+    {"glyph": "dpad_down", "box": [144, 48, 160, 64], "dimmed": true},
+    {"glyph": "rs", "box": [160, 48, 176, 64]},
+    {"glyph": "rs", "box": [176, 48, 192, 64], "dimmed": true},
+    {"glyph": "rs", "box": [128, 64, 144, 80]},
+    {"glyph": "rs", "box": [144, 64, 160, 80], "dimmed": true},
+    {"glyph": "back", "box": [224, 64, 240, 80]},
+    {"glyph": "back", "box": [240, 64, 256, 80], "dimmed": true}
   ],
   "menu/01_US_ENGLISH/menu_okarina_parts00.ctxb": [
     {"relabel": "LT", "box": [208, 160, 224, 175]},

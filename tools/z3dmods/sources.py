@@ -53,7 +53,7 @@ SOURCES = (
            _home("setup-ui")),
     Source("RmlUi", "https://github.com/mikke89/RmlUi", "ba95ffe8bfb6370efb2cdcca927eaad4710c5413", _home("RmlUi")),
     Source("port-assets", "https://github.com/SomeoneIsWorking/port-assets",
-           "81f39c900cba9e9faac8707e5900dc71caa0f553", lambda cfg: cfg.port_assets),
+           "485524f30ffc7288c4bb716562f898bd07e524f6", lambda cfg: cfg.port_assets),
 )
 
 
