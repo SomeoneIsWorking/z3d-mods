@@ -87,10 +87,22 @@ def core(cfg: Config, builder: Builder = HOST) -> Path:
     return prefix
 
 
+def _configured_prefix(tree: Path) -> str | None:
+    """The core prefix the app tree was configured with, if it was."""
+    cache = tree / "CMakeCache.txt"
+    if not (tree / "build.ninja").exists() or not cache.exists():
+        return None
+    for line in cache.read_text().splitlines():
+        if line.startswith("CMAKE_PREFIX_PATH:"):
+            return line.split("=", 1)[1]
+    return None
+
+
 def _build(cfg: Config, builder: Builder) -> Path:
     tree = builder.tree(cfg)
-    if not (tree / "build.ninja").exists():
-        prefix = core(cfg, builder)
+    prefix = core(cfg, builder)
+    # A tree made for another core revision is configured again against this one.
+    if _configured_prefix(tree) != str(prefix):
         tree.mkdir(parents=True, exist_ok=True)
         builder.run(cfg, ["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
                           "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={prefix}",
