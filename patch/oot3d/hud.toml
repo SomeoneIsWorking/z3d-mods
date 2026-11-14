@@ -1,0 +1,117 @@
+# Our play HUD (app/src/hud.hpp): each element's place on the top screen's 400x240 pixels and the
+# guest memory it reads (decomp/oot3d docs/hud.md names it). `at` is a sum: a global of the
+# decomp, `Struct.field` offsets, defines and numbers; `through` reads it off a guest pointer.
+# The base mod's own HUD is switched off in hooks.s (base_hud). The buttons sit top right: the
+# game's minimap keeps the bottom right.
+
+# Play: a loaded file, the game's HUD fully shown, no menu up.
+show = [
+  { at = ["gSaveContext", "SaveContext.gameMode"], bytes = 4, equals = 0 },
+  { at = ["gSaveContext", "SaveContext.hudVisibilityMode"], bytes = 2, equals = 50 },
+  { at = ["gHud", "Hud.state"], bytes = 4, equals = 2 },
+]
+
+# An item's frame in the sheet is its id.
+[icons]
+sheet = "menu/01_US_ENGLISH/icon_item_menu00.ctxb"
+frame = [42, 42]
+columns = 12
+icons = 144
+
+[[element]]
+kind = "hearts"
+rect = [8, 8, 11, 11]
+unit = 0x10
+columns = 10
+value = { at = ["gSaveContext", "SaveContext.health"], bytes = 2 }
+capacity = { at = ["gSaveContext", "SaveContext.healthCapacity"], bytes = 2 }
+
+[[element]]
+kind = "meter"
+rect = [8, 32, 63, 7]
+value = { at = ["gSaveContext", "SaveContext.magic"], bytes = 1 }
+capacity = { at = ["gSaveContext", "SaveContext.magicMeterSize"], bytes = 2 }
+longer = { at = ["gSaveContext", "SaveContext.doubleMagic"], bytes = 1 }
+
+[[element]]
+kind = "counter"
+icon = "rupee"
+rect = [8, 198, 40, 13]
+value = { at = ["gSaveContext", "SaveContext.rupees"], bytes = 2 }
+
+# Small keys: the dungeons' scenes, where the dungeon has a count.
+[[element]]
+kind = "counter"
+icon = "key"
+rect = [8, 180, 40, 13]
+value = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.dungeonKeys"], bytes = 1 }
+index = { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2 }
+when = [
+  { at = ["PlayState.sceneNum"], through = "gPlayState", bytes = 2, least = 3, most = 16 },
+  { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2, most = 18 },
+]
+
+# The action's words follow DO_ACTION_*; -1 and DO_ACTION_NONE have none.
+[[element]]
+kind = "button"
+frame = "ring"
+button = "A"
+rect = [318, 24, 28, 28]
+label = { at = ["gTopHud", "TopHud.doAction"], bytes = 4 }
+labels = ["Attack", "Check", "Enter", "Return", "Open", "Jump", "Decide", "Dive", "Faster", "Throw", "",
+          "Climb", "Drop", "Down", "Save", "Speak", "Next", "Grab", "Stop", "Put Away", "Reel"]
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "B"
+rect = [292, 12, 24, 24]
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 0], bytes = 1 }
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 0], bytes = 1 }
+disabled = 0xFF
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "Y"
+item_button = "Y"
+rect = [372, 10, 22, 22]
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 1], bytes = 1 }
+ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
+ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 1], bytes = 1 }
+disabled = 0xFF
+
+[[element]]
+kind = "button"
+frame = "ring"
+button = "X"
+item_button = "X"
+rect = [348, 10, 22, 22]
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 2], bytes = 1 }
+ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
+ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 2], bytes = 1 }
+disabled = 0xFF
+
+[[element]]
+kind = "button"
+frame = "slot"
+item_button = "I"
+rect = [348, 36, 22, 22]
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 3], bytes = 1 }
+ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
+ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 3], bytes = 1 }
+disabled = 0xFF
+
+[[element]]
+kind = "button"
+frame = "slot"
+item_button = "II"
+rect = [372, 36, 22, 22]
+value = { at = ["gSaveContext", "SaveContext.equips", "ItemEquips.buttonItems", 4], bytes = 1 }
+ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
+ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
+status = { at = ["gSaveContext", "SaveContext.buttonStatus", 4], bytes = 1 }
+disabled = 0xFF

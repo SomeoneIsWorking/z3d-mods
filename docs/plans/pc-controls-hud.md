@@ -96,8 +96,8 @@ OoT3D; the chord page; key caps; the clock and minimap; hiding the games' own.
 ### Open
 - Which guest state each element reads (button items, counts, the minimap's ownership) and the
   item icons' files: per game, into the decomps first.
-- OoT3D runs The One Screen, whose HUD is drawn by the game on the top screen: ours replaces it
-  only once a patch can switch its elements off.
+- OoT3D's words for the A button are English in `hud.toml`; the game's other languages need
+  their own lists, or the words cut from the game's `hud_all00.ctxb`.
 
 ## Outline fonts
 User: "And SVG fonts" (an outline font, crisp at any resolution). Every piece of text the HUD
@@ -116,14 +116,15 @@ draw in the app only what that cannot reach.
   turns the aim. Both games already aim with the gyroscope, so the app feeds mouse motion to the
   3DS gyro input first; patch code only if that cannot give 1:1 aim. Outside aiming, the mouse may
   drive the free camera.
-- Built so far: the pad owner feeds the core a gyroscope (`PadState::gyro`, the `gyro:` step),
-  and the core's HID reads it about 100 times a second with the value set (`mm-gyro4`). The mouse
-  is not wired to it yet, because the game does not answer: in MM3D's first-person view, with
-  Motion Controls on (`mm-opt3`), 40 degrees a second for half a second on each axis and
-  direction leaves the view where it was (`mm-gyro3`). OoT3D's first-person view was not reached
-  (`mm-ootgyro1`: D-pad left is the overhead view). Next: decompile what the first-person camera
-  reads of the gyroscope in each game (OoT3D has `CalculateGyroscopeAxisStatus`) and find what
-  it waits for: a steady rate may be taken for drift, or the accelerometer may have to agree.
+- Built so far: the pad owner feeds the core a gyroscope (`PadState::gyro`, the `gyro:` step).
+  The mouse is not wired to it yet.
+- What the games read (decomp `docs/motion.md`, both games, the same code): the first-person look
+  adds the SDK gyroscope reader's direction (the rate integrated) to the look base, times 2.1 in
+  yaw and 1.46 in pitch. A rate does turn the view (`gyro-mm2`, `gyro-oot1`); the earlier "no
+  answer" was the harness: the core scales the rate by the host's frame time, and the hidden
+  harness runs unthrottled. For exact aim the reader's dead zone, zero drift and accelerometer
+  revise (reader +0x854 to +0x856) must be off and its bias zeroed, the yaw fed around world up,
+  and the core's frame-time scaling skipped for our device.
 
 ## Status
 - Chord + ABXY: bindings built, not yet seen in a run with a real pad.
@@ -136,9 +137,16 @@ draw in the app only what that cannot reach.
   ice and light arrows' and the powder keg's counts. The dimmed state is read but was seen in the
   game only once (decomp `docs/hud.md`). The game's own A ring and clock still draw: hiding the
   A button's widget is found, the clock alone is not, and no code patch has been built yet.
-- OoT3D: nothing drawn yet; its inventory is being written into `decomp/oot3d`.
+- HUD (OoT3D): drawn from state (decomp `docs/hud.md`, `patch/oot3d/hud.toml`): hearts, magic,
+  rupees, small keys in the dungeons, B, the A button with its action's word, and Y, X, I and II
+  with icons and counts; The One Screen's own HUD is switched off in the patch (`base_hud`), and
+  the game's minimap stays (`mm-oothud3`). Missing: the wallet's capacity, the carrots, the D-pad
+  cross and View; the bow's, bombchus' and beans' counts and the action words past "Check" follow
+  the N64's numbering and were not seen; an equipped item was only seen written into memory, not
+  equipped through the item screen.
 - Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
   command, not with real keys in a window.
-- Mouse aim: the gyroscope feed exists and the games do not answer it yet (below).
+- Mouse aim: the gyroscope feed exists and what the games read of it is known (above); the mouse
+  is not wired.
 - Outline fonts: the HUD's own lettering is port-assets' outline typeface at the window's size;
   the games' text is not started.

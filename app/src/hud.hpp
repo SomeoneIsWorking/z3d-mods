@@ -31,10 +31,19 @@ public:
   Hud &operator=(Hud &&) = delete;
 
 private:
-  // A little-endian unsigned value in guest memory; `bytes` 0 is no value.
+  // A little-endian unsigned value in guest memory; `bytes` 0 is no value. With `pointer`, the
+  // address is an offset from what that guest pointer holds.
   struct GuestValue {
     uint32_t address = 0;
     uint8_t bytes = 0;
+    uint32_t pointer = 0;
+  };
+
+  // Holds while the value reads `least` to `most`.
+  struct Condition {
+    GuestValue value;
+    uint32_t least = 0;
+    uint32_t most = 0;
   };
 
   enum class Kind : uint8_t { Hearts, Meter, Counter, Button };
@@ -44,18 +53,20 @@ private:
     Kind kind = Kind::Hearts;
     OverlayRect rect;
     GuestValue value;
+    // Drawn only while all of these hold.
+    std::vector<Condition> when;
     // Hearts: the health all hearts hold. Meter: what a full bar holds, unless `full` says.
     GuestValue capacity;
     // Hearts: the health in one heart, and hearts in a row. Meter: a full bar.
     uint32_t unit = 0;
     uint32_t columns = 0;
     uint32_t full = 0;
-    // Meter: drawn only while this reads nonzero (if set), and twice as long and as full while
-    // `longer` does.
-    GuestValue shown;
+    // Meter: twice as long while this reads nonzero, and `full` twice as much.
     GuestValue longer;
-    // Counter: the port-assets hud glyph before the number.
+    // Counter: the port-assets hud glyph before the number, and which of the game's array of
+    // values to read (if it is one).
     std::string icon;
+    GuestValue index;
     // Button: its frame (hud set), the 3DS button that presses it (if one does), the item
     // button it is (if it is one), and the item value that means empty.
     std::string frame;
@@ -68,9 +79,13 @@ private:
     std::vector<std::pair<uint32_t, uint32_t>> ammoIndex;
     GuestValue status;
     uint32_t disabled = 0;
+    // Button: the game's number of the action it does now, and the word for each.
+    GuestValue label;
+    std::vector<std::string> labels;
   };
 
   [[nodiscard]] std::optional<uint32_t> read(const GuestValue &value) const;
+  [[nodiscard]] bool hold(const std::vector<Condition> &conditions) const;
   void update();
   void draw(const Element &element);
   void quad(const HudSprite &sprite, const OverlayRect &at, float share = 1.0F, float opacity = 1.0F);
@@ -83,6 +98,8 @@ private:
   const ScreenOverlay &overlay_;
   std::optional<HudAtlas> atlas_;
   std::vector<Element> elements_;
+  // A game without an overlay table (screen_overlay.hpp) is in play while all of these hold.
+  std::vector<Condition> show_;
   // <icons>/<item id>.png: the game's or the pack's icon of each item.
   std::filesystem::path icons_;
   unsigned width_ = 0;

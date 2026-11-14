@@ -34,6 +34,8 @@ constexpr float kDigitShare = 0.8F;
 constexpr float kCounterGap = 0.25F;
 // A meter's art is this many times as long as it is tall (port-assets hud/bar).
 constexpr float kMeterAspect = 9.0F;
+// A button's action word against its size.
+constexpr float kLabelShare = 0.4F;
 
 uint32_t integer(const lucent::json::Value &object, std::string_view key, uint32_t otherwise) {
   const lucent::json::Value *value = object.find(key);
@@ -130,8 +132,26 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
     if (value == nullptr) {
       return GuestValue{};
     }
-    return GuestValue{integer(*value, "address", 0), static_cast<uint8_t>(integer(*value, "bytes", 0))};
+    return GuestValue{integer(*value, "address", 0), static_cast<uint8_t>(integer(*value, "bytes", 0)),
+                      integer(*value, "pointer", 0)};
   };
+  // { address, bytes, equals } or { address, bytes, least, most }.
+  const auto conditions = [&](const lucent::json::Value &object, std::string_view key) {
+    std::vector<Condition> found;
+    const lucent::json::Value *list = object.find(key);
+    if (list == nullptr || list->array() == nullptr) {
+      return found;
+    }
+    for (const lucent::json::Value &entry : *list->array()) {
+      const uint32_t least = integer(entry, "equals", integer(entry, "least", 0));
+      const uint32_t most = integer(entry, "equals", integer(entry, "most", UINT32_MAX));
+      found.push_back({GuestValue{integer(entry, "address", 0), static_cast<uint8_t>(integer(entry, "bytes", 0)),
+                                  integer(entry, "pointer", 0)},
+                       least, most});
+    }
+    return found;
+  };
+  show_ = conditions(*hud, "show");
   constexpr std::array kKinds{std::pair{std::string_view("hearts"), Kind::Hearts},
                               std::pair{std::string_view("meter"), Kind::Meter},
                               std::pair{std::string_view("counter"), Kind::Counter},
@@ -155,7 +175,14 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
     element.button = nativeButton(text(entry, "button"));
     element.itemButton = itemButton(text(entry, "item_button"));
     element.none = integer(entry, "none", 0xFF);
-    element.shown = guest(entry, "shown");
+    element.when = conditions(entry, "when");
+    element.index = guest(entry, "index");
+    element.label = guest(entry, "label");
+    if (const lucent::json::Value *labels = entry.find("labels"); labels != nullptr && labels->array() != nullptr) {
+      for (const lucent::json::Value &label : *labels->array()) {
+        element.labels.push_back(label.string() != nullptr ? *label.string() : std::string());
+      }
+    }
     element.longer = guest(entry, "longer");
     element.ammo = guest(entry, "ammo");
     element.status = guest(entry, "status");
@@ -185,6 +212,10 @@ Hud::~Hud() {
 }
 
 std::optional<uint32_t> Hud::read(const GuestValue &value) const {
+  if (value.pointer != 0) {
+    const std::optional<uint32_t> base = read({value.pointer, sizeof(uint32_t)});
+    return base && *base != 0 ? read({*base + value.address, value.bytes}) : std::nullopt;
+  }
   std::array<uint8_t, sizeof(uint32_t)> bytes{};
   if (value.bytes == 0 || value.bytes > bytes.size() ||
       !emulator_.read(value.address, std::span(bytes).first(value.bytes))) {
@@ -197,9 +228,16 @@ std::optional<uint32_t> Hud::read(const GuestValue &value) const {
   return result;
 }
 
+bool Hud::hold(const std::vector<Condition> &conditions) const {
+  return std::ranges::all_of(conditions, [this](const Condition &condition) {
+    const std::optional<uint32_t> value = read(condition.value);
+    return value && *value >= condition.least && *value <= condition.most;
+  });
+}
+
 void Hud::update() {
   quads_.clear();
-  if (overlay_.hudShown()) {
+  if (overlay_.hudShown() || (!show_.empty() && hold(show_))) {
     const auto [width, height] = window_.pixelSize();
     if (width != width_ || height != height_) {
       width_ = width;
@@ -207,7 +245,9 @@ void Hud::update() {
       atlas_->clear();
     }
     for (const Element &element : elements_) {
-      draw(element);
+      if (hold(element.when)) {
+        draw(element);
+      }
     }
   }
   Settings::values.overlay_image = atlas_->image();
@@ -253,8 +293,8 @@ void Hud::draw(const Element &element) {
   case Kind::Meter: {
     const std::optional<uint32_t> value = read(element.value);
     const uint32_t lengths = read(element.longer).value_or(0) != 0 ? 2 : 1;
-    const uint32_t full = (element.full != 0 ? element.full : read(element.capacity).value_or(0)) * lengths;
-    if (!value || full == 0 || (element.shown.bytes != 0 && read(element.shown).value_or(0) == 0)) {
+    const uint32_t full = element.full != 0 ? element.full * lengths : read(element.capacity).value_or(0);
+    if (!value || full == 0) {
       return;
     }
     box.w = std::round(box.h * kMeterAspect * static_cast<float>(lengths));
@@ -264,7 +304,9 @@ void Hud::draw(const Element &element) {
     return;
   }
   case Kind::Counter: {
-    const std::optional<uint32_t> value = read(element.value);
+    const uint32_t index = element.index.bytes != 0 ? read(element.index).value_or(0) : 0;
+    const std::optional<uint32_t> value =
+        read({element.value.address + index * element.value.bytes, element.value.bytes, element.value.pointer});
     if (!value) {
       return;
     }
@@ -303,6 +345,12 @@ void Hud::draw(const Element &element) {
           quad(sprite, {x, box.y + box.h - sprite.h, sprite.w, sprite.h});
         }
       }
+    }
+    if (const std::optional<uint32_t> action = read(element.label);
+        action && *action < element.labels.size() && !element.labels[*action].empty()) {
+      // Centred under the button.
+      const HudSprite word = atlas_->text(element.labels[*action], static_cast<int>(std::round(box.h * kLabelShare)), false);
+      quad(word, {std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h});
     }
     prompt(element, box);
     return;

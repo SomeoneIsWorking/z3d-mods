@@ -13,6 +13,8 @@ SECTIONS {
   .patch.interpreter_tail kCutsceneRunScript + 0x120 : { KEEP(*(.patch.interpreter_tail)) }
   .patch.play_update kGameplayUpdate + 0x9C : { KEEP(*(.patch.play_update)) }
   .patch.base_camera kGameplayUpdate + 0xA8 : { KEEP(*(.patch.base_camera)) }
+  /* The One Screen 891b60e's payload: Hud_Submit's visible flag (decomp docs/hud.md). */
+  .patch.base_hud 0x612C84 : { KEEP(*(.patch.base_hud)) }
   . = PAYLOAD;
   .payload : { KEEP(*(.options)) *(.text*) *(.rodata*) *(.data*) }
   .payload_zero (NOLOAD) : { *(.bss*) *(COMMON) }

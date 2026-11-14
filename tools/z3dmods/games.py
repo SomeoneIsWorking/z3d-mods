@@ -55,7 +55,7 @@ def _player_list_head(d: symbols.Decomp) -> int:
             + PLAYER_CATEGORY * symbols.size(d, "ActorListEntry") + symbols.offset(d, "ActorListEntry.head"))
 
 
-def _oot3d(_repo: Path, d: symbols.Decomp) -> Layout:
+def _oot3d(repo: Path, d: symbols.Decomp) -> Layout:
     cutscene = symbols.offset(d, "PlayState.csCtx")
     return Layout(
         play_pointer=symbols.global_(d, "gPlayState"),
@@ -73,6 +73,7 @@ def _oot3d(_repo: Path, d: symbols.Decomp) -> Layout:
         actor_home=symbols.offset(d, "Actor.home"),
         camera_at=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.at"),
         camera_eye=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.eye"),
+        hud=_hud(repo, "oot3d", d),
     )
 
 
@@ -104,16 +105,27 @@ def _guest_address(d: symbols.Decomp, terms: list[str | int]) -> int:
     return total
 
 
+def _resolved(d: symbols.Decomp, value: object) -> object:
+    """hud.toml's `{ at = [...], through = "global" }` as `{ address, pointer }`, wherever it sits."""
+    if isinstance(value, list):
+        return [_resolved(d, entry) for entry in value]
+    if not isinstance(value, dict):
+        return value
+    out = {key: _resolved(d, entry) for key, entry in value.items() if key not in ("at", "through")}
+    if "at" in value:
+        out["address"] = _guest_address(d, value["at"])
+    if "through" in value:
+        out["pointer"] = symbols.global_(d, value["through"])
+    return out
+
+
 def _hud(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object] | None:
-    """hud.toml with every `{ at = [...], bytes = n }` resolved to `{ address, bytes }`."""
+    """hud.toml as the app reads it: every guest value resolved to its address."""
     path = repo / "patch" / game / "hud.toml"
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
-    elements = [{key: {"address": _guest_address(d, value["at"]), "bytes": value["bytes"]}
-                 if isinstance(value, dict) else value for key, value in element.items()}
-                for element in table["element"]]
-    return {"icons": HUD_ICONS, "elements": elements}
+    return {"icons": HUD_ICONS, "show": _resolved(d, table.get("show", [])), "elements": _resolved(d, table["element"])}
 
 
 # The folder of item icons beside the installed patch: <item id>.png.

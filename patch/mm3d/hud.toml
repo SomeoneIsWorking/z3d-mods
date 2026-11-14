@@ -26,7 +26,7 @@ kind = "meter"
 rect = [8, 32, 63, 7]
 full = 0x30
 value = { at = ["gCommonData", "CommonData.save", "SaveData.magic"], bytes = 1 }
-shown = { at = ["gCommonData", "CommonData.save", "SaveData.magicAcquired"], bytes = 1 }
+when = [{ at = ["gCommonData", "CommonData.save", "SaveData.magicAcquired"], bytes = 1, least = 1 }]
 longer = { at = ["gCommonData", "CommonData.save", "SaveData.doubleMagicAcquired"], bytes = 1 }
 
 [[element]]

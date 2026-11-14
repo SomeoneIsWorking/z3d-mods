@@ -154,12 +154,16 @@ key typeface): `hud_atlas` rasterizes each SVG at the size it is drawn at in the
 window size, into one RGBA image, and `Hud` gives the core that image and a list of quads every
 frame (`Settings::values.overlay_image`, `overlay_quads`). It reads the game after every frame
 through `Emulator::read`, and draws only while the overlay's layout is play's (`hud = true` in
-`overlay.toml`). While the chord is held (`PadInput::chord()`), a button shows the face button
+`overlay.toml`), or, for a game without an overlay table, while every condition of `hud.toml`'s
+`show` holds. A value can sit behind a guest pointer (`through`), and an element is drawn only
+while its `when` conditions hold. While the chord is held (`PadInput::chord()`), a button shows the face button
 that presses it; with the keyboard last used it shows a key cap instead (1 to 4, or 5 to 8 on
 the second page). An item's icon is `<mods>/z3d-hud-icons/<item id>.png`, cut at install from the game's icon sheet
 (the pack's copy when it has one) by the game's own table of a frame per item (`hud_icons.py`,
-`[icons]` in `hud.toml`). A button also draws its item's count and dims a disabled item; a meter
-can wait for a flag and double its length.
+`[icons]` in `hud.toml`). Where the game has no such table an item's frame is its id (OoT3D). A button also draws its
+item's count, dims a disabled item and writes the word of the game's action number under it
+(`label`, `labels`); a counter can read one entry of an array (`index`); a meter can double its
+length.
 
 Seen (MM3D, `mm-hud2` at scale 3, `mm-hud3` at scale 5): three hearts and 0 rupees on a fresh
 file; `healthCapacity` 0xA0, `health` 0x68 and `rupees` 123 written, and the next frame has ten
@@ -170,6 +174,11 @@ same crops at both sizes have clean edges.
 their icons (the pack's) with the counts from `SaveData.ammo`, the half-full magic meter shows
 once `magicAcquired` is set, and after Y pulls a bomb that goes off in Link's hands the hearts
 read two and a half.
+OoT3D (`mm-oothud3`, scale 3): the same values written give ten hearts with six and a half red,
+the half meter and 123 rupees; a bomb, the Slingshot, nuts and sticks written onto the buttons
+draw their icons with 9, 17, 7 and 5; "Check" sits under A beside the bed; in the Forest Temple
+the key counter reads the 2 written to its dungeon; the chord puts A and B on I and II; the
+pause screen hides the HUD. The One Screen's HUD is not drawn in any of them.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`

@@ -44,6 +44,11 @@
     b kGameplayDraw
 .section .expect.base_camera, "", %progbits
     .word 0xEA070C77 @ b tos_after
+@ The One Screen's Hud_Submit: its HUD is never visible; ours is drawn by the app (hud.toml).
+.section .patch.base_hud, "ax", %progbits
+    mov r0, #0
+.section .expect.base_hud, "", %progbits
+    .word 0xC3A00001 @ movgt r0, #1
 .text
 quick_text_element:
     push {r0-r3, r12, lr}
