@@ -205,6 +205,10 @@ maintainer's:
   picker with both games' tiles.
 - The first run (`z3dmods inputtest first-run`, the package's launcher on an empty data folder,
   and `first-run-appimage`, the AppImage): docs/app.md, "Checking it".
+- The Ally, `pk-ally4`, the container-built package: the AppImage on an empty data folder,
+  told the dump folder, opens the picker with both tiles; the installed folder sets both games
+  up again (their inputs changed) and boots Ocarina of Time 3D to file select and Majora's Mask
+  3D to its title.
 - The Ally, `pk-ally2`: the package installed by `z3dmods shortcut --host ally` over sets an
   older package made, The One Screen left in its mods folder as the `.tar.gz` its site gives,
   the launcher started in a headless Gamescope with only `dirname` and `readlink` on its PATH
