@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, steps
+from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, sources, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -70,6 +70,11 @@ def build_package(args: argparse.Namespace) -> None:
     print(package.appimage(cfg, built))
 
 
+def fetch_sources(_args: argparse.Namespace) -> None:
+    for made in sources.fetch():
+        print(made)
+
+
 def install_shortcuts(args: argparse.Namespace) -> None:
     cfg = config.load()
     paths = host_install.install(cfg, args.host) if args.host else shortcut.install(cfg)
@@ -112,11 +117,13 @@ def main() -> None:
     packed = commands.add_parser("package", help="build the z3d package for Linux: its folder, and the AppImage of it")
     packed.add_argument("--out", type=Path, help="the folder to make; build/package/z3d without it")
     packed.set_defaults(run=build_package)
+    fetched = commands.add_parser("sources", help="clone the checkouts a package is built from that this machine lacks, each at its pinned revision")
+    fetched.set_defaults(run=fetch_sources)
     probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key, mouse and pad events")
     probe.add_argument("scenario", choices=sorted(input_test.SCENARIOS))
     probe.set_defaults(run=input_check)
     links = commands.add_parser("shortcut", help="add the desktop shortcut that opens the app's title picker")
-    links.add_argument("--host", help="install the app, the sets and its saves on this ssh host instead, in ~/Games/z3d")
+    links.add_argument("--host", help="install the app, the sets and its saves on this ssh host instead, in Games/z3d of its home folder")
     links.set_defaults(run=install_shortcuts)
     args = parser.parse_args()
     args.run(args)

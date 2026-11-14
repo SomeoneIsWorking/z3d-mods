@@ -1,0 +1,115 @@
+# The Linux package, built the way the maintainer builds it (`z3dmods package`), from public
+# sources only: no game data and no mod is fetched or needed. Started by hand it keeps the
+# AppImage as a run artifact; from a release tag it attaches it to that tag's release, unless
+# the release already holds one (a package published from the maintainer's build).
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  published:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      held: ${{ steps.release.outputs.held }}
+    steps:
+      - id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          held=false
+          if [ "$GITHUB_REF_TYPE" = tag ] && gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" \
+              --json assets -q '.assets[].name' | grep -qx z3d-x86_64.AppImage; then
+            held=true
+            echo "::notice::release $GITHUB_REF_NAME already holds z3d-x86_64.AppImage; nothing is built"
+          fi
+          echo "held=$held" >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: published
+    if: needs.published.outputs.held != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.7"
+      - name: Build tools
+        run: |
+          # Clang 22 from apt.llvm.org for the patches, as packaging/Containerfile takes it for the app.
+          curl -fsSL --retry 5 --retry-all-errors -o llvm.key https://apt.llvm.org/llvm-snapshot.gpg.key
+          echo "8b2a587ffd672c4687e7581dad4b2f6c1bb2ad6b480cd9771ba2ff48e0b8c75d  llvm.key" | sha256sum -c -
+          sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg llvm.key
+          rm llvm.key
+          echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
+              | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-22 lld-22 podman squashfs-tools fontconfig fonts-noto-core
+          mkdir -p "$HOME/.local/bin"
+          ln -s /usr/bin/clang++-22 "$HOME/.local/bin/clang++"
+          ln -s /usr/bin/ld.lld-22 "$HOME/.local/bin/ld.lld"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: ImageMagick 7 for the glyphs
+        run: |
+          # The runner's Ubuntu packages ImageMagick 6. The checkout and port-assets are both under work/.
+          podman build -t localhost/z3d-glyphs -f packaging/Containerfile.glyphs packaging
+          work=$(dirname "$RUNNER_WORKSPACE")
+          printf '#!/bin/sh\nexec podman run --rm --userns=keep-id -v "%s:%s" localhost/z3d-glyphs "$@"\n' \
+              "$work" "$work" > "$HOME/.local/bin/magick"
+          chmod +x "$HOME/.local/bin/magick"
+      - name: Sources
+        run: uv run --frozen z3dmods sources
+      - name: Package
+        run: uv run --frozen z3dmods package
+      - name: Checksum
+        working-directory: build/package
+        run: |
+          cat z3d/SOURCE.txt
+          if grep -q "uncommitted changes" z3d/SOURCE.txt; then exit 1; fi
+          sha256sum z3d-x86_64.AppImage | tee z3d-x86_64.AppImage.sha256
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: z3d-x86_64
+          path: |
+            build/package/z3d-x86_64.AppImage
+            build/package/z3d-x86_64.AppImage.sha256
+          if-no-files-found: error
+
+  attach:
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: z3d-x86_64
+          path: package
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "z3d $GITHUB_REF_NAME" \
+                --notes-file "docs/releases/$GITHUB_REF_NAME.md"
+          fi
+          gh release upload "$GITHUB_REF_NAME" package/z3d-x86_64.AppImage package/z3d-x86_64.AppImage.sha256

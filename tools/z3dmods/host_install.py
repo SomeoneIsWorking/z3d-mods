@@ -1,8 +1,8 @@
-"""The z3d package installed on another machine (`ssh <host>`) for the player: ~/Games/z3d there is
-the package (package.py) with the player's data in `user/` inside it. The host's own files serve
-it: the dumps in its ~/ROM/3DS, the player's mod downloads in `user/mods`; its picker sets each
-game up from them. What is in `user/` stays, and is copied aside first. A menu and a Desktop
-entry open the title picker.
+"""The z3d package installed on another machine (`ssh <host>`) for the player: Games/z3d in its home
+folder is the package (package.py) with the player's data in `user/` inside it. The host's own
+files serve it: the dumps in ROM/3DS of its home folder, the player's mod downloads in
+`user/mods`; its picker sets each game up from them. What is in `user/` stays, and is copied
+aside first. A menu and a Desktop entry open the title picker.
 """
 
 from __future__ import annotations
@@ -39,9 +39,11 @@ def install(cfg: Config, host: str) -> list[Path]:
     user = root / "user"
     built = package.build(cfg, package.folder(cfg))
     backup = home / BACKUPS / f"user-{time.strftime('%Y%m%d-%H%M%S')}.tar"
+    applications = home / ".local/share/applications"
+    icons = home / ".local/share/icons/hicolor/scalable/apps"
     excluded = " ".join(f"--exclude={shlex.quote(name)}" for name in DERIVED)
     _ssh(host, f"mkdir -p {shlex.quote(str(user / 'Azahar'))} {shlex.quote(str(backup.parent))} "
-               "~/.local/share/applications ~/.local/share/icons/hicolor/scalable/apps && "
+               f"{shlex.quote(str(applications))} {shlex.quote(str(icons))} && "
                f"tar -C {shlex.quote(str(root))} {excluded} -cf {shlex.quote(str(backup))} user")
     _rsync([f"{built}/"], host, root, "--delete", "--exclude=/user")
     present = _ssh(host, f"ls {shlex.quote(str(user / 'Azahar'))} {shlex.quote(str(user))}").split()
@@ -58,8 +60,8 @@ def install(cfg: Config, host: str) -> list[Path]:
     entry = staging / f"{play.DESKTOP_ID}.desktop"
     entry.write_text(shortcut.desktop_entry(shlex.quote(str(root / "z3d")), root))
     entry.chmod(0o755)
-    _rsync([built / "z3d.svg"], host, home / ".local/share/icons/hicolor/scalable/apps/z3d.svg")
-    written = [home / ".local/share/applications" / entry.name, home / "Desktop" / entry.name]
+    _rsync([built / "z3d.svg"], host, icons / "z3d.svg")
+    written = [applications / entry.name, home / "Desktop" / entry.name]
     for path in written:
         _rsync([entry], host, path)
     return [*written, backup]

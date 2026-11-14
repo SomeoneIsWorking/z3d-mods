@@ -55,6 +55,8 @@ class Builder:
     # The app's build tree.
     tree: Callable[[Config], Path]
     run: Callable[[Config, list[str]], None]
+    # What it adds to the core's and the app's CMake configure.
+    flags: Callable[[Config], list[str]] = lambda _cfg: []
 
 
 def _run_here(_cfg: Config, command: list[str]) -> None:
@@ -76,7 +78,8 @@ def core(cfg: Config, builder: Builder = HOST) -> Path:
         tree.mkdir(parents=True, exist_ok=True)
         flags = [f"-D{key}={value}" for key, value in AZAHAR_OPTIONS.items()]
         builder.run(cfg, ["cmake", "-S", str(azahar_source(cfg)), "-B", str(tree), "-G", "Ninja",
-                          "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_INSTALL_PREFIX={prefix}", *flags])
+                          "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_INSTALL_PREFIX={prefix}", *flags,
+                          *builder.flags(cfg)])
         builder.run(cfg, ["ninja", "-C", str(tree), "install"])
     return prefix
 
@@ -87,7 +90,8 @@ def _build(cfg: Config, builder: Builder) -> Path:
         prefix = core(cfg, builder)
         tree.mkdir(parents=True, exist_ok=True)
         builder.run(cfg, ["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
-                          "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={prefix}"])
+                          "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={prefix}",
+                          *builder.flags(cfg)])
     builder.run(cfg, ["ninja", "-C", str(tree)])
     return tree / cfg.app_binary.name
 

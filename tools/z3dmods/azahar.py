@@ -92,6 +92,8 @@ class Session:
         self.rpc = Rpc()
 
     def __enter__(self) -> Session:
+        if self._cfg.azahar_appimage is None:
+            raise RuntimeError("openSU has no standalone Azahar on this machine: run on the harness (--harness)")
         self._config_snapshot = {p: p.read_bytes() for p in self._cfg.azahar_config.rglob("*.ini")}
         if self._run_settings:
             azahar_config.set_global(self._cfg.azahar_config, self._run_settings)

@@ -11,6 +11,8 @@ but the desktop's own libraries (docs/plans/packed-app.md).
     prebuilt/<game>/    our patch built for the set's base, and the decomp's names the tools read
     prebuilt/glyphs/    port-assets' pad glyphs drawn for the menu textures
     assets/, fonts/     port-assets' glyphs and key typeface, the picker's font
+    SOURCE.txt          the commit of every checkout the build was made from (the GPL's source)
+    licenses/           the licence of everything in it that is not ours
 
 Nothing third-party that is not ours to give is in it: no game data, no mod. The player's data
 is `user/` inside the folder when that exists, else their data folder (config.py); an AppImage
@@ -34,6 +36,7 @@ from z3dmods import (
     play,
     shortcut,
     source_check,
+    sources,
     symbols,
 )
 from z3dmods.config import Config
@@ -48,21 +51,44 @@ PYTHON_UNUSED = ("include", "share", "lib/tcl*", "lib/tk*", "lib/itcl*", "lib/th
 # stand in for. Every other one it links comes along (the font, text and image libraries with
 # what they need). Vulkan is not linked: the core opens the desktop's loader.
 DESKTOP_LIBRARIES = ("linux-vdso", "ld-linux", "libc.", "libm.", "libgcc_s", "libstdc++")
-# The AppImage runtime (github.com/AppImage/type2-runtime, MIT): the program a squashfs image of
-# the package folder is appended to.
-RUNTIME_RELEASE = "20251108"
-RUNTIME_SHA256 = "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
+# What python-build-standalone's sysconfig names as its prefix, where uv writes the folder it
+# installed into.
+PYTHON_PREFIX = "/install"
 APPIMAGE = "z3d-x86_64.AppImage"
 LAUNCHER = """#!/bin/sh
 # z3d: opens the title picker, which asks for your folders on its first run.
 here=$(dirname "$(readlink -f "$0")")
 exec "$here/python/bin/python3" -I -m z3dmods.packed play "$@"
 """
-SOURCE = """z3d links Azahar's core (GPL-2.0-or-later), so this build as a whole is under the GPL.
-Its source:
-  https://github.com/SomeoneIsWorking/z3d-mods at {revision} (our own files are MIT: LICENSE)
-  https://github.com/SomeoneIsWorking/azahar at {azahar}
+SOURCE = """z3d links Azahar's core (GPL-2.0-or-later), so this build as a whole is under the GPL
+(licenses/azahar/license.txt). Our own files are MIT (LICENSE). Its source, each at the commit
+this build was made from:
+  https://github.com/SomeoneIsWorking/z3d-mods at {revision}
+{sources}
+azahar is the core, with its submodules; lucent, setup-ui and RmlUi are built into bin/z3d;
+port-assets is assets/ and what prebuilt/glyphs/ is drawn from.
+lib/ holds SDL3, SDL3_ttf and SDL3_image built from the release tarballs that
+packaging/Containerfile names, and Ubuntu 24.04's own builds of the rest (apt source <package>).
 """
+LICENSES = """The licences of what this package holds that is not ours.
+
+azahar/             the core, lib/libazahar_core.so: license.txt (GPL-2.0), and under externals/
+                    the libraries its source tree carries, of which the core builds in a part
+lucent/, setup-ui/, RmlUi/
+                    built into bin/z3d
+SDL3/, SDL3_ttf/, SDL3_image/
+                    lib/libSDL3*.so
+ubuntu/<package>    the other libraries in lib/, each Ubuntu 24.04 package's copyright file
+python/             python/: CPython (also python/lib/python*/LICENSE.txt); the wheels keep
+                    theirs in python/lib/python*/site-packages/*.dist-info
+appimage-runtime    the AppImage's own first bytes: github.com/AppImage/type2-runtime
+                    (MIT), release {runtime}
+assets/LICENSE      port-assets' glyphs (MIT), which prebuilt/glyphs/ is drawn from
+assets/fonts/OFL.txt, fonts/OFL.txt
+                    the Noto Sans typefaces (SIL Open Font License 1.1)
+"""
+# How a licence file is named in a source tree.
+LICENSE_NAMES = ("license", "licence", "copying", "copyright", "notice")
 
 
 def _run(*command: str) -> str:
@@ -89,12 +115,17 @@ def _python(out: Path) -> Path:
     requirements.unlink()
     # The tools stay beside the sets they read (config.REPO is two folders above them).
     (site / "z3d.pth").write_text("../../../../tools\n")
+    for built in (out / "python" / "lib").glob("python*/_sysconfigdata_*.py"):
+        built.write_text(built.read_text().replace(str(installed), PYTHON_PREFIX))
     return interpreter
 
 
-def _libraries(cfg: Config, binary: Path, core: Path, out: Path) -> None:
-    """The libraries `binary` links in the build container, copied out of it."""
+def _libraries(cfg: Config, binary: Path, core: Path, out: Path, licenses: Path) -> None:
+    """The libraries `binary` links in the build container, copied out of it into `out`, and
+    their licences into `licenses`: the ones built into the image as they installed theirs,
+    the distribution's by the package that owns the file."""
     out.mkdir()
+    (licenses / "ubuntu").mkdir(parents=True)
     shutil.copyfile(core, out / core.name)
     linked = []
     for line in build_container.output(cfg, ["ldd", str(binary)]).splitlines():
@@ -102,6 +133,37 @@ def _libraries(cfg: Config, binary: Path, core: Path, out: Path) -> None:
         if not name.startswith((*DESKTOP_LIBRARIES, core.stem)) and rest.startswith("/"):
             linked.append(rest.split()[0])
     build_container.run(cfg, ["cp", "-L", *linked, str(out)])
+    build_container.run(cfg, ["cp", "-r", "/usr/local/share/licenses/.", str(licenses)])
+    packaged = [path for path in linked if not path.startswith("/usr/local/")]
+    owners = build_container.output(cfg, ["sh", "-c", 'for file; do dpkg -S "$(readlink -f "$file")"; done', "sh",
+                                          *packaged])
+    for owner in sorted({line.split(":")[0] for line in owners.splitlines()}):
+        build_container.run(cfg, ["cp", f"/usr/share/doc/{owner}/copyright", str(licenses / "ubuntu" / owner)])
+
+
+def _license_files(folder: Path) -> list[Path]:
+    return sorted(p for p in folder.iterdir() if p.is_file() and p.name.lower().startswith(LICENSE_NAMES)
+                  and p.suffix.lower() in ("", ".txt", ".md", ".gplv2", ".gplv3"))
+
+
+def _licenses(cfg: Config, out: Path, python: Path) -> None:
+    """The licences of the sources the build was made from, and the package's list of them."""
+    for source in sources.SOURCES:
+        folder = source.folder(cfg)
+        if folder == cfg.port_assets:
+            continue
+        (out / source.name).mkdir()
+        for file in _license_files(folder):
+            shutil.copyfile(file, out / source.name / file.name)
+    externals = app.azahar_source(cfg) / "externals"
+    for folder in sorted(p for pattern in ("*", "*/*") for p in externals.glob(pattern) if p.is_dir()):
+        for file in _license_files(folder):
+            kept = out / "azahar" / "externals" / folder.relative_to(externals) / file.name
+            kept.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(file, kept)
+    (out / "python").mkdir()
+    shutil.copyfile(next((python / "lib").glob("python*/LICENSE.txt")), out / "python" / "LICENSE.txt")
+    (out / "README.txt").write_text(LICENSES.format(runtime=sources.RUNTIME_RELEASE))
 
 
 def _glibc(binary: Path) -> tuple[int, ...]:
@@ -126,13 +188,25 @@ def _check_floor(out: Path) -> None:
         raise RuntimeError(f"these need a glibc newer than {floor}: {', '.join(newer)}")
 
 
+def _check_private(cfg: Config, out: Path) -> None:
+    """Refuses a package that names this machine: a file holding the home folder's path, the
+    dump folder's or a download's, or bytecode, which records where it was compiled."""
+    private = [str(Path.home()).encode(), *(str(rom.parent).encode() for rom in cfg.roms.values()),
+               str(cfg.mod_sources).encode()]
+    found = []
+    for path in sorted(p for p in out.rglob("*") if p.is_file() and not p.is_symlink()):
+        if path.suffix == ".pyc" or any(word in path.read_bytes() for word in private):
+            found.append(str(path.relative_to(out)))
+    if found:
+        raise RuntimeError(f"these name this machine's folders: {', '.join(found)}")
+
+
 def _runtime(cfg: Config) -> Path:
-    runtime = cfg.dependencies / "appimage-runtime" / RUNTIME_RELEASE / "runtime-x86_64"
+    runtime = sources.runtime(cfg)
     if not runtime.exists():
-        raise RuntimeError(f"the AppImage runtime is missing: gh release download {RUNTIME_RELEASE} "
-                           f"-R AppImage/type2-runtime -p runtime-x86_64 -D {runtime.parent}")
-    if source_check.digest(runtime) != RUNTIME_SHA256:
-        raise RuntimeError(f"{runtime} is not release {RUNTIME_RELEASE}'s runtime")
+        raise RuntimeError(f"the AppImage runtime is missing: uv run --frozen z3dmods sources fetches {runtime}")
+    if source_check.digest(runtime) != sources.RUNTIME_SHA256:
+        raise RuntimeError(f"{runtime} is not release {sources.RUNTIME_RELEASE}'s runtime")
     return runtime
 
 
@@ -167,7 +241,7 @@ def build(cfg: Config, out: Path) -> Path:
     binary = app.current_binary(cfg, build_container.BUILDER)
     shutil.copy2(binary, out / "bin" / binary.name)
     core = next(app.core_prefix(cfg, build_container.BUILDER).glob("lib*/libazahar_core.so"))
-    _libraries(cfg, binary, core, out / "lib")
+    _libraries(cfg, binary, core, out / "lib", out / "licenses")
     shutil.copytree(cfg.repo / "tools" / "z3dmods", out / "tools" / "z3dmods",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(cfg.repo / "sets", out / "sets")
@@ -185,10 +259,12 @@ def build(cfg: Config, out: Path) -> Path:
     shutil.copyfile(cfg.port_assets / "LICENSE", out / "assets" / "LICENSE")
     (out / "fonts").mkdir()
     shutil.copyfile(cfg.ui_font(), out / "fonts" / cfg.ui_font().name)
+    shutil.copyfile(cfg.port_assets / "fonts" / "OFL.txt", out / "fonts" / "OFL.txt")
     shutil.copyfile(cfg.repo / "app" / "icon" / "z3d.svg", out / "z3d.svg")
     shutil.copyfile(cfg.repo / "LICENSE", out / "LICENSE")
     revision = _run("git", "-C", str(cfg.repo), "rev-parse", "HEAD").strip()
-    (out / "SOURCE.txt").write_text(SOURCE.format(revision=revision, azahar=app.AZAHAR_REVISION))
+    built_from = "\n".join(f"  {source.url} at {sources.built_from(source.folder(cfg))}" for source in sources.SOURCES)
+    (out / "SOURCE.txt").write_text(SOURCE.format(revision=sources.built_from(cfg.repo), sources=built_from))
     launcher = out / "z3d"
     launcher.write_text(LAUNCHER)
     launcher.chmod(0o755)
@@ -196,8 +272,10 @@ def build(cfg: Config, out: Path) -> Path:
     (out / "AppRun").symlink_to(launcher.name)
     (out / f"{play.DESKTOP_ID}.desktop").write_text(shortcut.desktop_entry(launcher.name))
     interpreter = _python(out)
+    _licenses(cfg, out / "licenses", interpreter.parent.parent)
     _check_floor(out)
     # The mark comes last: a folder with it is a whole package.
     (out / config.PACKAGE_MARK).write_text(json.dumps({"revision": revision, "azahar": app.AZAHAR_REVISION}) + "\n")
-    _run(str(interpreter), "-I", "-c", "import z3dmods.packed")
+    _run(str(interpreter), "-I", "-B", "-c", "import z3dmods.packed")
+    _check_private(cfg, out)
     return out

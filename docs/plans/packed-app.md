@@ -132,9 +132,7 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
   word against the player's baked code as before.
 - The tools read guest names from the decomp, which a package does not carry: it has
   `prebuilt/<game>/symbols.json`, the decomp's globals, field offsets, sizes and defines
-  (no function map), and `patch/<game>/*.toml`. For MM3D that table comes from mm3d-decomp,
-  which is still private: publish it, or cut the table to the names the tools read, before a
-  package goes public.
+  (no function map), and `patch/<game>/*.toml`. Both decomps are public.
 
 ### The drawn glyphs
 - `hud.py` draws port-assets' pad glyphs over the 3DS button prompts of the menu textures.
@@ -161,8 +159,14 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
 - `python/`, uv's relocatable CPython 3.12 with the locked wheels (Pillow) in its
   site-packages, and `tools/z3dmods/` on its path: no system Python, no uv;
 - `sets/`, `patch/<game>/*.toml`, `prebuilt/<game>/`, `prebuilt/glyphs/`, `assets/`
-  (port-assets' sets and key typeface), `fonts/` (the picker's), `LICENSE`, `SOURCE.txt` (the
-  GPL's source offer);
+  (port-assets' sets and key typeface), `fonts/` (the picker's), `LICENSE`;
+- `SOURCE.txt`, the GPL's source: the commit of this repository and of every checkout the build
+  was made from (`tools/z3dmods/sources.py`: the core, Lucent, setup-ui, RmlUi, port-assets),
+  marked "with uncommitted changes" where a checkout's tracked files differ from it;
+- `licenses/`: the core's GPL and the licences its externals carry, Lucent's, setup-ui's and
+  RmlUi's, the SDL libraries' as the image installed them, each other library's Ubuntu
+  `copyright` file (by the package that owns the file), CPython's, and a `README.txt` that
+  says which is which;
 - `AppRun` (a link to the launcher), `z3d.desktop` and `z3d.svg`, which make the folder an
   AppDir;
 - `package.json`, which tells `config.py` this is a package.
@@ -191,11 +195,33 @@ maintainer's:
   clang-ubuntu24.04`, the app's tree `build/package-app`. The checkout's own build
   (`build/app`) is not what a package holds.
 - The libraries in `lib/` are the ones the app links there, copied out of the container.
+- The build names no folder of the maintainer's machine: source files are compiled under
+  their checkout's name (`-ffile-prefix-map`), the app has no run path (the launcher names
+  `lib/`), and Python's build variables get back the prefix its distribution ships. The build
+  refuses a package in which any file holds the home folder's path, the dump folder's or the
+  downloads', or is Python bytecode (`package._check_private`).
 - What a desktop must have: glibc 2.39 and GCC 13's libstdc++ (Ubuntu 24.04, Debian 13,
   Fedora 40 or newer), a Vulkan driver, and the X11 or Wayland libraries SDL3 opens. The
   build refuses a package in which any program or library needs a newer glibc.
 - 24.04 is the floor because Lucent's log uses `<format>`, which GCC 12's libstdc++ (Debian
   12, Ubuntu 22.04) lacks.
+
+### The release
+- A release is a tag `v<version>` (`pyproject.toml`'s) with `z3d-x86_64.AppImage` and its
+  `.sha256` on its GitHub Release, and notes in `docs/releases/<tag>.md`. The README links the
+  latest one.
+- `v0.1.0` was published from the maintainer's build: a clean worktree of the tagged commit,
+  `z3dmods package`, then `gh release create`.
+- `.github/workflows/release.yml` runs the same `z3dmods package` on a hosted runner, started
+  by hand (the AppImage is the run's artifact) or by a `v*` tag (it attaches the AppImage to
+  the tag's release, making the release from the notes file when there is none; it builds
+  nothing when the release already holds an AppImage). `z3dmods sources` gives the runner the
+  checkouts at the revisions `sources.py` pins, so bump those to what a release's `SOURCE.txt`
+  names. It needs no game data and no mod: a package is made of none. The runner's Ubuntu has
+  ImageMagick 6, so it draws the glyphs with Fedora's in a container
+  (`packaging/Containerfile.glyphs`).
+- Not run on a runner: anything that needs a dump (the setup, the input tests, the harness).
+  Those stay on the maintainer's machines.
 
 ### Seen (2026-11-14)
 - The older desktop, `z3dmods inputtest appimage-older-desktop`: the AppImage started in a

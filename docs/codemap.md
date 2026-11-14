@@ -35,7 +35,10 @@
 - `tools/z3dmods/build_container.py`: the podman image the package's app and core are built in (`packaging/Containerfile`), which sets the oldest glibc and libstdc++ a desktop needs.
 - `tools/z3dmods/desktop_container.py`: a container of the oldest distribution the package runs on (`packaging/Containerfile.desktop`), where the input test starts the AppImage.
 - `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the package in another machine's `~/Games/z3d`, the player's data there kept and copied aside, with its shortcuts.
-- `tools/z3dmods/package.py`: `z3dmods package`: the Linux package folder (an AppDir): app, every library it links but the C and C++ runtimes, a relocatable Python with the locked wheels, the tools, sets, prebuilt patches and glyphs, assets; and the AppImage of that folder.
+- `tools/z3dmods/package.py`: `z3dmods package`: the Linux package folder (an AppDir): app, every library it links but the C and C++ runtimes, a relocatable Python with the locked wheels, the tools, sets, prebuilt patches and glyphs, assets, the source's commits (`SOURCE.txt`) and the licences of what is not ours (`licenses/`); and the AppImage of that folder. Refuses a package that needs a newer glibc than the container's or names this machine's folders.
+- `tools/z3dmods/sources.py`: the checkouts the app is built from besides this one (the core, Lucent, setup-ui, RmlUi, port-assets) and the AppImage runtime: where each lives, the revision `z3dmods sources` fetches where one is missing, and the commit a build names as its source.
+- `.github/workflows/release.yml`: the hosted build of the package, by hand or from a release tag (plans/packed-app.md, "The release"); `packaging/Containerfile.glyphs` is its ImageMagick.
+- `docs/releases/<tag>.md`: a release's notes.
 - `tools/z3dmods/packed.py`: the package's entry point (`python -m z3dmods.packed`): `play` over the player's dump folder, and what the picker runs: `folders` (takes a folder the player chose, keeps it in `folders.json`, writes the library) and `setup`.
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants; in a package, reads the table saved from it (`prebuilt/<game>/symbols.json`).
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
@@ -43,7 +46,7 @@
 - `tools/z3dmods/options.py`: a patch's switches (`patch/<game>/options.toml`): the generated `options.hpp` and the manifest the app's options menu reads.
 - `tools/z3dmods/slot_link.py`: the item slots' block a patch shares with the app: the generated `slot_link.hpp` and its addresses in the manifest.
 - `decomp/oot3d/`: submodule, our fork of zeldaret/oot3d (CC0): OoT3D symbols, structs and RE docs.
-- `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT, private): MM3D 1.0-layout symbols, structs and RE docs.
+- `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT): MM3D 1.0-layout symbols, structs and RE docs.
 - `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
   - `slots.hpp`: the item slots both games' patches share: slot values packed for a save's spare bytes, and which of the game's item buttons carry the slots in use.

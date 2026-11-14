@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from z3dmods import app
+from z3dmods import app, sources
 from z3dmods.config import Config
 
 IMAGE = "localhost/z3d-package-build"
@@ -20,8 +20,6 @@ CONTAINERFILE = "packaging/Containerfile"
 TOOLCHAIN = "clang-ubuntu24.04"
 # The newest glibc the image links against: what a desktop must have (package.py checks it).
 GLIBC_FLOOR = (2, 39)
-# The shared checkouts app/CMakeLists.txt builds from, under the home folder.
-CHECKOUTS = ("repo/lucent", "repo/shared/setup-ui", "repo/RmlUi")
 
 
 def image(cfg: Config) -> str:
@@ -40,7 +38,7 @@ def _command(cfg: Config, command: list[str]) -> list[str]:
     cores = cfg.dependencies / "azahar-core"
     cores.mkdir(parents=True, exist_ok=True)
     mounts = [f"{cfg.repo}:{cfg.repo}", f"{cores}:{cores}", f"{app.azahar_source(cfg)}:{app.azahar_source(cfg)}:ro",
-              *(f"{home / checkout}:{home / checkout}:ro" for checkout in CHECKOUTS)]
+              *(f"{home / checkout}:{home / checkout}:ro" for checkout in sources.HOME_CHECKOUTS.values())]
     words = ["podman", "run", "--rm", "--userns=keep-id", "--security-opt", "label=disable", "-e", f"HOME={home}"]
     for mount in mounts:
         words += ["-v", mount]
@@ -55,4 +53,14 @@ def output(cfg: Config, command: list[str]) -> str:
     return subprocess.run(_command(cfg, command), check=True, capture_output=True, text=True).stdout
 
 
-BUILDER = app.Builder(TOOLCHAIN, lambda cfg: cfg.repo / "build" / "package-app", run)
+def _flags(cfg: Config) -> list[str]:
+    """Keeps this machine's folders out of what a package holds: a source file is named from
+    its checkout, and the app has no run path (its launcher names the package's lib/)."""
+    home = Path.home()
+    named = {app.azahar_source(cfg): "azahar", cfg.repo: "z3d", cfg.dependencies / "azahar-core": "azahar-core",
+             **{home / checkout: name for name, checkout in sources.HOME_CHECKOUTS.items()}, home: "builder"}
+    maps = " ".join(f"-ffile-prefix-map={folder}={name}" for folder, name in named.items())
+    return [f"-DCMAKE_C_FLAGS={maps}", f"-DCMAKE_CXX_FLAGS={maps}", "-DCMAKE_SKIP_RPATH=ON"]
+
+
+BUILDER = app.Builder(TOOLCHAIN, lambda cfg: cfg.repo / "build" / "package-app", run, _flags)

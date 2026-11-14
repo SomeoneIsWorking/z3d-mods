@@ -21,7 +21,7 @@ class Config:
     mod_sources: Path
     azahar_data: Path
     azahar_config: Path
-    # Standalone Azahar, which the checkout's tools run; a package has none.
+    # Standalone Azahar, which the checkout's tools run; a package has none, nor a machine without openSU's.
     azahar_appimage: Path | None
     roms: dict[str, Path]
     # The SomeoneIsWorking/azahar checkout the app builds inside (local.json "azahar_source").
@@ -104,8 +104,9 @@ SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")
 def _session_env() -> dict[str, str]:
     if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"):
         return {key: os.environ[key] for key in SESSION_KEYS if key in os.environ}
+    # A machine without a user session (a build runner) has no display to name.
     shown = subprocess.run(["systemctl", "--user", "show-environment"], capture_output=True,
-                           text=True, check=True).stdout
+                           text=True, check=False).stdout
     found = dict(line.split("=", 1) for line in shown.splitlines() if "=" in line)
     return {key: found[key] for key in SESSION_KEYS if key in found}
 
@@ -155,13 +156,13 @@ def load() -> Config:
         raise RuntimeError("uv is not on PATH")
     env_assets = REPO / "env-assets"
     local = json.loads((env_assets / "local.json").read_text())
-    installed = json.loads((data_home / "opensu/emulators/azahar/installed.json").read_text())
+    installed = data_home / "opensu/emulators/azahar/installed.json"
     return Config(
         repo=REPO,
         mod_sources=Path(os.environ.get(MOD_SOURCES_ENV) or env_assets / "downloads"),
         azahar_data=data_home / "azahar-emu",
         azahar_config=config_home / "azahar-emu",
-        azahar_appimage=data_home / "opensu/emulators/azahar" / installed["file"],
+        azahar_appimage=installed.parent / json.loads(installed.read_text())["file"] if installed.exists() else None,
         roms={tid: Path(path) for tid, path in local["roms"].items()},
         azahar_source=Path(local["azahar_source"]) if "azahar_source" in local else None,
         dependencies=home / "dev",
