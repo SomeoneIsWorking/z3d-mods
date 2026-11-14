@@ -4,6 +4,44 @@ User (2026-11-14): "Chord + ABXY gives you more item slots, that's the chord, we
 stick to existing bindings for anything, I was also gonna ask you to make custom HUD with Xbox
 glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mouse aim".
 
+## Layout (decided 2026-11-14)
+User: "think what a PC game with Xbox controller support would do", then "just make
+something". Fable's design (modern verbs on fixed buttons, D-pad slots) plus the user's LB chord,
+whose objection (a hidden layer) our HUD answers by drawing the chord page while LB is held.
+Same layout in both games; this supersedes the bindings in the sections below.
+
+| Pad | Job |
+|---|---|
+| Left stick | Move |
+| Right stick | Free camera; aim in first person and aimed items (the mouse too) |
+| R3 | First person; again to leave |
+| L3 | Nothing |
+| A | Context action (talk, open, climb, roll, put away) |
+| X | Sword (hold for spin); MM form action |
+| Y, B, RB | Item slots 1 to 3 (RB keeps the right thumb on aim) |
+| RT | Shield; fires the item in hand while aiming |
+| LT | Hold to Z-target; tap to recenter |
+| D-pad | Item slots 4 to 7; defaults Down ocarina, MM Left/Up/Right Deku/Goron/Zora |
+| LB held | Chord: A, B, X, Y are item slots 8 to 11; the HUD shows them while held |
+| Menu | Pause; in the item screen a slot's input assigns the cursor's item to it |
+| View | Map; MM: a second press opens the Bombers' Notebook |
+
+| Keyboard and mouse | Job |
+|---|---|
+| WASD | Move |
+| Mouse | Camera and aim |
+| E or Space | Context action |
+| Left mouse | Sword |
+| Right mouse | Shield |
+| Q or middle mouse | Target / recenter |
+| F | First person |
+| 1 to 8, then Shift+1 to 3 | Item slots 1 to 11 |
+| R | Ocarina |
+| Tab | Item screen; M map; Esc pause |
+
+Not done on purpose: no hotkey for a song (a stray Song of Time wipes a cycle), no item on a
+trigger or on R3, no radial wheel, nothing equips boots or masks by context.
+
 ## Chord + ABXY
 - Holding the chord turns A, B, X and Y into four more item buttons; released, they are the
   game's buttons again. Every binding is ours to choose: the 3DS layout and The One Screen's do
