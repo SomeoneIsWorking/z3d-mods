@@ -221,8 +221,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
     strips the D-pad in play). Saving is "hold LB and press Menu". The Know-It-All Brother's
     menu answers "Your item slots", "The Action Icon", "The top-right icon".
   - MM3D: the Map Screen is View (icon 9, drawn as View); Masks is Menu, then RT; Gear is LB
-    and Menu; the map zooms and pans by mouse, at the right of the split layout; the ocarina
-    and the Pictograph Box are used from a slot; the notebook's screens are "left" and "right".
+    and Menu, Pause (icon 0x0E, Esc on the keyboard); the map zooms and pans by mouse, at the
+    right of the split layout; the ocarina and the Pictograph Box are used from a slot; the notebook's screens are "left" and "right".
 - Seen, every reworded message drawn through a sign or statue given its number (decomp
   `docs/message.md`): OoT3D `txt-oot-w1`, `txt-oot-w2`; MM3D `txt-mm-p7`, `txt-mm-w2`,
   `txt-mm-w3`, `txt-mm-w5`. Earlier: the Know-It-All Brother at 1x and 4x (`txt-oot-r1`,
@@ -237,7 +237,7 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   `docs/ui.md`). Seen with the pad's View and the keyboard's M, B back to play each time
   (`gap-nbin1`).
 - The chord is a prompt cell, drawn as LB or the chord's key cap: OoT3D's unused +Control Pad
-  cell 0x02 (0x1036) and MM3D's ZL cell 0x34 (0x0270); OoT3D's song list
+  cell 0x02 (0x1036); OoT3D's song list
   is cell 0x03, drawn as RB or the key R (0x10C7). Seen through a sign and a statue
   (`gap-txt1`, `gap-txt2`).
 - Layout gaps the text exposed, closed: the keyboard's R is ZR by name (the song list, with the
@@ -258,8 +258,9 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   arrow and tag read at 1x, a cell of four keys reads at 4x only.
 - Saving names Pause in one cell, OoT3D's unused 0x0E: LB held over Menu on the pad, Esc on the
   keyboard (0x103B, 0x010F; `gap-pause4`), where "hold the chord and press Menu" read Shift
-  and Tab on the keyboard, which do not pause. MM3D's 0x0270 (Gear) still names the chord and
-  Menu: it waits on a free MM3D icon cell for Pause.
+  and Tab on the keyboard, which do not pause. MM3D's Gear (0x0270) is Pause in the +Control
+  Pad Left's cell, icon 0x0E, which no message in any language uses; seen with the pad and the
+  keyboard (`txt-mm-pause1`: LB over Menu, then Esc).
 - Prompts by device, seen with the same box swapped live by `device:` (`txt-oot-k3`: 0x00A4
   shows Menu, RT, A, then Tab, the right mouse button, E, then the pad's again; 0x1036 and
   0x0066 with caps; `txt-mm-k2`: 0x0078's Menu, LT, Y, B, RB, D-pad become Tab, Q, 1, 2, 3,

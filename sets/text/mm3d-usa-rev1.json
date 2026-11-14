@@ -1,5 +1,5 @@
 {
-  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: English prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\"); markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, 5 L (LT), 6 R (RT), 7 START (Menu), 9 the power button's cell (View), 11 the circle pad, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad (sets/hud/mm3d-usa-rev1.json). 0x34 is the sheet's ZL cell, drawn as LB (the chord), which no message uses.",
+  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: English prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\"); markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, 5 L (LT), 6 R (RT), 7 START (Menu), 9 the power button's cell (View), 11 the circle pad, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad (sets/hud/mm3d-usa-rev1.json). 0x0E is the +Control Pad Left's cell, which no message uses, drawn as Pause: LB over Menu, Esc on the keyboard.",
   "font": {
     "file": "message/ltn16.gzf",
     "outline": "Jost[wght].ttf",
@@ -140,12 +140,12 @@
         "put": "press\nthe slot's button to use it."
       },
       {
-        "why": "LB and Menu open the Gear screen (Project Restoration's ZR and Start).",
+        "why": "Pause opens the Gear screen: LB and Menu (Project Restoration's ZR and Start), Esc on the keyboard (icon 0x0E).",
         "only": [
           "0270"
         ],
-        "find": "Tap \\{25:2D\\} on the lower screen if you\never want to take a look at the\ngear-like things",
-        "put": "Hold {25:34} and press {25:7} if you ever\nwant to take a look at the gear-like\nthings"
+        "find": "Tap \\{25:2D\\} on the lower screen if you\never want to take a look at the\ngear-like things you've collected\\.",
+        "put": "Press {25:E} if you ever want to take a\nlook at the gear-like things you've\ncollected."
       },
       {
         "why": "The notebook shows in the split layout: the top screen at the left, the touch screen at the right.",
