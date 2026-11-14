@@ -1,7 +1,8 @@
 """Run a scripted session.
 
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
-poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or player+<offset>, from the player actor), warp:<entrance>, teleport:<x>,<y>,<z> (the player), where (print the player's position), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
+poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or player+<offset>, from the player actor), warp:<entrance>, teleport:<x>,<y>,<z> (the player), where (print the player's position),
+walk:<x>,<z>[,<s>] (harness: the circle pad steered until the player stands at x, z, printing the way), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
 cs (print the cutscene context and script header).
@@ -15,6 +16,7 @@ touch:<x>,<y>[,<s>] (the stylus on the 320x240 touch screen).
 
 from __future__ import annotations
 
+import math
 import struct
 import time
 from pathlib import Path
@@ -108,6 +110,54 @@ def _wait_script(session: Session, layout: Layout, script: int, button: str,
     raise RuntimeError(f"cutscene script 0x{script:08X} did not start within {timeout}s")
 
 
+WALK_SAMPLE = 0.1
+# The player turns toward a new pad angle over a few frames; the camera is read after them.
+WALK_TURN = 0.2
+WALK_ARRIVED = 4.0
+WALK_SETTLED = math.radians(20)
+# The pad eases off inside this distance, down to the weakest push that still moves the player.
+WALK_SLOW_WITHIN = 60.0
+WALK_SLOWEST = 0.65
+STICK_FULL = 32767
+
+
+def _walk(session: Session, layout: Layout, x: float, z: float, timeout: float, log) -> None:
+    """Steers the circle pad toward (x, z). The pad's angle is relative to the camera, so the
+    camera's yaw is read back from where each push moved the player."""
+    stick = getattr(session, "stick", None)
+    if stick is None:
+        raise RuntimeError("walk is not available on this backend")
+    player = _player(session, layout)
+
+    def position() -> tuple[float, float, float]:
+        now = struct.unpack("<3f", session.read(player + layout.actor_position, 12))
+        log(f"walk {now[0]:.1f} {now[1]:.1f} {now[2]:.1f}")
+        return now
+
+    # Yaws turn from +z toward +x; the pad's turn from up toward right, which is the other way.
+    # The first push is a slow one straight up the pad, to find the camera.
+    camera = None
+    held = None
+    last = position()
+    for _ in range(round(timeout / (WALK_TURN + WALK_SAMPLE))):
+        away = math.hypot(x - last[0], z - last[2])
+        if away <= WALK_ARRIVED:
+            return
+        pad = 0.0 if camera is None else camera - math.atan2(x - last[0], z - last[2])
+        push = STICK_FULL * (WALK_SLOWEST if camera is None else min(1.0, max(WALK_SLOWEST, away / WALK_SLOW_WITHIN)))
+        along = (str(round(math.sin(pad) * push)), str(round(-math.cos(pad) * push)))
+        stick(*along, str(WALK_TURN))
+        turned = position()
+        stick(*along, str(WALK_SAMPLE))
+        last = position()
+        # A push tells the camera only once the player has turned onto it.
+        settled = held is None or abs(math.remainder(pad - held, math.tau)) < WALK_SETTLED
+        if settled and math.hypot(last[0] - turned[0], last[2] - turned[2]) > 0.5:
+            camera = math.atan2(last[0] - turned[0], last[2] - turned[2]) + pad
+        held = pad
+    raise RuntimeError(f"walk did not reach {x}, {z} within {timeout}s (at {last})")
+
+
 def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
     start = time.monotonic()
 
@@ -149,6 +199,9 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             player = _player(session, layout)
             x, y, z = struct.unpack("<3f", session.read(player + layout.actor_position, 12))
             log(f"player at {x:.1f} {y:.1f} {z:.1f}")
+        elif kind == "walk":
+            x, z, *seconds = (float(part) for part in arg.split(","))
+            _walk(session, layout, x, z, seconds[0] if seconds else 20.0, log)
         elif kind == "csframe":
             log(f"cutscene at {_wait_frame(session, layout, int(arg, 0))}")
         elif kind == "waitscript":
