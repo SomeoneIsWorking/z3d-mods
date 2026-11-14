@@ -41,10 +41,11 @@ fontconfig (`Noto Sans:bold`).
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
-which is what both sets' HUDs draw (A south, B east, X west, Y north, LT and RT are L and R, LB
-and RB are ZL and ZR), right stick the C-stick; the left mouse button on the bottom screen is the stylus. The left stick's
-click and the 3 key hold pad bit 12 (the core's Debug button), which no 3DS button sets: our patches
-read it as the chord button (plans/pad-features.md).
+(A south, B east, X west, Y north, LT and RT are L and R, RB is ZR, the right stick's click ZL),
+right stick the C-stick; the left mouse button on the bottom screen is the stylus. LB is the
+chord: it and the 3 key hold pad bit 12 (the core's Debug button), which no 3DS button sets and
+our patches read as "second item page"; while LB is held, A, B, X and Y press that page's four
+item buttons and nothing else (`kChords` in `pad_input.cpp`, plans/pc-controls-hud.md).
 
 ## Options
 Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick
@@ -107,28 +108,34 @@ bytes written", "patch in") and the Lost Woods cutscene plays on through them.
 
 ## Overlay layout
 `overlay` is the app's own single screen for a game that keeps its HUD and menus on the touch
-screen (MM3D's set uses it; `screen_overlay`). The window has the top screen's shape and the core
-draws both screens into it through its custom layout, which the app rewrites whenever the game
-changes what the touch screen shows:
+screen (MM3D's set uses it; `screen_overlay`). The window has the top screen's shape. A layout
+places the top screen and pieces of the touch screen in it: a piece is a rectangle of the touch
+screen's 320x240 pixels drawn at a rectangle of the top screen's 400x240, with rounded corners and
+an opacity. The game's table, `patch/<game>/overlay.toml`, holds the layouts and names one for each
+of the game's touch screens (and one for while its HUD visibility hides that screen); MM3D's:
 
-- in play (the game's main touch screen is up) the top screen fills the window and the touch screen
-  sits in its top left corner at 40% of the height, 85% opaque: hearts, rupees, the item buttons
-  and the map tabs;
-- with one of play's other touch screens up (Items, Masks, Gear, Map) the touch screen is drawn
-  large and opaque under the menu's title bar;
-- while the game blanks the touch screen or dims its main one (its HUD visibility says so: an
-  area's title card, a cutscene) only the top screen is drawn;
-- the ocarina's screen is an inset whatever the HUD visibility says (the game hides the HUD while
-  Link plays), since the notes play on the top screen;
-- the map, whose other half is on the top screen, and anything outside play (boot, title, file
-  select) put the two screens side by side.
+- `play` (the main touch screen): the top screen fills the window and the HUD's elements are each
+  drawn on it at 0.55 of their size: hearts and magic, rupees and View top left, the ocarina
+  bottom left, Gear and the Masks, Map and Items tabs top right, the I, II, X and Y item buttons
+  on the right edge above the A button. The decorative middle panel is not drawn;
+- `menu` (Items, Masks, Gear): the whole touch screen, large, under the menu's title bar;
+- `top_only` (the game blanks the touch screen, or its HUD visibility hides the main one: an
+  area's title card, a cutscene): the top screen alone;
+- `ocarina`: the whole touch screen as a small inset, since the notes play on the top screen;
+- `split`, the app's own (`splitLayout`): the two screens side by side, for the map, the
+  notebook and anything outside play (boot, title, file select).
 
-The game says which it is: the install writes `"screens"` into `z3d-options.json` (the address of
-the game's pointer to the touch screen that is up, the table of play's screens with a placement
-for each (`hud` is the main screen's inset, the only one the HUD visibility hides), and the HUD visibility word with the values that hide the main screen, from the decomp
-through `tools/z3dmods/games.py`), and `ScreenOverlay` reads them after every frame. Touch follows the layout, so the mouse works on the touch screen
-wherever it is drawn. A tool screenshot of the side-by-side placement is cut to the screens'
-extent (800x384 at scale 2).
+The install writes the table into `z3d-options.json` as `"screens"`, with the address of the
+game's pointer to the touch screen that is up, the table of play's screens and the HUD visibility
+word (from the decomp, `tools/z3dmods/games.py`). `ScreenOverlay` reads the game after every frame
+and hands the layout to `GameWindow`, which writes the core's custom layout and
+`custom_bottom_pieces` (`placeOverlay`). The mouse goes back through the same pieces
+(`overlayTouch`): a click on a piece touches the touch-screen pixel drawn there, and a click
+between pieces touches nothing. A tool screenshot of the side-by-side layout is cut to the
+screens' extent (800x384 at scale 2).
+
+Seen (`mm-ov3`, scale 3): play, the Items and Masks menus, first person, and Woodfall Temple's
+title card with the top screen alone.
 
 ## Core
 `SomeoneIsWorking/azahar`, branch `z3d-harness`, pinned in `tools/z3dmods/app.py`
@@ -149,6 +156,10 @@ extent (800x384 at scale 2).
    taken through the staging copy. `TryRenderScreenshotWithHostMemory` let that refusal throw
    (`vk::Device::allocateMemoryUnique: ErrorInvalidExternalHandle`), which ended a tool run now
    and then; radv refuses pages the kernel cannot pin, file-backed ones every time.
+5. `renderer_vulkan`: `Settings::values.custom_bottom_pieces` (`Settings::ScreenPiece`): with the
+   custom layout, the bottom screen is drawn as these pieces (a source rectangle of the screen at
+   a destination rectangle of the window, corner radius, opacity) instead of whole. The present
+   shaders compute each rectangle's coverage, which also carries the second layer's opacity.
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and

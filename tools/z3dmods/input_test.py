@@ -28,6 +28,7 @@ KEYS = {
     "menu": "Escape", "reload_patch": "F5", "toggle_patch": "F6", "toggle_textures": "F7", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
 }
 PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
+               "lb": ecodes.BTN_TL, "rb": ecodes.BTN_TR,
                "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE}
 # File select's second slot on MM3D's touch screen, which the overlay layout puts beside the top
 # screen there: the right two fifths of the window, half its height, centred.
@@ -40,19 +41,21 @@ class Gamepad:
 
     def __init__(self) -> None:
         self._device = UInput(
-            {ecodes.EV_KEY: list(PAD_BUTTONS.values()) + [ecodes.BTN_TL, ecodes.BTN_TR],
+            {ecodes.EV_KEY: list(PAD_BUTTONS.values()),
              ecodes.EV_ABS: [(ecodes.ABS_X, AXIS), (ecodes.ABS_Y, AXIS), (ecodes.ABS_RX, AXIS), (ecodes.ABS_RY, AXIS)]},
             name="z3d input test pad", vendor=0x045E, product=0x028E, version=0x0110, bustype=ecodes.BUS_USB)
 
     def close(self) -> None:
         self._device.close()
 
+    def hold(self, name: str, down: bool) -> None:
+        self._device.write(ecodes.EV_KEY, PAD_BUTTONS[name], int(down))
+        self._device.syn()
+
     def button(self, name: str, seconds: float = 0.15) -> None:
-        self._device.write(ecodes.EV_KEY, PAD_BUTTONS[name], 1)
-        self._device.syn()
+        self.hold(name, True)
         time.sleep(seconds)
-        self._device.write(ecodes.EV_KEY, PAD_BUTTONS[name], 0)
-        self._device.syn()
+        self.hold(name, False)
 
     def stick(self, x: int, y: int, seconds: float) -> None:
         """Left stick, evdev's range (y grows downward), held for `seconds`, then centred."""
@@ -193,6 +196,28 @@ def _oot3d(session: Session, pad: Gamepad) -> None:
     session.shot("pad-moved-link")
 
 
+def _chord(session: Session, pad: Gamepad) -> None:
+    """The chord takes the face buttons from the game: with LB held the pad's A does not read
+    Link's bed in File 1, and released it does."""
+    session.wait(20)
+    session.key("start")
+    session.wait(3)
+    session.key("a")
+    session.wait(2)
+    session.key("a")
+    session.wait(10)
+    pad.hold("lb", True)
+    session.wait(1)
+    pad.button("a")
+    session.wait(2)
+    session.shot("chord-a")
+    pad.hold("lb", False)
+    session.wait(1)
+    pad.button("a")
+    session.wait(2)
+    session.shot("a")
+
+
 def _mm3d(session: Session, pad: Gamepad) -> None:
     """The overlay layout: keys reach file select, a tap on slot 2 makes a file, Start skips the opening."""
     session.wait(30)
@@ -315,9 +340,9 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap}
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord}
 # The game a direct scenario launches, when it is not the scenario's name.
-DIRECT_GAME = {"hotswap": "mm3d"}
+DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d"}
 SCENARIOS = {**DIRECT, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 

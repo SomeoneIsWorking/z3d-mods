@@ -137,6 +137,8 @@ void GameOptions::apply(Emulator &emulator, PadInput &pad) const {
     invertY = invertY || (item.pad == kCStickInvertY && item.value != 0);
   }
   pad.invertCStick(invertX, invertY);
+  // The manifest sits in the mod folder named by the title ID.
+  pad.bindGame(setup_.options.parent_path().filename().string());
   if (blockCount_ == 0) {
     return;
   }

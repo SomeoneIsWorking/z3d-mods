@@ -46,7 +46,7 @@ struct PadBinding {
 };
 
 // By name on an Xbox pad, which is what the sets' HUDs draw: A is A (south), B is B (east), the
-// triggers are L and R, the bumpers ZL and ZR.
+// triggers are L and R. The left bumper is the chord (kChords), so ZL is the right stick's click.
 constexpr std::array kPadButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_SOUTH, Settings::NativeButton::A},
     PadBinding{SDL_GAMEPAD_BUTTON_EAST, Settings::NativeButton::B},
@@ -54,14 +54,40 @@ constexpr std::array kPadButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_NORTH, Settings::NativeButton::Y},
     PadBinding{SDL_GAMEPAD_BUTTON_START, Settings::NativeButton::Start},
     PadBinding{SDL_GAMEPAD_BUTTON_BACK, Settings::NativeButton::Select},
-    PadBinding{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, Settings::NativeButton::ZL},
+    PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_STICK, Settings::NativeButton::ZL},
     PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, Settings::NativeButton::ZR},
-    // No button of the console: our patches read it as the chord button.
-    PadBinding{SDL_GAMEPAD_BUTTON_LEFT_STICK, Settings::NativeButton::Debug},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_UP, Settings::NativeButton::Up},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_DOWN, Settings::NativeButton::Down},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_LEFT, Settings::NativeButton::Left},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, Settings::NativeButton::Right},
+};
+
+constexpr uint32_t bit(Button button) {
+  return 1U << button;
+}
+
+// The chord is the left bumper in both games: the left index finger holds it while the left
+// thumb steers and the right thumb presses a face button, which a stick's click does not allow.
+// It holds pad bit 12 (the core's Debug button), which no 3DS button sets and our patches read
+// as "second item page" (plans/pad-features.md). X and Y keep their own item buttons; A and B
+// press I and II, as each game's mod set presses them.
+constexpr std::array kChords{
+    // Ocarina of Time 3D, The One Screen: I is ZL, II is ZR.
+    ChordLayout{"0004000000033500",
+                SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
+                {ChordSlot{SDL_GAMEPAD_BUTTON_WEST, ItemButton::X, bit(Settings::NativeButton::X)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_NORTH, ItemButton::Y, bit(Settings::NativeButton::Y)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_SOUTH, ItemButton::I, bit(Settings::NativeButton::ZL)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_EAST, ItemButton::II, bit(Settings::NativeButton::ZR)}}},
+    // Majora's Mask 3D, Project Restoration: I is ZR with X, II is ZR with Y.
+    ChordLayout{"0004000000125500",
+                SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
+                {ChordSlot{SDL_GAMEPAD_BUTTON_WEST, ItemButton::X, bit(Settings::NativeButton::X)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_NORTH, ItemButton::Y, bit(Settings::NativeButton::Y)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_SOUTH, ItemButton::I,
+                           bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::X)},
+                 ChordSlot{SDL_GAMEPAD_BUTTON_EAST, ItemButton::II,
+                           bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::Y)}}},
 };
 
 constexpr int16_t kTriggerPressed = 16384;
@@ -183,10 +209,17 @@ void PadInput::readHost() {
   circle[1] = (keys[SDL_SCANCODE_UP] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_DOWN] ? 1.0F : 0.0F);
   auto &cStick = state.sticks[Settings::NativeAnalog::CStick];
   for (SDL_Gamepad *pad : pads_) {
+    const bool chord = chord_ != nullptr && SDL_GetGamepadButton(pad, chord_->chord);
+    uint32_t held = chord ? bit(Settings::NativeButton::Debug) : 0;
     for (const PadBinding &binding : kPadButtons) {
-      if (SDL_GetGamepadButton(pad, binding.pad)) {
-        state.buttons[binding.button] = true;
+      if (!SDL_GetGamepadButton(pad, binding.pad)) {
+        continue;
       }
+      const auto *slot = chord ? std::ranges::find(chord_->slots, binding.pad, &ChordSlot::face) : nullptr;
+      held |= slot != nullptr && slot != chord_->slots.end() ? slot->buttons : bit(binding.button);
+    }
+    for (size_t i = 0; i < state.buttons.size(); ++i) {
+      state.buttons[i] = state.buttons[i] || ((held >> i) & 1U) != 0;
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerPressed) {
       state.buttons[Settings::NativeButton::L] = true;
@@ -201,6 +234,11 @@ void PadInput::readHost() {
     cStick[1] = stronger(cStick[1], -axis(pad, SDL_GAMEPAD_AXIS_RIGHTY));
   }
   *state_ = state;
+}
+
+void PadInput::bindGame(std::string_view titleId) {
+  const auto *found = std::ranges::find(kChords, titleId, &ChordLayout::titleId);
+  chord_ = found != kChords.end() ? found : nullptr;
 }
 
 void PadInput::setButtons(uint32_t mask) {

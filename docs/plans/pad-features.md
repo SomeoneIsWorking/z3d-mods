@@ -54,7 +54,8 @@ Built (`patch/oot3d/free_camera.cpp`). Seen on the harness, File 1 as a child:
   pages. Items are assigned in the game's own item screen: opened with the chord button held, it
   shows and edits the second page.
 - The chord button is pad bit 12, which no 3DS button sets and the game ignores. The app holds it
-  from the left stick's click and the 3 key (app.md). The plan said ZL, but The One Screen already
+  from the left bumper and the 3 key, and turns A, B, X and Y into the page's four buttons
+  meanwhile (app.md, pc-controls-hud.md). The plan said ZL, but The One Screen already
   uses ZL and ZR for the LB and RB items, and every other button has a job.
 - The item screen's layout in the save owns the buttons (decomp/oot3d `docs/item_buttons.md`):
   the game derives the equipped items and the HUD from it whenever the screen opens. So the pages
