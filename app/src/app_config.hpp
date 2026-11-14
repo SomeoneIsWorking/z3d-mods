@@ -35,6 +35,9 @@ struct AppConfig {
   // The tools' list of games (game_library.hpp) and the picker's outline font.
   std::filesystem::path library;
   std::filesystem::path font;
+  // The tools' installer for a game whose set is missing (set_install.hpp); the dump's path is
+  // added after it. Everything after --installer on the command line.
+  std::vector<std::string> installer;
   // A port-assets copy (sets/, fonts/), which the play HUD draws from; none draws no HUD.
   std::filesystem::path assets;
   // Holds Azahar/ in the core's user layout (nand, sdmc, sysdata, load).
@@ -51,6 +54,7 @@ struct AppConfig {
 
   // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... | --library <json> --font <ttf>)
   //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
+  //     [--installer <program> [<argument>]...]
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
 };
 

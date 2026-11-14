@@ -355,6 +355,43 @@ def _chord_mm3d(session: Session, pad: Gamepad) -> None:
     session.wait(1)
 
 
+SETUP_GAME = "mm3d"
+
+
+def _without_set(cfg: Config, user: Path, out: Path) -> None:
+    """The test's user folder with a load/ of its own that lacks SETUP_GAME's set: the other
+    games' folders are links to the installed ones."""
+    load = user / "Azahar" / "load"
+    load.unlink()
+    missing = GameSet.named(cfg.repo, SETUP_GAME).title_id
+    for kind in ("mods", "textures"):
+        (load / kind).mkdir(parents=True)
+        for folder in (cfg.azahar_data / "load" / kind).iterdir():
+            if folder.name != missing:
+                (load / kind / folder.name).symlink_to(folder, target_is_directory=True)
+
+
+def _setup(session: Session, pad: Gamepad) -> None:
+    """A game whose set is missing: the picker says so, A runs the tools' installer on the
+    player's dump with its stages on screen, and the game boots with the set it made."""
+    session.expect("picker: on")
+    session.wait(2)
+    pad.stick(32767, 0, 0.3)
+    session.expect("picker: on Majora")
+    session.wait(1)
+    session.shot("not-set-up")
+    pad.button("a")
+    session.expect("picker: setting up")
+    session.wait(4)
+    session.shot("setting-up")
+    session.expect("the set is in place", 1200)
+    session.expect("booting")
+    session.wait(40)
+    session.key("start")
+    session.wait(12)
+    session.shot("booted")
+
+
 def _hotswap(session: Session, pad: Gamepad) -> None:
     """MM3D's mods swapped while it runs: F7 turns the textures off and on, F6 takes the patch out
     and puts it back, F5 reads it again; the game runs on (the log names each swap)."""
@@ -461,8 +498,10 @@ DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord, 
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d"}
 # What a scenario puts in its user folder before the app starts.
-PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file}
-SCENARIOS = {**DIRECT, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
+PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "setup": _without_set}
+# Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.
+PICKER = {"setup": _setup}
+SCENARIOS = {**DIRECT, **PICKER, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:
@@ -472,6 +511,8 @@ def _session(cfg: Config, scenario: str, out: Path) -> Session:
         PREPARE[scenario](cfg, user, out)
     if scenario in DIRECT:
         return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user))
+    if scenario in PICKER:
+        return Session(out, play.launch_args(cfg, None, user))
     entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"
     if not entry.exists():
         raise RuntimeError(f"{entry} is missing; run z3dmods shortcut")

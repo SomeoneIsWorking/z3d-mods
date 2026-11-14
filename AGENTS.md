@@ -37,7 +37,7 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   one game directly; its saves live in `~/.local/share/z3d-mods/`, apart from standalone Azahar's.
   `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker); `--host ally` installs
   the app, the sets and its saves in `~/Games/z3d` on the Ally with its own shortcuts.
-- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|chord|chord-mm3d>`: the
+- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|chord|chord-mm3d|setup>`: the
   windowed app's input path with real key, mouse and pad events, off the player's desktop; `picker`
   runs the installed shortcut's Exec line. Shots in `scratch/input-test/<scenario>/`.
 

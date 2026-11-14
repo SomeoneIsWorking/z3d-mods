@@ -28,6 +28,7 @@
 - `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad; the picker scenario runs the installed shortcut.
 - `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.
 - `tools/z3dmods/shortcut.py`: the per-machine desktop shortcut that runs `z3dmods play`.
+- `tools/z3dmods/setup.py`: `z3dmods setup --user <folder> <dump>`: the set of a dump's game installed into an app user folder; the app's picker runs it.
 - `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the app, its sets and saves in another machine's `~/Games/z3d`, with its shortcuts.
 - `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
@@ -50,6 +51,7 @@
   - `screen_overlay`: the overlay layout: pieces of the touch screen drawn on the top screen from the game's table of layouts (`patch/<game>/overlay.toml`) by which touch screen is up, and the mouse mapped back through them.
   - `hud`: the play HUD for every game: element kinds (hearts, meter, counter, button) read from guest memory by the game's table (`patch/<game>/hud.toml`) and drawn as quads of the atlas.
   - `hud_atlas`: port-assets SVGs, lettering and item icons rasterized at the window's size into the image the core draws.
+  - `set_install`: whether a game's set is in the user folder, and the tools' installer run on the player's dump as a child process when it is not.
   - `mod_swap`: the running game's patch put in, taken out or read again from disk, and its texture pack turned on and off.
   - `options_menu`: the picker's options screen for one game.
   - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.

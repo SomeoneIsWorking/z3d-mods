@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, play, shortcut, steps
+from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, play, setup, shortcut, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -31,6 +31,10 @@ def install_set(args: argparse.Namespace) -> None:
     for name in args.games:
         game = install.GameSet.named(cfg.repo, name)
         print(f"{name}: installed into {install.install(cfg, game)}")
+
+
+def setup_game(args: argparse.Namespace) -> None:
+    setup.setup(config.load(), args.rom, args.user)
 
 
 def run_steps(args: argparse.Namespace) -> None:
@@ -75,6 +79,10 @@ def main() -> None:
     inst = commands.add_parser("install", help="install a game's mod set into Azahar")
     inst.add_argument("games", nargs="+", choices=["oot3d", "mm3d"])
     inst.set_defaults(run=install_set)
+    made = commands.add_parser("setup", help="install the set of a dump's game into a z3d app user folder; the app's picker runs this")
+    made.add_argument("--user", type=Path, required=True, help="the app's user folder (holds Azahar/)")
+    made.add_argument("rom", type=Path)
+    made.set_defaults(run=setup_game)
     run = commands.add_parser("run", help="run the player's Azahar headless through scripted steps")
     run.add_argument("game", choices=["oot3d", "mm3d"])
     run.add_argument("name", help="run folder under scratch/runs/")

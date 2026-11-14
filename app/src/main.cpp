@@ -14,6 +14,7 @@
 #include "player.hpp"
 #include "repl.hpp"
 #include "screen_overlay.hpp"
+#include "set_install.hpp"
 #include "title_picker.hpp"
 
 #include <lucent/log.h>
@@ -70,16 +71,21 @@ int picker(const AppConfig &config, PadInput &pad) {
     options.push_back(loadOptions(config, game.setup));
   }
   GameWindow window(config, pad);
+  SetInstall install(config.installer, config.userDir);
   while (true) {
     std::optional<size_t> chosen;
     {
-      TitlePicker picker(window, pad, library, options, config.font);
+      TitlePicker picker(window, pad, library, options, install, config.font);
       chosen = picker.run();
     }
     if (!chosen) {
       return 0;
     }
     const Game &game = library.games()[*chosen];
+    if (install.takeFresh()) {
+      // The picker has just set the game up: its options exist now.
+      options[*chosen] = loadOptions(config, game.setup);
+    }
     lucent::info("z3d", "booting {}", game.title);
     applyGameSettings(options[*chosen].setup());
     window.boot(game.title);

@@ -22,6 +22,7 @@ add_executable(z3d
   src/game_options.cpp
   src/options_menu.cpp
   src/title_picker.cpp
+  src/set_install.cpp
   src/game_window.cpp
   src/pad_input.cpp
   src/emulator.cpp

@@ -3,6 +3,7 @@
 #include "game_window.hpp"
 #include "options_menu.hpp"
 #include "pad_input.hpp"
+#include "set_install.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -21,12 +22,18 @@ std::runtime_error sdlError(const char *what) {
 
 constexpr const char *kHeading = "z3d";
 constexpr const char *kHint = "A  Play    X  Options    Esc or Guide  Back";
+constexpr const char *kSetUpHint = "A  Set up from your game    X  Options";
+constexpr const char *kSetUpHeading = "Setting up ";
+constexpr const char *kSetUpStarting = "Reading your game";
+constexpr const char *kSetUpFailed = "Setup failed    A  Back";
 // Text size as a share of the window's height.
 constexpr float kTitleShare = 1.0F / 26.0F;
 constexpr float kHeadingShare = 1.0F / 14.0F;
 // Tile size and lift as shares of the window's height.
 constexpr float kTileShare = 0.42F;
 constexpr float kTileLift = 0.06F;
+// A line of text wraps at this share of the window's width.
+constexpr float kTextWidth = 0.9F;
 // Stick deflection that counts as a press.
 constexpr float kStickPress = 0.5F;
 
@@ -88,8 +95,9 @@ struct TitlePicker::Layout {
 };
 
 TitlePicker::TitlePicker(GameWindow &window, const PadInput &pad, const GameLibrary &library,
-                         std::vector<GameOptions> &options, const std::filesystem::path &font)
-    : window_(window), pad_(pad), library_(library), options_(options) {
+                         std::vector<GameOptions> &options, SetInstall &install,
+                         const std::filesystem::path &font)
+    : window_(window), pad_(pad), library_(library), options_(options), install_(install) {
   renderer_ = SDL_CreateRenderer(window_.sdlWindow(), "vulkan");
   if (renderer_ == nullptr) {
     throw sdlError("SDL_CreateRenderer");
@@ -117,7 +125,7 @@ TitlePicker::TitlePicker(GameWindow &window, const PadInput &pad, const GameLibr
     titles_.push_back(makeText(engine_, font_, game.title, kText));
   }
   heading_ = makeText(engine_, font_, kHeading, kText);
-  hint_ = makeText(engine_, font_, kHint, kDim);
+  hint_ = makeText(engine_, font_, hint(), kDim);
 }
 
 TitlePicker::~TitlePicker() {
@@ -137,8 +145,14 @@ TitlePicker::~TitlePicker() {
   SDL_DestroyRenderer(renderer_);
 }
 
+std::string TitlePicker::hint() const {
+  return install_.wanted(library_.games()[selected_].setup) ? kSetUpHint : kHint;
+}
+
 void TitlePicker::select(size_t index) {
   selected_ = index;
+  // The bottom line is the selected game's.
+  textHeight_ = 0.0F;
   lucent::info("menu", "picker: on {}", library_.games()[selected_].title);
 }
 
@@ -151,9 +165,10 @@ std::optional<size_t> TitlePicker::run() {
     const std::vector<SDL_FPoint> clicks = window_.pollMenu();
     (void)window_.takeMenuRequest();
     const Layout current = layout();
+    std::optional<size_t> chosen;
     for (const SDL_FPoint &click : clicks) {
       if (const auto index = hit(current, click.x, click.y)) {
-        return index;
+        chosen = index;
       }
     }
     const Held now = Held::from(pad_.state());
@@ -165,7 +180,15 @@ std::optional<size_t> TitlePicker::run() {
       select((selected_ + 1) % count);
     }
     if (now.choose && !before.choose) {
-      return selected_;
+      chosen = selected_;
+    }
+    if (chosen) {
+      if (!install_.wanted(library_.games()[*chosen].setup) || setUp(*chosen)) {
+        return chosen;
+      }
+      before = Held::from(pad_.state());
+      select(*chosen);
+      continue;
     }
     if (now.options && !before.options) {
       OptionsMenu(renderer_, engine_, font_, window_, pad_, options_[selected_],
@@ -212,7 +235,7 @@ void TitlePicker::fitText(float height) {
   heading_ = makeText(engine_, font_, kHeading, kText);
   TTF_SetFontSize(font_, height * kTitleShare);
   TTF_DestroyText(hint_);
-  hint_ = makeText(engine_, font_, kHint, kDim);
+  hint_ = makeText(engine_, font_, hint(), kDim);
   for (size_t i = 0; i < titles_.size(); ++i) {
     TTF_DestroyText(titles_[i]);
     titles_[i] = makeText(engine_, font_, library_.games()[i].title, kText);
@@ -240,8 +263,58 @@ void TitlePicker::draw(const Layout &layout) {
     const SDL_FPoint title = textSize(titles_[i]);
     TTF_DrawRendererText(titles_[i], tile.x + (tile.w - title.x) / 2.0F, tile.y + tile.h + inset);
   }
+  TTF_SetTextWrapWidth(hint_, static_cast<int>(layout.width * kTextWidth));
   const SDL_FPoint hint = textSize(hint_);
   TTF_DrawRendererText(hint_, (layout.width - hint.x) / 2.0F, layout.height * 0.92F - hint.y);
+  SDL_RenderPresent(renderer_);
+}
+
+bool TitlePicker::setUp(size_t index) {
+  const Game &game = library_.games()[index];
+  const std::string heading = kSetUpHeading + game.title;
+  lucent::info("menu", "picker: setting up {}", game.title);
+  install_.start(game.setup);
+  while (install_.running()) {
+    (void)window_.pollMenu();
+    if (window_.closeRequested()) {
+      return false;
+    }
+    drawSetUp(heading, install_.lastLine().empty() ? kSetUpStarting : install_.lastLine());
+  }
+  if (install_.succeeded()) {
+    return true;
+  }
+  lucent::error("menu", "picker: setting up {} failed: {}", game.title, install_.lastLine());
+  Held before = Held::from(pad_.state());
+  while (!window_.closeRequested()) {
+    (void)window_.pollMenu();
+    const Held now = Held::from(pad_.state());
+    if ((now.choose && !before.choose) || window_.takeMenuRequest()) {
+      break;
+    }
+    before = now;
+    drawSetUp(kSetUpFailed, install_.lastLine());
+  }
+  return false;
+}
+
+void TitlePicker::drawSetUp(const std::string &heading, const std::string &line) {
+  const Layout current = layout();
+  fitText(current.height);
+  SDL_SetRenderDrawColor(renderer_, kBackground.r, kBackground.g, kBackground.b, SDL_ALPHA_OPAQUE);
+  SDL_RenderClear(renderer_);
+  TTF_SetFontSize(font_, current.height * kHeadingShare);
+  TTF_Text *top = makeText(engine_, font_, heading, kText);
+  TTF_SetTextWrapWidth(top, static_cast<int>(current.width * kTextWidth));
+  const SDL_FPoint topSize = textSize(top);
+  TTF_DrawRendererText(top, (current.width - topSize.x) / 2.0F, current.height * 0.45F - topSize.y);
+  TTF_DestroyText(top);
+  TTF_SetFontSize(font_, current.height * kTitleShare);
+  TTF_Text *bottom = makeText(engine_, font_, line, kDim);
+  TTF_SetTextWrapWidth(bottom, static_cast<int>(current.width * kTextWidth));
+  const SDL_FPoint bottomSize = textSize(bottom);
+  TTF_DrawRendererText(bottom, (current.width - bottomSize.x) / 2.0F, current.height * 0.5F);
+  TTF_DestroyText(bottom);
   SDL_RenderPresent(renderer_);
 }
 

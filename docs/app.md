@@ -41,6 +41,12 @@ pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
 `<user>/library.json`, an array of `{"rom", "layout", "textures", "options"}` per set, and takes the font from
 fontconfig (`Noto Sans:bold`).
 
+Setup: with `--installer <program> [<argument>]...` (the rest of the command line) the picker
+sets up a game whose options manifest is missing from the user folder: `SetInstall`
+(`src/set_install`) runs the installer with the dump's path added and the picker shows its last
+printed line until it ends, then boots the game. `play.py` passes `z3dmods setup --user <user>`
+(plans/packed-app.md).
+
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
 (A south, B east, X west, Y north, LT and RT are L and R, RB is ZR, the right stick's click ZL),

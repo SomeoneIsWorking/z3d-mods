@@ -11,7 +11,8 @@ constexpr std::string_view kUsage =
     "usage: z3d --user <dir> (--rom <3ds> [--layout default|single_screen|large_screen|"
     "side_by_side|overlay] [--textures] [--options <json>] [--option <id>=<value>]... | "
     "--library <json> --font <ttf>) [--title <text>] "
-    "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures]";
+    "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures] "
+    "[--installer <program> [<argument>]...]";
 
 constexpr std::array kLayouts{
     std::pair{std::string_view("default"), ScreenLayout::Default},
@@ -62,6 +63,13 @@ AppConfig AppConfig::parse(int argc, char **argv) {
     if (flag == "--dump-textures") {
       config.dumpTextures = true;
       continue;
+    }
+    if (flag == "--installer") {
+      config.installer.assign(argv + i + 1, argv + argc);
+      if (config.installer.empty()) {
+        throw std::invalid_argument("--installer wants a program");
+      }
+      break;
     }
     if (flag == "--textures") {
       game.customTextures = true;

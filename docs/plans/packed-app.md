@@ -47,16 +47,53 @@ own patches and of texture packs.
   exheader and the check of every hook's original word. All of it is Python on game data, so
   none of it can ship prebuilt.
 
-## To decide
-A fresh install from the app alone needs that work reachable from the app. Two ways:
-- The app ships the tools (the locked Python environment and `z3dmods`) and runs the install on
-  first launch, from a folder picker for the ROM and the mods. Nothing is written twice; the
-  package grows by a Python runtime.
-- The install is rewritten in C++ inside the app (BPS and IPS, CMB and ZSI rewriting, the HUD
-  composition with font and SVG rendering) and the Python is deleted. Months of work with nothing
-  new for the player's own install.
-Neither is started. Hotswap of `romfs/` files and of a pack changed on disk needs the core to drop
-what it listed at load; not built.
+## The installer: the Python tools ship beside the app
+User: "an installer or something that sets everything up" from their own files: the app plus
+mods, no licensed mods shipped.
+
+Decided: the package carries the tools (`tools/z3dmods`, its locked environment and a Python
+runtime) beside the app, and the app runs them. The install is not rewritten in C++.
+- One implementation. The install is 3000 lines that are already proven on both games: BPS and
+  IPS, the stepped rooms (CMB and ZSI rewriting, the collision budget), the menu textures (font
+  and SVG rendering), the grown exheader, the hook checks. A C++ copy would be a second
+  implementation of every one of those rules until the Python is deleted, and the tools
+  (`run`, `inputtest`, the decomp readers) need the Python readers anyway.
+- It runs once per game, for minutes, on files on disk. Nothing in it is on the frame path, so
+  C++ buys the player nothing.
+- The cost is package size: a Python runtime and the wheels (Pillow, the SVG and font
+  renderers), tens of megabytes beside a core library of that order.
+- The GPL does not reach it: the tools are a separate program the app starts, MIT like the rest
+  of our files.
+The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (Android).
+
+### Slices
+1. Built: the picker sets up a game whose set is missing (below).
+2. The installer takes the player's mod folder instead of `env-assets/`: a folder picker in the
+   app, each download found by the set's SHA-256 (`source_check.py`), a missing or different
+   one named on the setup screen.
+3. Our patch ships prebuilt: `code.ips` and its hook table built at release for each set's base,
+   so the player's machine needs no ARM compiler (`patch_build.py` runs one today).
+4. The package: the app, the core library, the tools with a relocatable Python
+   (`uv python install` into the package, `uv sync --frozen`), port-assets' glyphs and fonts;
+   the ROM folder asked for on first run (`first-run-setup`).
+
+### Slice 1 (2026-11-14)
+- `app/src/set_install`: a game's set is missing when its options manifest
+  (`Azahar/load/mods/<title id>/z3d-options.json`) is not in the user folder. The app is told
+  the installer with `--installer <program> [<argument>]...` (the rest of the command line) and
+  runs it with the dump's path added, as a child process whose printed lines it reads.
+- The picker's bottom line for such a game reads "A  Set up from your game". A opens a
+  screen of its own, "Setting up <title>" over the installer's last line; when the installer
+  ends with the manifest in place the game boots with its options read again, otherwise the
+  screen says "Setup failed" over the last line until A.
+- `z3dmods setup --user <folder> <dump>` (`tools/z3dmods/setup.py`) is that installer: it finds
+  the set by the dump's title ID and runs `install` on that dump into `<folder>/Azahar/load`.
+  `z3dmods play` passes it to the picker. The Ally's copy has no tools, so its picker gets none.
+- The mods and the pack still come from `env-assets/` and the patch is still compiled there.
+
+## Not built
+Hotswap of `romfs/` files and of a pack changed on disk needs the core to drop what it listed at
+load.
 
 ## Open
 - Hidden-window mode for tools (the current harness is already that).
