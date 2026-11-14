@@ -63,16 +63,24 @@ printed lines it reads (`src/tool_process`); a tool's refusal is its lines that 
   question shows the folder set now ("Now: ..."), which `<tools> folders --user <user> --kept
   roms|mods` prints.
 
-Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
-q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
-(A south, B east, X west, Y north, LT and RT are L and R, RB is ZR, the right stick's click ZL),
-right stick the C-stick; the left mouse button on the bottom screen is the stylus. LB is the
-chord: it and the Tab key hold pad bit 12 (the core's Debug button), which no 3DS button sets and
-our patches read as "second item page"; while LB is held, A, B, X and Y press that page's four
-item buttons and nothing else (`kChords` in `pad_input.cpp`, plans/pc-controls-hud.md). The keys
-1 to 8 are the eight item slots: 1 to 4 press the chord layout's four item buttons, 5 to 8 press
-them with bit 12 held (`kItemKeys`). `PadInput::lastDevice()` is the device a button or key was
-last held on, the keyboard when both are; the HUD's prompts follow it.
+Windowed input (`pad_input`, plans/pc-controls-hud.md for the layout): the patch tells the app
+which table the game wants through the slot link (`slot_link`, `"link"` in `z3d-options.json`,
+laid out by `tools/z3dmods/slot_link.py`), and `PadInput` reads the host through it:
+- By name (menus, the ocarina, text, a game without a patch): a pad's buttons are the 3DS
+  buttons of the same names, LT and RT are L and R, LB and RB are ZL and ZR, the right stick the
+  C-stick; the keys are `name` in `z3d --keys`.
+- Play: verbs on fixed buttons, each pressing the 3DS buttons the bound game reads for it
+  (`kGames`), and the eleven item slots, which go to the patch as bits of the link's `held`, not
+  as 3DS buttons. LB (Shift on the keyboard) is the chord: held, A, B, X and Y are slots 8 to 11
+  and Menu is Pause.
+- Assign (an item screen, the ocarina's song list): the play table with the mouse left as the
+  stylus; Menu leaves the screen (`GameVerbs::leave`).
+The left mouse button on the bottom screen is the stylus where it shows. `z3d --keys` prints
+every key and mouse binding, a `<table>\t<name>\t<key>` line each; the tools read their keys
+from it (`tools/z3dmods/app_keys.py`). In the window F10 or Guide returns to the picker, F5
+reads the patch again, F6 takes it out or puts it back, F7 switches the textures.
+`PadInput::lastDevice()` is the device a button or key was last pressed on; the HUD's prompts
+and the menus' hints follow it.
 
 Mouse aim (`mouse_aim`, plans/pc-controls-hud.md): while the game's view is first person and
 follows the gyroscope (the first-person look, an aimed bow or Slingshot; both `PLAYER_LOOK_*`
@@ -110,14 +118,16 @@ counts right turn `focus.rot` 19.995 and 19.990 degrees for 20, 800 left 39.974 
 for 30 with the pitch within 0.005, and a diagonal of 437 by 211 counts 21.846 and 10.547 for
 21.85 and 10.55; `focus.rot` counts in steps of 0.0055 degrees and cuts. 2000 counts down stop
 at the limit, 76.9 degrees, and 100 up after a pause come back 4.999. In a window with real
-mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): D-pad Left or ZL logs "mouse captured for
+mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): the first-person key logs "mouse captured for
 aim", the same four moves show the same views as the harness frames, and leaving first person
 logs "mouse released after 1600 by 600 counts", the travel the test sent.
 
 The picker and its menus do not read the 3DS pad: `PadInput::menu()` (`MenuPad`) is the host's
 buttons by their names on an Xbox pad (A, B, X, Y, Start, the D-pad and the left stick) and the
-keys that stand for them, taken before a game's chord layout or a set's X/Y trade, so a menu
-button is the same whichever game was played last.
+keys that stand for them (`menu` in `z3d --keys`), taken before any game's table, so a menu
+button is the same whichever game was played last. Their hint lines are drawn by
+`MenuCanvas::hints` from `PadInput::menuPrompt` and `GameWindow::menuPrompt` with
+`prompt_art`'s glyphs and caps, the set of the last device; the picker needs `--assets` for them.
 
 ## Options
 Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick
@@ -167,14 +177,14 @@ the generated `options.hpp` in the feature; the menu, the manifest and the store
   still needs a reboot.
 - In the window: F5 reads the patch again, F6 takes it out or puts it back, F7 turns the textures
   off or on. Run steps: `patch:<on|off>`, `textures:<on|off>`.
-- A patch that keeps state in the game's own data is swapped as it stands: take the patch out
-  with the chord button released, or the second item page stays on the buttons.
+- A patch that keeps state in the game's own data is swapped as it stands: with the patch out
+  the item slots' block is dead, and the HUD draws what it last read.
 - Not swapped: the base mod (`code.bin`, `exheader.bin`), `romfs/` and its layers, which the game
   reads as it loads.
 
-Seen (`mm-swap1`, South Clock Town's owl statue, a bow on X): with the patch in, the chord button
-empties X; `patch off` and 0x317000 reads the game's own instruction and the chord does nothing;
-`patch on` and the hook is back, the chord empties X again and the statue still saves.
+Seen on the chord patch before the slots (`mm-swap1`, South Clock Town's owl statue): `patch
+off` and 0x317000 reads the game's own instruction; `patch on` and the hook is back and the
+statue still saves.
 `textures off` draws the 3DS's A on the action button, `textures on` the green A. In the window
 (`z3dmods inputtest hotswap`, real F7, F6 and F5 keys): the log names each swap ("patch out: 4112
 bytes written", "patch in") and the Lost Woods cutscene plays on through them.
@@ -240,30 +250,29 @@ Lettering is port-assets' outline typeface sized by its capitals' height, with a
 cut to its ink and placed by its baseline. A number is one piece of lettering. An item's count
 sits on a solid dark plate that hangs off the ring's bottom, centred: it starts where the icon
 ends, so it covers none of the icon, and the ring's rim never shows between its digits
-(`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100, released and with the chord). `hearts` picks one of the game's five hearts (empty,
+(`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100). `hearts` picks one of the game's five hearts (empty,
 a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can read one entry
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
 a `limit` (the game's table by tier, `gUpgradeCapacities` in both games).
 
-The buttons are four, the same in both games: A, B, X and Y in the pad's diamond, top right. A
-button's glyph never changes. Released, A shows the game's own word for its action under it
-(`label`, the action's number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`;
-MM3D's patch hides the game's own A button, `patch/mm3d/base_hud.cpp`), B shows the sword and X
-and Y their items; while the
-chord is held (`PadInput::chord()`), A and B show what `chord` names in `hud.toml`, the items of
-the game's I and II buttons, onto which the patch has then traded the second page. With the
-keyboard last used a button shows a key cap instead of the pad's glyph: the key of what it shows
-now (1 and 2 for X and Y, 5 to 8 with the chord). The first page's I and II items are not drawn.
+The buttons are the same in both games, top right: the pad's diamond, RB's ring beside Y and
+the D-pad's cross. A shows the game's own word for its action under it (`label`, the action's
+number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's patch hides the
+game's own A button, `patch/mm3d/base_hud.cpp`), X the sword, and Y, B, RB and the cross's four
+rings their slots' items from `SlotLink`, a note for a slot with a song. While the chord is held
+the diamond shows slots 8 to 11. Each ring's prompt is what `PadInput::slotPrompt` or
+`verbPrompt` says presses it, drawn by `prompt_art`: the pad's glyph, or with the keyboard last
+used the key's cap (the mouse's button for the sword). While a screen assigns slots (`PadMode::
+Assign`) a panel beside it shows all eleven.
 
-Seen, both games at scales 3 and 5 (`hud-ootlook3`, `hud-ootlook5`, `hud-mmlook3`,
-`hud-mmlook5`; crops in `scratch/mm-agent/crops/`), with items and counts written into memory
-and the second page named in the patch's bytes: the diamond with counts of 5, 30 and 100 on
-their plates; the chord held puts the second page's four items on Y, X, A and B; the keyboard
-turns the glyphs into caps, 5 to 8 with the chord; the pack's hearts with a quarter heart, the
-pack's rupee with the count in white below the wallet's capacity; "Check" under A beside the bed
-(OoT3D); the Kokiri Sword on B (MM3D). Earlier, on the layout before the diamond: MM3D's blue
-gem and a green 200 with the second wallet (`hud-mmart3`), OoT3D's key counter in the Forest
-Temple and the pause screen hiding the HUD (`mm-oothud3`).
+Seen in a window with real pad and key events at 1280x720 and 854x480 (`z3dmods inputtest
+slots`, `slots-small`, `slots-mm3d`, `slots-mm3d-small`; crops by `scratch/ctl/crops.py`): the
+rings fill as slots are assigned in the item screen, counts fall as the items are used, LB held
+moves slots 8 to 11 onto the diamond, a key turns every glyph into its cap, and the song's note
+sits on D-Up. Earlier, on the diamond alone (`hud-ootlook3`, `hud-mmlook3`): the pack's hearts
+with a quarter heart, the pack's rupee, "Check" under A, MM3D's blue gem and a green 200 with
+the second wallet (`hud-mmart3`), OoT3D's key counter in the Forest Temple and the pause screen
+hiding the HUD (`mm-oothud3`).
 Live state, both games at scale 3, items given to the file and then equipped in the game's own
 item screen (`hud-ootlive3`: Slingshot and bombs in Kokiri Forest; `hud-mmlive3`: bow and bombs
 at South Clock Town's owl statue): the buttons show them; a seed or arrow fired reads 29 of 30
@@ -378,7 +387,7 @@ run the package's launcher. Re-run it after a change.
 
 - Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the
-  dumps; the A key boots OoT3D to its title, Escape returns; the pad's stick selects MM3D and its A
+  dumps; the E key boots OoT3D to its title, F10 returns; the pad's stick selects MM3D and its A
   boots it, the guide button returns; a click on the OoT3D tile boots it again.
 - Options, 2026-11-14, `z3dmods inputtest options-oot3d` (the shortcut's picker, real keys): X on
   the OoT3D tile opens its options with every row of the manifest; Down and A set Quick Text to

@@ -53,7 +53,7 @@ only those (refusing a folder with files it did not write, or a file changed sin
 | Source | github.com/toadalle/The-One-Screen, commit `891b60e364cc660b2d1edfd7916ec01e3bb0cadf` (alpha 1.1.12); GameBanana 724248 |
 | Licence | MIT for its own code and tools; game-derived assets and inherited headers excluded (`THIRD_PARTY_NOTICES.md`). GameBanana asks for permission before modifying: our changes stay in our own patch, not in its files |
 | Gives | Single screen (HUD, items, gear, map, Ocarina, file select on the top screen), Xbox-style button labels, LB/RB items, X/Y slot swap, D-pad shortcuts (Up Items, Down Gear, Right Ocarina, hold Left View), Start pause, Select map |
-| Input | In play and in the pause screens it trades the pad word's X and Y bits before the game reads them (`source/input/policy.h`, `Input_Translate`): the 3DS Y presses the game's X item button and the 3DS X its Y. The app's pad owner presses them accordingly (`pad_input.cpp` `kChords`); on the harness `x` is the 3DS X, the game's Y. |
+| Input | In play and in the pause screens it trades the pad word's X and Y bits before the game reads them (`source/input/policy.h`, `Input_Translate`): the 3DS Y presses the game's X item button and the 3DS X its Y. On the harness `x` is the 3DS X, the game's Y; our item slots press the game's buttons inside the patch, after the trade. |
 | Not used | Its C-stick orbit camera (`source/camera/camera.c`, not in its README; it runs from the hook at 0x452434, after `Play_Update`). Our patch puts the retail branch back there and runs our own free camera, which has the options: two orbits would fight over the same eye |
 | Layout | `exefs/code.ips` (installed as `code.ips`), `exheader.bin` (text rounded to 0x3CA000, `.bss` 0x6C3E8 → 0xF1000; payload at 0x610000–0x64B8B1), `romfs/menu/01_US_ENGLISH/*.ctxb`, `romfs/message/parts.ctxb` |
 | Download | `env-assets/downloads/the-one-screen-891b60e…/` tarball sha256 `93c9ff9ab9f8c1080c37a9f2395bda336802227d76b3bc3699348ff088e68a79`; `code.ips` `10cf910a…a8026`, `exheader.bin` `81d21ba8…08740` |
@@ -144,7 +144,7 @@ Each ships as the `code.ips` that rides on the set's baked `code.bin`.
 
 - Press-Start cutscene skip, both games: [plans/cutscene-skip.md](plans/cutscene-skip.md).
 - Quick Text and optional autosave for OoT3D: [plans/oot3d-qol.md](plans/oot3d-qol.md).
-- Right-stick free camera and chord item buttons: [plans/pad-features.md](plans/pad-features.md).
+- Right-stick free camera: [plans/pad-features.md](plans/pad-features.md). Controls, item slots and the HUD: [plans/pc-controls-hud.md](plans/pc-controls-hud.md).
 - Options: each patch lists its switches in `patch/<game>/options.toml` and keeps them, one byte
   each, in one block at the start of its payload (0x64C000 on the installed OoT3D set, 0x8F7000 on
   MM3D: the page after the base mod's `.bss`), holding the defaults. The app's per-game options

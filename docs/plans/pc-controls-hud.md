@@ -8,7 +8,8 @@ glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mo
 User: "think what a PC game with Xbox controller support would do", then "just make
 something". Fable's design (modern verbs on fixed buttons, D-pad slots) plus the user's LB chord,
 whose objection (a hidden layer) our HUD answers by drawing the chord page while LB is held.
-Same layout in both games; this supersedes the bindings in the sections below.
+Same layout in both games. Built: `app/src/pad_input.cpp` holds every table, and `z3d --keys`
+prints the keyboard's and the mouse's.
 
 | Pad | Job |
 |---|---|
@@ -21,10 +22,11 @@ Same layout in both games; this supersedes the bindings in the sections below.
 | Y, B, RB | Item slots 1 to 3 (RB keeps the right thumb on aim) |
 | RT | Shield; fires the item in hand while aiming |
 | LT | Hold to Z-target; tap to recenter |
-| D-pad | Item slots 4 to 7; defaults Down ocarina, MM Left/Up/Right Deku/Goron/Zora |
+| D-pad | Item slots 4 to 7 (Up, Right, Down, Left); a new file has the ocarina on Down |
 | LB held | Chord: A, B, X, Y are item slots 8 to 11; the HUD shows them while held |
-| Menu | Pause; in the item screen a slot's input assigns the cursor's item to it |
-| View | Map; MM: a second press opens the Bombers' Notebook |
+| Menu | Item screen; a slot's input there assigns the cursor's item to it, Menu again leaves |
+| LB and Menu | Pause |
+| View | Map (OoT3D; MM3D has none bound yet) |
 
 | Keyboard and mouse | Job |
 |---|---|
@@ -36,64 +38,29 @@ Same layout in both games; this supersedes the bindings in the sections below.
 | Q or middle mouse | Target / recenter |
 | F | First person |
 | 1 to 8, then Shift+1 to 3 | Item slots 1 to 11 |
-| R | Ocarina |
+| R | Ocarina (OoT3D; MM3D has none bound yet) |
 | Tab | Item screen; M map; Esc pause |
 
-Songs on slots (user: "Imo songs can be added to item slots"). Not built.
-- Any learned song can be assigned to any slot, like an item: in the Quest screen's song list
-  the player presses the slot's input on a song.
+Menu is the item screen and not Pause as first decided: the game's Start in play is only OoT3D's
+"Save your progress?" and does nothing visible in MM3D (`ctl-pad1`), while the item screen is
+where slots are set. Outside play (menus, the ocarina, a text box) every host button is the 3DS
+button of its name, the triggers L and R, the bumpers ZL and ZR.
+
+Songs on slots (user: "Imo songs can be added to item slots"). Built, both games.
+- A learned song is assigned like an item: with the ocarina out, RB opens the song list, and a
+  slot's input there takes the song on show.
 - Pressing the slot plays the song through the game's own path: the ocarina comes out and the
   notes are played as the game plays them, so the game's own effects and prompts happen. MM3D's
-  Song of Time asks "return to the first day?" through the game; that prompt is kept, never
-  skipped.
-- The HUD shows a note icon with the song's colour or initial on the slot.
-- Proof: a slot plays the Song of Storms or Epona's Song in OoT3D and the Song of Time in MM3D,
-  with its prompt showing.
+  Song of Time ends in the game's own "Do you want to save?" (`ctl-pad2`, the same by hand in
+  `ctl-mm9`); the game asks nothing before the return, and nothing is skipped.
+- The HUD shows a note on the slot.
 
 Not done on purpose: no item on a trigger or on R3, no radial wheel, nothing equips boots or
 masks by context.
 
-## Chord + ABXY
-- Holding the chord turns A, B, X and Y into four more item buttons; released, they are the
-  game's buttons again. Every binding is ours to choose: the 3DS layout and The One Screen's do
-  not constrain it. The bindings live in one table in the app's pad owner, per game.
-- The page mechanism stays (the save holds page one, pages per age/form, `pad-features.md`); what
-  changes is which host buttons press the page's slots and what the HUD draws on them.
-
-- Built in the app, 2026-11-14 (`app/src/pad_input.cpp`, `kChords`: one `ChordLayout` per
-  title ID, bound when a game's options are applied). The chord is the left bumper in both
-  games: the left index finger holds it while the left thumb steers and the right thumb
-  presses a face button; the left stick's click, which it replaces, cannot be held while
-  steering, and both triggers are taken (L targets, R shields). Held, it sets pad bit 12, on
-  which the patches bring the second page onto the game's four item buttons, and the face
-  buttons press those and nothing else: X is X, Y is Y, A is I, B is II. I and II are pressed
-  the way each set presses them (OoT3D: ZL and ZR; MM3D: ZR with X and ZR with Y).
-- The bumper's old job, ZL (OoT3D's item I, MM3D's View), is on the right stick's click. RB
-  stays ZR.
-- For the HUD: `PadInput::chord()` returns the bound game's `ChordLayout` (`pad_input.hpp`):
-  the chord button and, per face button, the `ItemButton` it presses. The chord is held while
-  `state().buttons[NativeButton::Debug]` is set. Until our HUD draws from it, the sets' HUD art
-  is out of date: The One Screen's LB on item I and MM3D's LB badge on View name the old button.
-- The pad's X and Y are the X and Y item buttons on both pages, pressed as the bound game's
-  layout says. The One Screen trades the pad word's X and Y bits in play (its
-  `source/input/policy.h`; on the harness the 3DS X reads 0x800 in `GameState.buttonsHeld`,
-  `oot-ch15`), so for OoT3D the pad's X holds the 3DS Y and the pad's Y the 3DS X. MM3D reads
-  them straight (0x400 for X, `mm-xy1`).
-- Shown with a real pad's events, in a file the test makes on the harness with the game's own
-  save (items poked into the inventory and named on the second page):
-  - OoT3D (`z3dmods inputtest chord`, File 1 saved inside the Deku Tree, a Slingshot on X and a
-    Deku Stick on II of the second page): LB held, the HUD draws the Slingshot on X and the
-    stick on B's slot; LB and X held, Link aims the Slingshot in first person; LB and B, Link
-    has the stick in hand. Before the pad's X held the 3DS Y for this game, LB and X did nothing.
-  - MM3D (`z3dmods inputtest chord-mm3d`, File 1 saved at South Clock Town's owl statue, bombs
-    on X and a bow on II of the second page): LB held, the HUD draws both; LB and B held, Link
-    aims the bow; LB and X, he lifts a bomb.
-  - A on the chord page (item I) aimed the Slingshot and Y the bow in the test's earlier files.
-  - The Slingshot is not usable in Link's house, where a child's file saved outdoors loads.
-
 ## Our own HUD
 - One HUD per game drawn from the game's own state and art, with port-assets' Xbox glyphs on every
-  button: item buttons, the chord page while the chord is held, hearts, magic, rupees, the
+  button: the item slots, the chord's four while the chord is held, hearts, magic, rupees, the
   minimap, the clock (MM3D). It replaces pasting the touch screen into the play view; full-screen
   menus may still show the touch screen.
 - Each element sits where a console HUD puts it and occludes as little of the 3D view as possible.
@@ -119,56 +86,39 @@ RE based instead of copying patches of bottom screen".
 - Stopgap: a menu (Items, Masks, Gear, the map, the notebook) still shows the game's touch screen
   whole. The proper fix is those menus drawn by us or moved by a patch; the risk is only looks.
 
-### The button cluster (user, 2026-11-14)
-"Just show A B X Y only always and when cord is held it shows the alt versions."
-- The cluster is four buttons, A, B, X and Y, in the pad's diamond, top right, the same in both
-  games. A button's glyph never changes; only what it shows does.
-- Released: A is the action with its word, B the sword, X and Y their items.
-- Chord held: each shows what its press does then. A shows the I button's item and B the II
-  button's (the patch has traded the second page onto the game's four item buttons), X and Y the
-  second page's X and Y items.
-- Not on the HUD: the first page's I and II items. The bindings that press them stay as they are
-  (`kChords`, each set's own I and II buttons).
-- Counts sit on a dark plate: the ring's rim behind a bare count read as a decimal point ("30"
-  as "3.0"). The plate hangs below the ring, off the icon ("numbers overlap the icons too much"
-  about the plate in the ring's corner).
+### The buttons on the HUD
+- Top right, the same in both games: the pad's diamond (A with the action's word, X the sword, Y
+  and B their slots), RB's slot beside it and the D-pad's cross with its four slots. While LB is
+  held the diamond shows slots 8 to 11. A slot with a song shows a note. With the keyboard last
+  used every ring carries its key's cap, the sword and shield the mouse button's.
+- User: "Just show A B X Y only always and when cord is held it shows the alt versions", then the
+  layout above added RB and the D-pad.
+- Counts sit on a dark plate that hangs below the ring, off the icon ("numbers overlap the icons
+  too much"; a bare count on the rim read "30" as "3.0").
 - The rupee, the key and the hearts are the game's own art, the texture pack's copy ("use the 4k
   ones"); frames, the meter and glyphs stay vector.
 
 ### Our own item slots (user, 2026-11-14)
 "we don't have to stick to what 3D games do, we can move away from this I and II things and make
-it so we can dictate inputs". Also: "let's not bind an item to right stick click. We have a ton of
-slots anyway like d-pad and chord dpad are available as well."
+it so we can dictate inputs". Also: "let's not bind an item to right stick click."
 
-This replaces the two pages on the game's Y, X, I and II buttons. Not built yet; until it is, the
-chord page above is what runs.
-
-- The player has N item slots (at least 8), ours, the same in both games. The game's Y, X, I and II
-  buttons become lanes the patch uses and the player never sees or binds.
-- Bindings: one table per game in the pad owner (`app/src/pad_input.cpp`, where `kChords` is now):
-  each slot's host inputs, any of a face button, chord and a face button, a D-pad direction, chord
-  and a D-pad direction, a key (1 to 8 and on). No slot is on the right stick's click. A set's
-  own job on an input a slot takes (The One Screen's and Project Restoration's D-pad shortcuts)
-  moves to a free input in the same table, and each move is listed here when it is made.
-- App to patch: the pad owner writes the slots held this frame, one bit a slot, into a block of the
-  patch that the app already writes (the options block's neighbour, its address in
-  `z3d-options.json`). The pad word has one spare bit (12), too few for a slot number.
-- Patch: on a held slot it puts the slot's item on a free lane (the game's X or Y button, so two
-  slots can be held at once), sets that lane's button in the play input itself, and gives the lane
-  back when the slot is released: the trade `chord_items.cpp` does today, per slot instead of per
-  page. The press and the trade are one step in the patch, so no frame separates them.
-- Where a slot's item lives: an inventory slot number per item slot in the save's unused bytes
-  (OoT3D `SaveContext.unused_6C`, MM3D the unused rows of `EquipmentData.buttonSlots`), as the
-  second page is kept now. The game's own button layout in the file is never ours: before a save
-  the lanes hold what the game put there, so the file loads the same without the patch.
-- Assigning: in the item screen the player presses a slot's input on the item under the cursor.
-  The patch reads the screen's cursor and writes the slot. What the screen's cursor is (the
-  selected node, in both games) is not reverse-engineered yet: that is the first RE step, into the
-  decomps.
-- HUD: A, B, X and Y as decided above, drawn from the slot table: each button shows the slot its
-  press uses now, released and with the chord. Slots on other inputs (the D-pad) are not drawn.
-- Order: the cursor's RE; OoT3D; MM3D. Proof: items used from D-pad and chord and D-pad slots with
-  real pad events, and a file saved with slots set loading clean without the patch.
+- Eleven slots, ours, the same in both games. The game's own item buttons are lanes the patch
+  uses and the player never sees or binds.
+- App to patch: one block of the patch (`tools/z3dmods/slot_link.py`, `"link"` in
+  `z3d-options.json`; `app/src/slot_link`). The app writes the slots held this frame; the patch
+  writes the pad table the game wants (by name, play, or a screen that assigns), and each slot's
+  item, song and lane for the HUD.
+- Patch (`patch/<game>/slot_items.cpp`, `patch/common/slots.hpp`): a held slot's item goes onto a
+  free lane and that lane's button is pressed in the same update; the lane is given back when
+  another slot needs it. OoT3D: an item in hand that loses its lane is put away by the game,
+  which drops presses until Link's hands are empty, so the new slot's press waits for that
+  (decomp/oot3d `docs/item_buttons.md`, "The item in hand").
+- Store: a slot's inventory slot or song in the save's spare bytes (OoT3D
+  `SaveContext.unused_6C`, MM3D the spare rows of the equipment's button slots). The lanes hold
+  the game's own layout while an item screen is up and before a save, so the file loads the same
+  without the patch.
+- Assigning: in the item screen (MM3D: Items and Masks) a slot's input takes the cursor's item;
+  in the ocarina's song list it takes the song on show. The left stick moves both cursors.
 
 ### Design (one owner for both games)
 - f93caea drew the touch screen's play elements as cropped pieces; the user rejected it (rule
@@ -187,26 +137,37 @@ chord page above is what runs.
   drawn after the screens. Tool screenshots go through the same pass, so a HUD frame is a proof.
 - Item icons stay raster: the install copies each item's icon (the pack's copy where it has one)
   into the app's data by item ID; the HUD draws the icon of the item the game has on a button.
-- Buttons: the HUD asks `PadInput::chord()` for the bound game's `ChordLayout` and
-  `PadState::buttons[Debug]` for whether the chord is held, and draws that page's four items on
-  A, B, X and Y. The table stays where the other agent put it (`kChords`, `pad_input.cpp`); the
-  keyboard's 1 to 8 go into the same file's key table, each pressing a `ChordSlot`'s buttons.
+- Buttons: the HUD draws each slot from `SlotLink` and asks `PadInput::slotPrompt` and
+  `verbPrompt` what presses it; `app/src/prompt_art` maps a prompt to its glyph or cap, for the
+  HUD and the menus' hints alike.
 - Last device: `PadInput` records whether the last press came from a pad or the keyboard; the HUD
   reads it every frame and swaps the glyph set.
 - The game's own HUD has to go where ours replaces it (MM3D's A button and clock on the top
   screen, all of OoT3D's with The One Screen): a patch switch per element, found per game.
-
-Order: the core's atlas pass; hearts, rupees and the item buttons for MM3D; the same table for
-OoT3D; the chord page; key caps; the clock and minimap; hiding the games' own.
 
 ### Open
 - Which guest state each element reads (button items, counts, the minimap's ownership) and the
   item icons' files: per game, into the decomps first.
 - The A button's words are cut from the US English sheet (`[words]` in `hud.toml`); another
   language's file needs its sheet named by the file's language.
-- OoT3D's item screen labels its two round buttons for the 3DS under The One Screen's X/Y trade:
-  the pad's X assigns into the one labelled Y (`hud-ootlive3`). The labels are `sets/hud`'s; they
-  are redone with the slot model's assignment.
+- The item screens are the game's art: their BACK and Return tabs carry a circled B, which in
+  an item screen is slot 2's button; Menu leaves them.
+
+### The game's own prompts
+- A text box's button prompts are cells of the game's prompt sheet, redrawn with pad glyphs
+  (`sets/hud/*.json`, plans/xbox-glyphs.md). The four item-button cells (X, Y, I, II) name where
+  our slots start: Y, B, RB and the D-pad. OoT3D, the Know-It-All Brothers (`ctl-text5`): "The
+  RB, Y, B, and D-pad icons on the lower screen are your item slots", "Assign items you use often
+  to Y or B". MM3D's sheet has the same four cells changed ("Set it to Y, B, RB or D-pad"); seen
+  as the installed texture only, since the owl statue rewrites its message every frame.
+- Cannot change by a cell: the words ("tap", "the lower screen", "Select Item Screen") are the
+  game's message data; and the plain A, B, X, Y, L, R cells serve the menus, where the pad is by
+  name, and play alike, so a play prompt for the sword still shows B (the pad's X) and one for
+  the game's X or Y button shows X or Y. The fix is the outline-font pass below, which redraws
+  message text.
+- No key caps in text boxes: the sheet is a texture made at install, not swapped by device.
+- MM3D's touch-screen HUD sheet still labels I, II, View, Gear and Map with Project
+  Restoration's shortcuts; that sheet is not drawn in play any more.
 
 ## Outline fonts
 User: "And SVG fonts" (an outline font, crisp at any resolution). Every piece of text the HUD
@@ -219,8 +180,9 @@ draw in the app only what that cannot reach.
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.
   The switch is immediate (hotswap), with no restart.
-- Keyboard items: 1 to 8 use the eight item slots directly (page one 1 to 4, page two 5 to 8), no
-  chord needed.
+- The menus' hints (picker, options, folder browser) follow it the same way
+  (`MenuCanvas::hints`).
+- The tools read the keys from the app (`z3d --keys`, `tools/z3dmods/app_keys.py`), never a copy.
 - Mouse aim: in first person and aimed items (slingshot, bow, hookshot, boomerang), mouse motion
   turns the aim. Both games already aim with the gyroscope, so the app feeds mouse motion to the
   3DS gyro input first; patch code only if that cannot give 1:1 aim. Outside aiming, the mouse may
@@ -238,30 +200,29 @@ draw in the app only what that cannot reach.
   mouse button.
 
 ## Status
-- Chord + ABXY: bindings built, not yet seen in a run with a real pad.
-- HUD, both games (docs/app.md, "HUD"): the owner, the atlas and the core's pass are built. Drawn
-  from state: hearts by quarters, magic, rupees (the wallet's gem in MM3D, green at the wallet's
-  capacity), the A, B, X and Y diamond with item icons and counts on plates, the chord's alt
-  contents on the same four buttons, key caps (`hud-ootlook3`, `hud-ootlook5`, `hud-mmlook3`,
-  `hud-mmlook5`), the action's word under A in the game's own art, and in OoT3D small keys in the
-  dungeons. The rupee, key and hearts are the pack's copies of the game's art. The cut-out
-  touch-screen pieces are gone from play, The One Screen's own HUD is switched off in the patch
-  and MM3D's own A button is hidden by its patch (`base_hud` in both).
-- Seen live, with items equipped in the item screen (`hud-ootlive3`, `hud-mmlive3`): counts
-  falling as ammo is used, damage, a scene change, a purchase.
-- Missing from both: the decided layout (above): our own item slots, RB and the D-pad cross on
-  the HUD, the keyboard table; item counts are not coloured at capacity (the capacity tables are
-  in both decomps).
+- Slots, pad, keyboard and HUD: built in both games. Seen with a real pad's and real key events
+  in a window at 1280x720 and 854x480 (`z3dmods inputtest slots`, `slots-small`, `slots-mm3d`,
+  `slots-mm3d-small`; files made on the harness by the game's own save): Menu opens the item
+  screen; Y, RB, D-Right and LB+A take the cursor's items and the panel shows them; each is used
+  in play from its slot and the count falls; LB held shows slots 8 to 11; key 1 uses slot 1 with
+  caps on the HUD; D-Down brings the ocarina, RB its song list, D-Up takes the song; from play
+  D-Up plays it (OoT3D: "You played the Sun's Song"; MM3D: the Song of Time, the return to the
+  first day).
+- Saves: a file saved with slots set loads without the patch with the game's own buttons
+  (OoT3D `ctl-save3`; MM3D `ctl-mmsave2`, `ctl-mmload`).
+- Menu hints: `inputtest picker`, `options`, `options-oot3d` show pad glyphs, then caps after a
+  key, and back.
+- Not done: MM3D has no Map or Ocarina verb on the keyboard (M and R do nothing there); MM3D's Masks screen and the X and Y lanes were not run
+  with a pad; R3 and the mouse's free camera are unseen in a window; with
+  the patch taken out (F6) the HUD draws stale slots; item counts are not coloured at capacity.
 - Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
   game's own clock still draws and is not ours yet.
 - Missing from OoT3D's HUD: the carrots and View; the bow's, bombchus' and beans' counts follow
   the N64's slots and were not seen.
-- Keyboard: 1 to 8 and the last-device swap are built; seen only through the tools' `device`
-  command, not with real keys in a window.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the
   Slingshot (OoT3D): a mouse delta turns the view by 0.05 degrees a count within 0.03 degrees
-  (`aim-mm5`, `aim-oot3`), and real mouse motion in a window does the same (`inputtest aim`,
-  `aim-mm3d`). Not run: the hookshot, boomerang and OoT3D's bow; Master Quest.
+  (`aim-mm5`, `aim-oot3`), and in a window the F key, real mouse motion and leaving the look
+  (`inputtest aim`, `aim-mm3d`). Not run: the hookshot, boomerang and OoT3D's bow; Master Quest.
 - Outline fonts: the HUD's own lettering is port-assets' outline typeface at the window's size;
   the games' text is not started.

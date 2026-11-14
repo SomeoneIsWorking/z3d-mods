@@ -601,8 +601,8 @@ def _aim_released(session: Session) -> None:
 
 
 def _aim(session: Session, pad: Gamepad) -> None:
-    """OoT3D: a file saved inside the Deku Tree (Link's house has no first person), D-pad Left
-    for first person, the mouse turns the view, and B gives the mouse back."""
+    """OoT3D: a file saved inside the Deku Tree (Link's house has no first person), the
+    first-person key, the mouse turns the view, and the sword's button gives the mouse back."""
     session.wait(20)
     session.key("name", "start")
     session.wait(3)
@@ -613,15 +613,15 @@ def _aim(session: Session, pad: Gamepad) -> None:
     session.shot("deku-tree")
     session.key("play", "first_person")
     session.wait(1)
-    session.shot("d-pad-left")
+    session.shot("first-person")
     _aim_turns(session)
     session.mouse_button("sword")
     _aim_released(session)
 
 
 def _aim_mm3d(session: Session, pad: Gamepad) -> None:
-    """MM3D: the file at South Clock Town's owl statue, ZL for first person, the mouse turns the
-    view, and ZL again gives the mouse back."""
+    """MM3D: the file at South Clock Town's owl statue, the first-person key, the mouse turns
+    the view, and the key again gives the mouse back."""
     session.wait(30)
     session.key("name", "start")
     session.wait(12)
@@ -634,7 +634,7 @@ def _aim_mm3d(session: Session, pad: Gamepad) -> None:
     session.shot("statue")
     session.key("play", "first_person")
     session.wait(1)
-    session.shot("zl")
+    session.shot("first-person")
     _aim_turns(session)
     session.key("play", "first_person")
     _aim_released(session)
@@ -880,7 +880,7 @@ def _hotswap(session: Session, pad: Gamepad) -> None:
 
 
 def _picker(session: Session, pad: Gamepad) -> None:
-    """The shortcut's picker: keys boot OoT3D and Escape returns; the pad boots MM3D and Guide
+    """The shortcut's picker: keys boot OoT3D and the menu key returns; the pad boots MM3D and Guide
     returns; a click boots OoT3D again."""
     session.wait(8)
     session.shot("picker")
