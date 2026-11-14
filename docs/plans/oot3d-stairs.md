@@ -125,8 +125,10 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
     (`oot-st17-ganontika`, `oot-st17-sonogo`, steps 13.4 apart): walked. Hyrule Castle
     (`oot-st17-spot15`): steps 7 apart, the walk ends on the top landing 4 units beside its
     target. Death Mountain Trail (`oot-st17-spot16`): the short flight by the Kakariko exit
-    lands on 1181 to 1201; the drop next to the exit left the scene, so the long upper flight
-    is not measured.
+    lands on 1181 to 1201. The long upper flight is the way into the crater and its floor is
+    that exit, in the ROM as well: a drop on it lands on 3119.0 with the layer and 3120.9
+    without, and Death Mountain Crater loads either way (`oot-st21`, `oot-st22`), so there is
+    nothing to walk.
 - Not seen: an adult, Epona or a rolling bomb on the steps, enemies, arrows against a riser.
 
 ## Still open
@@ -161,7 +163,13 @@ File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm
   stepped stairs with Link on a tread in the Inn, the Milk Bar, the Music Box House and the
   Observatory; in the dungeons the flight's room is not loaded from the entrance used, so those
   frames are black and only the heights speak.
-- South Clock Town (`mm-st15-clocktower`): drops land 4.2 apart (39, 44, 48, 52, 56). Not
-  walked: Tatl's first-day talk holds Link there and the runs did not get past it.
+- South Clock Town (`mm-st20-ct<flight>`, entered at the owl statue, entrance 0xD890, which is
+  past Tatl's first-day talk): the four flights Link can stand on are walked foot to top without
+  a stop, the two by the tower landing 4.5 to 6 apart (40 to 54, 35 to 60) and the two upper
+  ones 9 apart (131 to 159); the frames show Link on the drawn treads at each foot and top.
+  The ramps to East and West Clock Town are exits over their whole floor, in the ROM as well
+  (`mm-st22`, the layer off: a drop on the east ramp lands on 42.8 and loads East Clock Town;
+  with the layer it lands on 39 and loads it, `mm-st21`), so nobody stands on those. The eighth
+  flight has no floor under it.
 - East, West and North Clock Town draw every district's flights, but only their own have a
   floor; West's one flight lands on 8 heights (`mm-st15-ichiba`), the other two have none.
