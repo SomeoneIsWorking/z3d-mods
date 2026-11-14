@@ -19,6 +19,10 @@ Both go into the same MIT `code.ips` as the cutscene skip ([cutscene-skip.md](cu
   and code 0x05 (instant off) is skipped. Delay codes still pause, so timed narration keeps its
   pacing. RE: `decomp/oot3d/docs/message.md`. Seen 2026-11-13 in the Deku Tree's scene after Gohma
   (every box whole on its first visible frame, the choice too) and in the opening narration.
+  Off against on, 2026-11-14, a Know-It-All Brother's first line on the same frame after A:
+  with `--option quick_text=0` the box holds "I c" (`oot-qt1`), with the option on the whole
+  line and its three choices (`oot-qt2`). Link's bed is no test: its line is whole on its first
+  frame either way (`oot-qt-0`, `oot-qt-1`, every frame recorded).
 - Autosave, built (`patch/oot3d/autosave.cpp`, option "Autosave after each scene change", off by
   default): when a scene change that began in play has finished (the fade in over, no cutscene,
   the HUD up), the patch calls the game's own `Sram_WriteSave(play, 0)`, the call the pause

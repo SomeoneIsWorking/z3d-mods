@@ -40,6 +40,8 @@ public:
 private:
   struct Layout;
   [[nodiscard]] Layout layout() const;
+  // Logs the game the picker is on, which the input tests wait on.
+  void select(size_t index);
   void fitText(float height);
   void draw(const Layout &layout);
   [[nodiscard]] std::optional<size_t> hit(const Layout &layout, float x, float y) const;

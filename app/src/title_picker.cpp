@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <lucent/log.h>
 
 #include <algorithm>
 #include <stdexcept>
@@ -136,10 +137,16 @@ TitlePicker::~TitlePicker() {
   SDL_DestroyRenderer(renderer_);
 }
 
+void TitlePicker::select(size_t index) {
+  selected_ = index;
+  lucent::info("menu", "picker: on {}", library_.games()[selected_].title);
+}
+
 std::optional<size_t> TitlePicker::run() {
   (void)window_.takeMenuRequest();
   // What is held when the picker opens (the A that chose it, say) is not a press.
   Held before = Held::from(pad_.state());
+  select(selected_);
   while (!window_.closeRequested()) {
     const std::vector<SDL_FPoint> clicks = window_.pollMenu();
     (void)window_.takeMenuRequest();
@@ -152,10 +159,10 @@ std::optional<size_t> TitlePicker::run() {
     const Held now = Held::from(pad_.state());
     const size_t count = library_.games().size();
     if (now.left && !before.left) {
-      selected_ = (selected_ + count - 1) % count;
+      select((selected_ + count - 1) % count);
     }
     if (now.right && !before.right) {
-      selected_ = (selected_ + 1) % count;
+      select((selected_ + 1) % count);
     }
     if (now.choose && !before.choose) {
       return selected_;
@@ -167,6 +174,7 @@ std::optional<size_t> TitlePicker::run() {
       // The menu left the font at its own size.
       textHeight_ = 0.0F;
       before = Held::from(pad_.state());
+      select(selected_);
       continue;
     }
     before = now;

@@ -208,8 +208,9 @@ the host's own SDL3 and SDL3_ttf serve the rest. Re-run it after a build or an i
   boots it, the guide button returns; a click on the OoT3D tile boots it again.
 - Options, 2026-11-14, `z3dmods inputtest options-oot3d` (the shortcut's picker, real keys): X on
   the OoT3D tile opens its options with every row of the manifest; Down and A set Quick Text to
-  Off; in File 1 the text of Link's bed then comes up as an empty box before its letters, which
-  Quick Text never shows. The shots are a second apart, so no half-typed line is caught.
+  Off, and File 1 boots. The test waits on the menus' own log lines (`[menu] picker: on <title>`,
+  `options: row <id>`, `options: <id> = <choice>`), not on fixed times: five runs in a row took
+  the same path. What the option does in game is shown on the harness (docs/plans/oot3d-qol.md).
 - Ally install, 2026-11-13: the installed entry's Exec line in a hidden headless Gamescope there
   shows the picker with both games; the A key boots OoT3D to its 4K title screen.
 

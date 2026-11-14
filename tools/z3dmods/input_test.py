@@ -72,6 +72,7 @@ class Session:
         self._gamescope: subprocess.Popen | None = None
         self._env: dict[str, str] = {}
         self._shots = 0
+        self._log_read = 0
 
     def __enter__(self) -> Session:
         args = self._args
@@ -120,6 +121,24 @@ class Session:
         time.sleep(seconds)
         if self._gamescope.poll() is not None:
             raise RuntimeError(f"gamescope exited; see {self.out / 'gamescope.log'}")
+
+    def expect(self, text: str, seconds: float = 30) -> str:
+        """Waits for the app to log a line holding `text` after the last line expected, and
+        returns it: the menus log what they are on (app/src/title_picker.cpp, options_menu.cpp)."""
+        assert self._gamescope
+        log = self.out / "gamescope.log"
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            data = log.read_bytes()
+            while (end := data.find(b"\n", self._log_read)) >= 0:
+                line = data[self._log_read:end].decode(errors="replace")
+                self._log_read = end + 1
+                if text in line:
+                    return line
+            if self._gamescope.poll() is not None:
+                raise RuntimeError(f"gamescope exited; see {log}")
+            time.sleep(0.05)
+        raise RuntimeError(f"the app did not log {text!r} within {seconds}s; see {log}")
 
     def shot(self, label: str) -> Path:
         self._shots += 1
@@ -234,17 +253,21 @@ def _picker(session: Session, pad: Gamepad) -> None:
 def _options(session: Session, pad: Gamepad) -> None:
     """The picker's options: X on MM3D opens them, A turns the cutscene skip off, and Start then
     leaves the opening narration running."""
-    session.wait(8)
-    session.key("stick_right", 0.3)
-    session.wait(1)
+    game = session.expect("picker: on ")
+    while "Majora" not in game:
+        session.key("stick_right")
+        game = session.expect("picker: on ")
     session.key("x")
-    session.wait(1)
+    row = session.expect("options: row ")
     session.shot("options")
+    while not row.endswith("options: row cutscene_skip"):
+        session.key("stick_down")
+        row = session.expect("options: row ")
     session.key("a")
-    session.wait(1)
+    session.expect("options: cutscene_skip = Off")
     session.shot("skip-off")
     session.key("b")
-    session.wait(1)
+    session.expect("picker: on ")
     session.shot("picker")
     session.key("a")
     session.wait(30)
@@ -263,19 +286,23 @@ def _options(session: Session, pad: Gamepad) -> None:
 
 
 def _options_oot3d(session: Session, pad: Gamepad) -> None:
-    """The picker's options for OoT3D: X opens them, Down and A turn Quick Text off, and the text
-    Link reads beside his bed in File 1 then types itself out."""
-    session.wait(8)
+    """The picker's options for OoT3D: X opens them, Down and A turn Quick Text off, and File 1
+    then boots with the option written. Each step waits on the menu's own log line."""
+    game = session.expect("picker: on ")
+    while "Ocarina" not in game:
+        session.key("stick_right")
+        game = session.expect("picker: on ")
     session.key("x")
-    session.wait(1)
+    row = session.expect("options: row ")
     session.shot("options")
-    session.key("stick_down")
-    session.wait(1)
+    while not row.endswith("options: row quick_text"):
+        session.key("stick_down")
+        row = session.expect("options: row ")
     session.key("a")
-    session.wait(1)
+    session.expect("options: quick_text = Off")
     session.shot("quick-text-off")
     session.key("b")
-    session.wait(1)
+    session.expect("picker: on ")
     session.key("a")
     session.wait(20)
     session.key("start")
@@ -285,11 +312,6 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
     session.key("a")
     session.wait(10)
     session.shot("house")
-    session.key("a", 0.05)
-    for shot in ("text-1", "text-2", "text-3"):
-        session.shot(shot)
-    session.wait(4)
-    session.shot("text-late")
 
 
 # Direct launches of one game, and the installed shortcut's picker.

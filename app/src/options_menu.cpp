@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <lucent/log.h>
 
 #include <algorithm>
 
@@ -44,26 +45,40 @@ struct Held {
 
 } // namespace
 
+void OptionsMenu::select(size_t index) {
+  selected_ = index;
+  lucent::info("menu", "options: row {}", options_.items()[selected_].id);
+}
+
+void OptionsMenu::step(int direction) {
+  options_.step(selected_, direction);
+  const Option &item = options_.items()[selected_];
+  lucent::info("menu", "options: {} = {}", item.id, item.choices[item.value]);
+}
+
 void OptionsMenu::run() {
   (void)window_.takeMenuRequest();
   Held before = Held::from(pad_.state());
+  lucent::info("menu", "options: open for {}", title_);
+  select(selected_);
   while (!window_.closeRequested()) {
     (void)window_.pollMenu();
     const Held now = Held::from(pad_.state());
     const size_t count = options_.items().size();
     if (now.up && !before.up) {
-      selected_ = (selected_ + count - 1) % count;
+      select((selected_ + count - 1) % count);
     }
     if (now.down && !before.down) {
-      selected_ = (selected_ + 1) % count;
+      select((selected_ + 1) % count);
     }
     if (now.left && !before.left) {
-      options_.step(selected_, -1);
+      step(-1);
     }
     if ((now.right && !before.right) || (now.change && !before.change)) {
-      options_.step(selected_, 1);
+      step(1);
     }
     if ((now.back && !before.back) || window_.takeMenuRequest()) {
+      lucent::info("menu", "options: closed");
       return;
     }
     before = now;

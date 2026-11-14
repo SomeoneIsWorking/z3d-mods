@@ -26,6 +26,9 @@ public:
   void run();
 
 private:
+  // Each logs the menu's new state, which the input tests wait on.
+  void select(size_t index);
+  void step(int direction);
   void draw();
   void text(const std::string &line, float x, float y, bool selected, bool rightAligned);
 
