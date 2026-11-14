@@ -23,6 +23,11 @@ mm3d-decomp `docs/ui.md`): the HUD's elements one by one in play, the whole scre
 user rejected the first form, the whole touch screen as one inset with its empty middle panel.
 It is still the game's touch screen composited; the HUD drawn by us is plans/pc-controls-hud.md.
 
+The user rejected the play elements cut out of the touch screen as well (2026-11-14: "do this
+properly RE based instead of copying patches of bottom screen"). Play gets our own HUD drawn from
+the game's state (plans/pc-controls-hud.md, "Rule"); the cut-out pieces are deleted when it lands.
+The menus showing the touch screen whole is a stopgap.
+
 Seen (`mm-ov3`): play has the elements along the edges, Items and Masks are large, the area's
 title card draws the top screen alone (`hudVisibility` 2). The pad reaches the touch-only buttons
 through Project Restoration: ZL is View, ZR with X is item I and ZR with Y is item II (`mm-zl`,

@@ -41,10 +41,25 @@ glyphs and also keyboard HUD hotswap that can be like 12345678 for items, and mo
   the window's size, never a bitmap scaled up. The item icons stay the game's or the pack's
   raster art.
 
+### Rule (user, 2026-11-14)
+On the crop layout (`mm-ov2`, tabs and item buttons circled): "No man no, please do this properly
+RE based instead of copying patches of bottom screen".
+- No piece of the touch screen's framebuffer is drawn in the play view. The `play` layout's
+  pieces in `patch/mm3d/overlay.toml`, and the mouse mapping for them, are deleted when the HUD
+  below replaces them; there is no second implementation.
+- The HUD is built from reverse-engineered state only: the item on each button and its icon, ammo,
+  a button's enabled or dimmed state, hearts and their fill, magic, rupees and the wallet, the
+  clock and day, the A button's action label, the minimap if shown. Each field and function is
+  named in the game's decomp first (`decomp/mm3d` `docs/hud.md`, then `decomp/oot3d`), and the app
+  reads the generated addresses through the core's guest memory.
+- The game's own HUD pieces we replace are switched off at their owner by the patch, not masked.
+- Positions are ours, a console layout; nothing has to sit where the 3DS put it.
+- Stopgap: a menu (Items, Masks, Gear, the map, the notebook) still shows the game's touch screen
+  whole. The proper fix is those menus drawn by us or moved by a patch; the risk is only looks.
+
 ### Design (one owner for both games)
-- Step one, built (f93caea): MM3D's overlay draws the touch screen's elements one by one from
-  `patch/mm3d/overlay.toml` (docs/app.md, "Overlay layout"). It is still the game's bitmap art;
-  the steps below replace the `play` layout's pieces and leave the menus' layouts.
+- f93caea drew the touch screen's play elements as cropped pieces; the user rejected it (rule
+  above). Its table of layouts stays for the menus; its `play` pieces go.
 - `app/src/hud` is the one HUD owner. It knows element kinds, not games: a button (ring, glyph,
   item icon, count), hearts, a magic bar, a rupee counter, a clock, a minimap frame. A game is
   data: `patch/<game>/hud.toml` places elements on the top screen's 400x240 and names what each
