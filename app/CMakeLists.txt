@@ -27,6 +27,7 @@ add_executable(z3d
   src/title_picker.cpp
   src/menu_canvas.cpp
   src/prompt_art.cpp
+  src/term_signal.cpp
   src/folder_setup.cpp
   src/folder_browser.cpp
   src/tool_process.cpp

@@ -19,6 +19,7 @@
 #include "screen_overlay.hpp"
 #include "set_install.hpp"
 #include "slot_link.hpp"
+#include "term_signal.hpp"
 #include "title_picker.hpp"
 
 #include <lucent/log.h>
@@ -154,6 +155,7 @@ int main(int argc, char **argv) {
       z3d::app::GameWindow::listKeys(std::cout);
       return 0;
     }
+    const z3d::app::TermSignal signals;
     z3d::app::applyCoreSettings(config);
     const z3d::app::CoreLog log;
     z3d::app::PadInput pad;

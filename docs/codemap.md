@@ -76,6 +76,7 @@
   - `title_picker`: the in-window title picker (SDL3_ttf outline text on the menu canvas), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
   - `pad_input`: the core's `z3d` input engine: the pad, keyboard and mouse tables (verbs and item slots in play, 3DS buttons by name elsewhere) and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
+  - `term_signal`: SIGTERM and SIGINT: SDL's quit event for the window's loop, and the process ended when the loop cannot take it.
   - `slot_link`: the item slots' block in the running game's patch: the held slots written in, the pad table the game wants and each slot's content read out.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`).
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.

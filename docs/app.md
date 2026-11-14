@@ -122,6 +122,13 @@ mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): the first-person key logs "m
 aim", the same four moves show the same views as the harness frames, and leaving first person
 logs "mouse released after 1600 by 600 counts", the travel the test sent.
 
+SIGTERM and SIGINT (`term_signal`): the window's loop gets SDL's quit event and ends as when
+the window is closed. A loop that cannot take it is ended with the process three seconds later:
+with its compositor gone the picker's present waits in the driver for a swapchain image
+(`vkAcquireNextImage`, no timeout and no way to cancel), where it used to stay until `kill -9`.
+Seen (`scratch/ctl/sigterm.py picker`: Gamescope killed, then SIGTERM): the log reads "signal 15:
+the window's loop did not end, ending the process" and the process is gone.
+
 The picker and its menus do not read the 3DS pad: `PadInput::menu()` (`MenuPad`) is the host's
 buttons by their names on an Xbox pad (A, B, X, Y, Start, the D-pad and the left stick) and the
 keys that stand for them (`menu` in `z3d --keys`), taken before any game's table, so a menu
