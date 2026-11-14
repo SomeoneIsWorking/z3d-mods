@@ -151,6 +151,15 @@ Each ships as the `code.ips` that rides on the set's baked `code.bin`.
   menu writes that block (app.md, "Options"); nothing else in a patch decides whether a feature
   runs.
 - Our own Xbox glyph textures for both games: [plans/xbox-glyphs.md](plans/xbox-glyphs.md).
+- The games' own text from outline fonts, and its prompts' words for our inputs
+  (`tools/z3dmods/text.py`, tables in `sets/text/`; [plans/pc-controls-hud.md](plans/pc-controls-hud.md),
+  "Outline fonts"). The fonts are in `sets/fonts/` with their licences, both SIL OFL 1.1, which
+  lets them be kept, bundled and redistributed with the tools as they are:
+
+  | Game | Font | From | Why this one |
+  |---|---|---|---|
+  | OoT3D | Arimo (variable, weight 500) | github.com/google/fonts `ofl/arimo`, `Arimo-OFL.txt` | The game's font is a plain grotesque of Helvetica's shapes; Arimo has Helvetica's metrics and Latin-1 with Œ, œ, Ÿ and € |
+  | MM3D | Jost (variable, weight 600) | github.com/google/fonts `ofl/jost`, `Jost-OFL.txt` | The game's font is a geometric sans in Futura's manner (round o, pointed W, two-storey a), semi-bold; Jost is that |
 - MM3D single screen: [plans/mm3d-single-screen.md](plans/mm3d-single-screen.md).
 - Fallback if The One Screen cannot be used: our own OoT3D single screen in the same patch, built from
   the Randomizer's loader and the CC0 decompilation (same plan file as MM3D's, OoT3D section).

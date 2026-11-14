@@ -17,6 +17,7 @@
   "screen_layout": "overlay",
   "stairs": "kaidan|step",
   "hud": "hud/mm3d-usa-rev1.json",
+  "text": "text/mm3d-usa-rev1.json",
   "textures": {
     "name": "Henriko Magnifico MM3D 4K 3.0b-1, 1080p variant (free, no licence stated)",
     "from": "https://henrikomagnifico.com/zelda-majoras-mask-3d-4k (3.0b-1, the 1080p download)",

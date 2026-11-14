@@ -19,6 +19,7 @@
   "screen_layout": "single_screen",
   "stairs": "kaidan",
   "hud": "hud/the-one-screen-891b60e.json",
+  "text": "text/oot3d-usa.json",
   "textures": {
     "name": "Henriko Magnifico OoT3D 4K 5.0a, 1080p variant (free, no licence stated)",
     "from": "https://henrikomagnifico.com/zelda-ocarina-of-time-3d-4k (5.0a, the 1080p download)",

@@ -1,0 +1,38 @@
+{
+  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: English prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\"); markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad.",
+  "font": {
+    "file": "message/ltn16.gzf",
+    "outline": "Jost[wght].ttf",
+    "weight": 600,
+    "scale": 8
+  },
+  "messages": {
+    "file": "message/us/use.gmsg",
+    "edits": [
+      {
+        "why": "The sword and each form's action are X. B stays where the pad is read by name: the ocarina, a menu, a minigame's Quit.",
+        "except": [
+          "004C",
+          "00FF",
+          "05E6",
+          "1B5A",
+          "1BAD",
+          "1BB0",
+          "2A00"
+        ],
+        "find": "\\{25:2\\}",
+        "put": "{25:3}"
+      },
+      {
+        "why": "The slots in their order: Y, B, RB, the D-pad.",
+        "find": "\\{25:3\\}, \\{25:4\\}, \\{25:18\\} or \\{25:1B\\}",
+        "put": "{25:4}, {25:2}, {25:18} or {25:1B}"
+      },
+      {
+        "why": "Menu opens the Items screen.",
+        "find": "Select Item Screen",
+        "put": "Items screen"
+      }
+    ]
+  }
+}

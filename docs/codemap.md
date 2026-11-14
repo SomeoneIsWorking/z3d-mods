@@ -8,7 +8,7 @@
 - `tools/z3dmods/cmb.py`: CMB models, OoT3D's version 6 and MM3D's 10: textures, materials, meshes, vertices; rewriting one shape's geometry.
 - `tools/z3dmods/lzs.py`: unpacks MM3D's LzS-wrapped game files.
 - `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
-- `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, ETC1, ETC1A4) and Azahar's custom-texture file name, by either of its hashes.
+- `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, 4-bit alpha, ETC1, ETC1A4), 4-bit alpha encoding and Azahar's custom-texture file name, by either of its hashes.
 - `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
 - `tools/z3dmods/source_check.py`: a set's third-party files found among the player's mod downloads by the set's hashes (archives unpacked first), and the refusal that names a missing or different one and where to get it.
 - `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by the hash its `pack.json` names.
@@ -16,6 +16,12 @@
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).
 - `tools/z3dmods/hud.py`: redoes a base mod's menu-texture edits on the texture pack's high-resolution copies and draws port-assets' pad glyphs over the 3DS button prompts (edit tables in `sets/hud/`).
 - `tools/z3dmods/hud_icons.py`: the game art the app's play HUD draws, cut from the game's sheets or the pack's copies: item icons by the game's icon table, named pieces and the A button's words (`[icons]`, `[art]`, `[words]` in `patch/<game>/hud.toml`).
+- `tools/z3dmods/text.py`: a game's own text for the PC, from its table in `sets/text/`: the text font drawn from an outline font (`sets/fonts/`) into the game's font file and the pack's images, and the messages' prompt words reworded.
+- `tools/z3dmods/text_font.py`: an outline font fitted to a bitmap font's cells (capital height, baseline, tracking) and drawn into them at the game's size and a pack's scale.
+- `tools/z3dmods/qbf.py`: OoT3D's QBF1 font, read and written, and the static glyph texture the game makes of it.
+- `tools/z3dmods/gzf.py`: MM3D's GZFX font, read and written.
+- `tools/z3dmods/qm.py`: OoT3D's QM message file, read and written, and a message's text as markup.
+- `tools/z3dmods/gmsg.py`: MM3D's GMSG message file, read and written, and a message's text as markup.
 - `tools/z3dmods/stairs.py`: folds stair-textured ramps in a game's rooms into risers and treads, and the scene's collision triangles on them the same way.
 - `tools/z3dmods/bgcheck.py`: the room a scene's collision has in the game: the grid and memory `BgCheck_Allocate` gives a scene (its tables read from the code at the decomp's addresses), the list nodes the triangles take, and the limits `install` refuses a stepped scene over.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
@@ -54,7 +60,7 @@
   - `song_sequence.hpp`: a song's notes held one after another in the pad for the game to recognise.
   - `ctr.hpp`: 3DS kernel calls and service IPC from inside a title.
   - `cstick.hpp`: the New 3DS C-stick, read from `ir:rst`'s shared memory.
-- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), the item slots (`slot_items.cpp`) and a slot's song played on the ocarina (`song_player.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the text font as one fixed texture (`font_atlas.cpp`), the right-stick free camera (`free_camera.cpp`), the item slots (`slot_items.cpp`) and a slot's song played on the ocarina (`song_player.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the item slots with their songs (`slot_items.cpp`), the game's own A button hidden (`base_hud.cpp`), its switches (`options.toml`), hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).

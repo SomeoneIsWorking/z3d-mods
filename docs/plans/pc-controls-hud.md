@@ -165,11 +165,9 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
   and only I and II with their own: the Hero's Bow message (`ctl-text7`, a poster in South Clock
   Town given its text) reads "Set it to X, Y, RB or D-pad on the Select Item Screen". Y, RB and
   the D-pad are slots; X is the sword.
-- Cannot change by a cell: the words ("tap", "the lower screen", "Select Item Screen") are the
-  game's message data; and the plain A, B, X, Y, L, R cells serve the menus, where the pad is by
-  name, and play alike, so a play prompt for the sword still shows B (the pad's X) and MM3D's
-  item messages show X for a button that is no slot. The fix is the outline-font pass below, which redraws
-  message text.
+- What a cell cannot say is said in the message data: the install rewords the prompts
+  (`sets/text/`, "The games' text" below), so the sword's prompt is X and the item messages
+  name the slots.
 - No key caps in text boxes: the sheet is a texture made at install, not swapped by device.
 - MM3D's touch-screen HUD sheet still labels I, II, View, Gear and Map with Project
   Restoration's shortcuts; that sheet is not drawn in play any more.
@@ -182,16 +180,51 @@ font is permissively licensed and close to the game's look; first check whether 
 sheets can be regenerated at the pack's scale from the outline font (texture replacement), and
 draw in the app only what that cannot reach.
 
-Started (2026-11-14), the fonts' files read, in the decomps:
-- OoT3D: `message/<language>/ltn16.qbf`, `QBF1`: 199 glyphs in 208 cells of 16 by 16 at 4 bits,
-  each glyph with its left edge and width (decomp/oot3d `docs/message.md`, "The font files").
-- MM3D: `message/ltn16.gzf`, `GZFX`: 468 glyphs on three 4-bit sheets, 256x256 twice and 256x128
-  (decomp/mm3d `docs/formats/gzf.md`).
-- Next: the cells' and sheets' pixel order; then the loader at each magic's literal (OoT3D
-  0x2DF6A8, MM3D 0x133A2C) and the function that draws a glyph, to learn how glyphs reach the
-  GPU. MM3D's sheets are likely whole textures a pack can replace with an outline font drawn at
-  its scale; OoT3D's cells may be copied into a texture as text is laid out, which a pack cannot
-  key. The words and the prompts in a message need `us.qm` and `GMSG` decoded too.
+### The games' text (built 2026-11-14)
+The path is texture replacement, in both games, with nothing drawn by the app:
+- MM3D hands each sheet of `message/ltn16.gzf` to the GPU whole, a 256x256 A4 texture named by
+  the hash of its bytes (decomp/mm3d `docs/formats/gzf.md`). The install writes the font file
+  with its glyphs drawn from the outline font and the pack's image of each sheet at 8x.
+- OoT3D copies a glyph's cell into a texture as text first uses it, so every message makes
+  another texture and none can be keyed. Its text renderer has a second mode no caller uses,
+  one texture of the font's characters by code, filled once; our patch turns it on for every
+  renderer and gives the characters past 255 (the dash, the quotes, Œ) the control codes'
+  cells (`patch/oot3d/font_atlas.cpp`, decomp/oot3d `docs/message.md`, "Drawing glyphs"). The
+  texture is then a function of the font file, and the install writes both as for MM3D.
+- Why not text drawn by the app: the game keeps its own layout, clipping, colours, fades and
+  order under its menus for free, in every screen that prints text, and no patch has to
+  publish any of it. What it costs: glyphs sit on the game's whole pixels (each glyph is
+  stretched to a whole advance, under 6%, so lines keep an even rhythm), the images are 8x, so
+  past 8x they are scaled up, and below 4x the core samples them without mipmaps: at 1x the
+  letters are legible but rough. Without the pack's folder the game prints the same font from
+  its file at 1x.
+- `tools/z3dmods/text.py` owns it; a game's table is `sets/text/<game>.json` and the fonts are
+  in `sets/fonts/` (docs/mods.md has the licences and the choice). The outline font is fitted
+  to the game's own font: capitals as tall and on the same row, tracked until a few lines of
+  prose are as long (OoT3D: Arimo at 13.08 px an em; MM3D: Jost at 14.29).
+- Prompt words: the table's `edits`, regular expressions over a message's markup, English
+  only. OoT3D, 58 messages: the sword's B is X except in the ocarina's messages; the item
+  buttons are in the slots' order (Y, B, RB, D-pad); "Tap the Items icon on the lower screen"
+  is "Press Menu" (the START icon, drawn as Menu); the map's "Tap ... on the lower screen" is
+  "Press View"; the Know-It-All Brother's item lesson (0x1036) is written again for slots and
+  names the LB chord. MM3D, 78 messages: the sword's and the forms' B is X except where the
+  pad is by name (the ocarina, a cancel, a minigame's Quit); "Set it to X, Y, I or II on the
+  Select Item Screen" is "Set it to Y, B, RB or D-pad on the Items screen".
+- Seen (harness, with the pack): OoT3D's Know-It-All Brother at 1x and 4x (`txt-oot-r1`,
+  `txt-oot-r4`): "Y, B, RB, and each direction of D-pad are your item slots", "first press
+  Menu to open the Items subscreen", "Hold LB, and A, B, X, and Y are four more slots", in
+  Arimo with clean edges at 4x. MM3D's Hero's Bow message on the South Clock Town poster
+  (`txt-mm-r1`, `txt-mm-r4`): "Set it to Y, B, RB or D-pad on the Items screen" and "You can
+  also use LT to automatically aim at a target", in Jost.
+- Not done: the prompts do not follow the last device. The prompt sheet is one texture made
+  at install; following the device needs the core to swap that one replacement while the game
+  runs (a second image of the sheet with key caps, and a setting the app flips), which is not
+  built. French and Spanish are not reworded. OoT3D's Gear, Navi, View and Ocarina touch icons
+  ("Tap ... to open the Gear subscreen", 0x1039's map display on the +Control Pad) still name
+  the touch screen: which input opens each in our layout has to be seen first. MM3D's
+  remaining "Tap ... on the lower screen" messages (six) likewise. The fonts' characters the
+  outline font lacks keep the game's bitmap, enlarged (MM3D's Greek and Cyrillic sheets, the
+  US text uses none). sys8.qbf is not redrawn.
 
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.
@@ -250,4 +283,4 @@ Started (2026-11-14), the fonts' files read, in the decomps:
   (`aim-mm5`, `aim-oot3`), and in a window the F key, real mouse motion and leaving the look
   (`inputtest aim`, `aim-mm3d`). Not run: the hookshot, boomerang and OoT3D's bow; Master Quest.
 - Outline fonts: the HUD's own lettering is port-assets' outline typeface at the window's size;
-  the games' text is not started.
+  the games' text is drawn from Arimo and Jost through the texture pack ("The games' text").

@@ -4,11 +4,14 @@ ENTRY(_ZN7z3dmods5oot3d12stepCutsceneEPvS1_PKv)
 INCLUDE symbols.ld
 SECTIONS {
   /* Fixed sites in address order. */
+  .patch.static_glyph_cell kTextRendererAddGlyph + 0x150 : { KEEP(*(.patch.static_glyph_cell)) }
+  .patch.glyph_texture_mode kTextRendererInit + 0x13C : { KEEP(*(.patch.glyph_texture_mode)) }
   .patch.text_element kMessageLayoutText + 0xA8 : { KEEP(*(.patch.text_element)) }
   .patch.instant_off kMessageLayoutText + 0x1B8 : { KEEP(*(.patch.instant_off)) }
   .patch.draw_camera kGameplayDraw + 0x808 : { KEEP(*(.patch.draw_camera)) }
   .patch.update_camera kPlayUpdate + 0x1540 : { KEEP(*(.patch.update_camera)) }
   .patch.save_entry kSramWriteSave : { KEEP(*(.patch.save_entry)) }
+  .patch.static_cell_glyph kTextRendererFillStatic + 0x80 : { KEEP(*(.patch.static_cell_glyph)) }
   .patch.interpreter_catchup kCutsceneRunScript + 0xF0 : { KEEP(*(.patch.interpreter_catchup)) }
   .patch.interpreter_tail kCutsceneRunScript + 0x120 : { KEEP(*(.patch.interpreter_tail)) }
   .patch.song_notes kPadRequestData + 0x98 : { KEEP(*(.patch.song_notes)) }

@@ -54,7 +54,40 @@
     bl song_notes
 .section .expect.song_notes, "", %progbits
     .word 0xE1A08000 @ mov r8, r0
+@ TextRenderer_Init: every renderer keeps its font in the static glyph texture (font_atlas.cpp).
+.section .patch.glyph_texture_mode, "ax", %progbits
+    bl glyph_texture_mode
+.section .expect.glyph_texture_mode, "", %progbits
+    .word 0xE1A0100B @ mov r1, r11
+@ TextRenderer_AddGlyph's static branch: the cell of the character in r7, into r5.
+.section .patch.static_glyph_cell, "ax", %progbits
+    mov r0, r4
+    mov r1, r7
+    bl _ZN7z3dmods5oot3d15staticGlyphCellEPvj
+    mov r5, r0
+    nop
+    nop
+    nop
+.section .expect.static_glyph_cell, "", %progbits
+    .word 0xE3570C01 @ cmp r7, #256
+    .word 0xE1A05007 @ mov r5, r7
+    .word 0x3A000004 @ bcc +0x18
+    .word 0xE5940010 @ ldr r0, [r4, #16]
+    .word 0xEB005D58 @ bl QbfFont_GetDefaultChar
+    .word 0xE3500C01 @ cmp r0, #256
+    .word 0xE1A05000 @ mov r5, r0
+@ TextRenderer_FillStaticGlyphTexture: the glyph of each cell.
+.section .patch.static_cell_glyph, "ax", %progbits
+    bl _ZN7z3dmods5oot3d15staticCellGlyphEPvjS1_
+.section .expect.static_cell_glyph, "", %progbits
+    .word 0xEBF99FAD @ bl QbfFont_FindGlyph
 .text
+@ r0 to r3 are set after the site.
+glyph_texture_mode:
+    push {r4, lr}
+    bl _ZN7z3dmods5oot3d16glyphTextureModeEv
+    mov r1, r0
+    pop {r4, pc}
 song_notes:
     push {r0, lr}
     bl _ZN7z3dmods5oot3d13nextSongNotesEv

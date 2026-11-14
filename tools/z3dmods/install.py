@@ -12,7 +12,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, source_check, stairs, symbols, zsi
+from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, source_check, stairs, symbols, text, zsi
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
 
@@ -20,6 +20,7 @@ RECORD = "z3dmods-install.json"
 PAGE = 0x1000
 EXHEADER_BSS_SIZE = 0x3C
 HUD_FOLDER = "z3dmods-hud"
+TEXT_FOLDER = "z3dmods-text"
 STAGING = ".z3dmods-new"
 # The layer switch in the patch's options.toml that turns the stepped stairs on.
 STAIRS_OPTION = "stairs"
@@ -45,6 +46,9 @@ class GameSet:
     # The menu-texture edit table (sets/hud/): the base mod's edits redone on the texture pack's
     # copies, and the pad glyphs drawn over the game's button prompts.
     hud: str | None
+    # The text table (sets/text/): the text font drawn from an outline font and the prompts'
+    # words for our inputs.
+    text: str | None
 
 
     @classmethod
@@ -54,7 +58,7 @@ class GameSet:
         return cls(raw["title_id"], raw["dump"], raw["code_sha256"], raw["base"], raw.get("textures"),
                    raw.get("azahar_global", {}), raw.get("patch"),
                    int(raw["payload"], 16) if "payload" in raw else None, raw.get("screen_layout", "default"),
-                   raw.get("stairs"), raw.get("hud"))
+                   raw.get("stairs"), raw.get("hud"), raw.get("text"))
 
 
 def _sources(cfg: Config, game: GameSet) -> tuple[Path, Path | None]:
@@ -224,13 +228,15 @@ def install(cfg: Config, game: GameSet) -> Path:
                       cfg.glyph_set())
              if game.hud else {})
 
+    words, letters = _text(cfg, game, rom, base_romfs, pack)
+
     mods = cfg.mods_dir(game.title_id)
-    textures = cfg.textures_dir(game.title_id) if game.textures or menus else None
+    textures = cfg.textures_dir(game.title_id) if game.textures or menus or letters else None
     staged = [(folder, _staging(folder)) for folder in (mods, textures) if folder is not None]
     try:
-        _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], stairs_layer, rooms)
+        _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], stairs_layer, rooms, words)
         if textures is not None:
-            _build_textures(game, texture_root, menus, staged[1][1])
+            _build_textures(game, texture_root, menus, letters, staged[1][1])
         # Every refusal comes before the first file is taken out.
         recorded = [_recorded(folder) for folder, _ in staged]
         for (folder, staging), files in zip(staged, recorded):
@@ -243,8 +249,26 @@ def install(cfg: Config, game: GameSet) -> Path:
     return mods
 
 
+def _text(cfg: Config, game: GameSet, rom: ctr.Ncch, base_romfs: Path | None,
+          pack: TexturePack | None) -> tuple[dict[str, bytes], dict[str, bytes]]:
+    """The set's text: the game's font and message files to replace, and the pack's images of
+    the font. A file the base mod replaces is refused: two owners of one file."""
+    if not game.text:
+        return {}, {}
+    files = rom.romfs()
+
+    def read(path: str) -> bytes:
+        if base_romfs and (base_romfs / path).exists():
+            raise RuntimeError(f"{path}: the base mod replaces it, and so would the set's text")
+        return files.read(path)
+
+    # Azahar names a texture by its decoded pixels unless a pack's config says otherwise.
+    return text.build(read, cfg.repo / "sets" / game.text, pack.new_hash if pack else False)
+
+
 def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | None, code: bytes, root: Path,
-                base_romfs: Path | None, mods: Path, stairs_layer: str | None, rooms: dict[str, bytes]) -> None:
+                base_romfs: Path | None, mods: Path, stairs_layer: str | None, rooms: dict[str, bytes],
+                words: dict[str, bytes]) -> None:
     """The game's mods folder, whole, with its record."""
     if game.patch:
         _layer(cfg, game, code, (root / game.base["exheader"]).read_bytes(),
@@ -254,6 +278,10 @@ def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | N
         shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
     if base_romfs:
         _copy_tree(base_romfs, mods / "romfs")
+    for path, data in words.items():
+        target = mods / "romfs" / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
     for item, png in (hud_icons.build(cfg.repo, game.patch, rom.romfs(), pack, code) if game.patch else {}).items():
         target = mods / games.HUD_ICONS / f"{item}.png"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -266,7 +294,8 @@ def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | N
                          "stairs": "yes" if game.stairs else "no"})
 
 
-def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, bytes], textures: Path) -> None:
+def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, bytes],
+                    letters: dict[str, bytes], textures: Path) -> None:
     """The game's textures folder, whole, with its record."""
     if texture_root:
         # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
@@ -275,5 +304,9 @@ def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, b
         target = textures / HUD_FOLDER / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(png)
+    for name, png in letters.items():
+        target = textures / TEXT_FOLDER / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(png)
     _write_record(textures, {"textures": game.textures["name"] if game.textures else "",
-                             "hud": game.hud or ""})
+                             "hud": game.hud or "", "text": game.text or ""})

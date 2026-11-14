@@ -86,6 +86,8 @@ appimage-runtime    the AppImage's own first bytes: github.com/AppImage/type2-ru
 assets/LICENSE      port-assets' glyphs (MIT), which prebuilt/glyphs/ is drawn from
 assets/fonts/OFL.txt, fonts/OFL.txt
                     the Noto Sans typefaces (SIL Open Font License 1.1)
+sets/fonts/*-OFL.txt
+                    Arimo and Jost, the games' text fonts (SIL Open Font License 1.1)
 """
 # How a licence file is named in a source tree.
 LICENSE_NAMES = ("license", "licence", "copying", "copyright", "notice")
