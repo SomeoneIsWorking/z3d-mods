@@ -234,6 +234,14 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
         bare != nullptr && bare->boolean() != nullptr) {
       element.bare = *bare->boolean();
     }
+    if (const std::string device = text(entry, "device"); device == "pad") {
+      element.device = HostDevice::Pad;
+    } else if (device == "keyboard") {
+      element.device = HostDevice::Keyboard;
+    } else if (!device.empty()) {
+      throw std::runtime_error(manifest.string() + ": hud \"device\" is pad or keyboard, not " +
+                               device);
+    }
     element.glyph = text(entry, "glyph");
     element.when = conditions(entry, "when");
     element.index = guest(entry, "index");
@@ -354,7 +362,8 @@ bool Hud::hold(const std::vector<Condition> &conditions) const {
 // Only what is drawn counts: an item without an icon (the game's "none") is an empty ring.
 Hud::Face Hud::face(const Element &element, std::optional<size_t> slot) const {
   const auto drawn = [this](std::optional<uint32_t> value, std::string_view prefix) {
-    return value && art_.contains(std::string(prefix) + std::to_string(*value)) ? value : std::nullopt;
+    return value && art_.contains(std::string(prefix) + std::to_string(*value)) ? value
+                                                                                : std::nullopt;
   };
   if (slot) {
     const SlotLink::Slot &held = link_.slot(*slot);
@@ -387,8 +396,10 @@ void Hud::update() {
       height_ = height;
       atlas_->clear();
     }
+    const HostDevice device = pad_.lastDevice();
     for (const Element &element : elements_) {
-      if (element.assign == assign && hold(element.when)) {
+      if (element.assign == assign && element.device.value_or(device) == device &&
+          hold(element.when)) {
         draw(element);
       }
     }
@@ -491,9 +502,7 @@ void Hud::draw(const Element &element) {
     return;
   case Kind::Prompt: {
     if (!element.glyph.empty()) {
-      if (pad_.lastDevice() != HostDevice::Keyboard) {
-        quad(sized(kPadSet, element.glyph, box.w, box.h), box);
-      }
+      quad(sized(kPadSet, element.glyph, box.w, box.h), box);
       return;
     }
     Prompt by = element.verb ? PadInput::verbPrompt(*element.verb) : Prompt{};
@@ -554,10 +563,11 @@ void Hud::button(const Element &element, const OverlayRect &box) {
     // The game's word for the action, centred under the button.
     const float height = std::round(box.h * kLabelShare);
     const HudSprite word = art(words_ + std::to_string(*action), 0.0F, height);
-    quad(word, squashed({std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h},
-                        share));
+    quad(word,
+         squashed({std::round(box.x + (box.w - word.w) / 2.0F), box.y + box.h, word.w, word.h},
+                  share));
   }
-  if (element.bare && pad_.lastDevice() != HostDevice::Keyboard) {
+  if (element.bare) {
     return;
   }
   const float size = std::max(std::round(box.w * kGlyphShare), kGlyphLeast);

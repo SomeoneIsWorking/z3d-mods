@@ -25,8 +25,9 @@ class GameWindow;
 class Hud {
 public:
   // Draws nothing without `assets` (a port-assets copy) or without "hud" in `manifest`.
-  Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const SlotLink &link, const ScreenOverlay &overlay,
-      const std::filesystem::path &assets, const std::filesystem::path &manifest);
+  Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const SlotLink &link,
+      const ScreenOverlay &overlay, const std::filesystem::path &assets,
+      const std::filesystem::path &manifest);
   ~Hud();
   Hud(const Hud &) = delete;
   Hud &operator=(const Hud &) = delete;
@@ -35,7 +36,8 @@ public:
 
 private:
   // A little-endian unsigned value in guest memory; `bytes` 0 is no value. With `pointer`, the
-  // address is an offset from what that guest pointer holds. A bit field is masked, then shifted down.
+  // address is an offset from what that guest pointer holds. A bit field is masked, then shifted
+  // down.
   struct GuestValue {
     uint32_t address = 0;
     uint8_t bytes = 0;
@@ -90,13 +92,16 @@ private:
     // status of the button whose item `value` reads.
     GuestValue label;
     GuestValue status;
-    // Prompt: the chord's own glyph, on its own; or a pad glyph by name, for a pad only.
+    // Prompt: the chord's own glyph (a pad's button or the keyboard's wide cap), on its own; or a
+    // pad glyph by name.
     bool chord = false;
     std::string glyph;
-    // Button: no pad glyph of its own, where a shared one beside it says which it is.
+    // Button: no prompt of its own, where a shared one beside it says which it is.
     bool bare = false;
     // Drawn while a screen that assigns slots is up, instead of in play.
     bool assign = false;
+    // Drawn only while the device used last is this one; for both without it.
+    std::optional<HostDevice> device;
   };
 
   // What a button's ring shows on one page: a slot's item or song, or the item and action word
@@ -123,7 +128,8 @@ private:
   // A button element with what it shows now.
   void button(const Element &element, const OverlayRect &box);
   // An item's icon in a button's box, its count on a plate below; a song's note.
-  void content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song, uint8_t lane);
+  void content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song,
+               uint8_t lane);
   // The pad glyph or key cap of `by`, `size` pixels, its top left corner at (x, y).
   void prompt(const Prompt &by, float x, float y, float size);
 

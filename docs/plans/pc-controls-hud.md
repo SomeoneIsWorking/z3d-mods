@@ -92,8 +92,12 @@ RE based instead of copying patches of bottom screen".
 ### The buttons on the HUD
 - Top right, the same in both games: the pad's diamond (A with the action's word, X the sword, Y
   and B their slots), RB's slot beside it and the D-pad's cross with its four slots. While LB is
-  held the diamond shows slots 8 to 11. A slot with a song shows a note. With the keyboard last
-  used every ring carries its key's cap, the sword and shield the mouse button's.
+  held the diamond shows slots 8 to 11. A slot with a song shows a note.
+- The keyboard has its own layout in the same corner ("I think keyboard needs its own HUD"): a bar
+  of slots 1 to 8 under their number caps, below it a Shift cap with its three slots, then the
+  sword on the left mouse button and the action on E with its word. The item screen's panel lists
+  the number keys' slots in a column and Shift's three beside it. An element's `device` (`pad` or
+  `keyboard`, both without it) says which layout it belongs to.
 - User: "Just show A B X Y only always and when cord is held it shows the alt versions", then the
   layout above added RB and the D-pad.
 - Counts sit on a dark plate that hangs below the ring, off the icon ("numbers overlap the icons
@@ -144,7 +148,7 @@ it so we can dictate inputs". Also: "let's not bind an item to right stick click
   `verbPrompt` what presses it; `app/src/prompt_art` maps a prompt to its glyph or cap, for the
   HUD and the menus' hints alike.
 - Last device: `PadInput` records whether the last press came from a pad or the keyboard; the HUD
-  reads it every frame and swaps the glyph set.
+  reads it every frame and draws that device's layout.
 - The game's own HUD has to go where ours replaces it (MM3D's A button and clock on the top
   screen, all of OoT3D's with The One Screen): a patch switch per element, found per game.
 

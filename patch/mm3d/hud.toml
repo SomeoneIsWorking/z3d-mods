@@ -84,6 +84,7 @@ limit = { at = ["gUpgradeCapacities", 32], bytes = 2 }
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 verb = "action"
 chord_slot = 7
@@ -92,6 +93,7 @@ label = { at = ["PlayState.aButtonDoAction"], through = "gPlayState", bytes = 2 
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 slot = 1
 chord_slot = 8
@@ -99,6 +101,7 @@ rect = [373, 29, 24, 24]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 verb = "sword"
 chord_slot = 9
@@ -108,6 +111,7 @@ status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_B"], by
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 slot = 0
 chord_slot = 10
@@ -115,6 +119,7 @@ rect = [346, 2, 24, 24]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 slot = 2
 rect = [377, 3, 20, 20]
@@ -122,11 +127,13 @@ rect = [377, 3, 20, 20]
 # The D-pad's cross: one glyph in its middle, and a slot's place says which way.
 [[element]]
 kind = "prompt"
+device = "pad"
 glyph = "dpad"
 rect = [263, 31, 16, 16]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 bare = true
 slot = 3
@@ -134,6 +141,7 @@ rect = [262, 10, 18, 18]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 bare = true
 slot = 4
@@ -141,6 +149,7 @@ rect = [282, 30, 18, 18]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 bare = true
 slot = 5
@@ -148,10 +157,115 @@ rect = [262, 50, 18, 18]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 bare = true
 slot = 6
 rect = [242, 30, 18, 18]
+
+# The keyboard's own, top right: a bar of the eight number keys' slots, under it Shift's three,
+# then the mouse's sword and the action on E with its word.
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 0
+rect = [206, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 1
+rect = [230, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 2
+rect = [254, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 3
+rect = [278, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 4
+rect = [302, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 5
+rect = [326, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 6
+rect = [350, 8, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 7
+rect = [374, 8, 20, 20]
+
+[[element]]
+kind = "prompt"
+device = "keyboard"
+chord = true
+rect = [206, 44, 18, 12]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 8
+rect = [230, 40, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 9
+rect = [254, 40, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+slot = 10
+rect = [278, 40, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+verb = "sword"
+value = { at = ["gCommonData", "CommonData.save", "SaveData.equipment", "EquipmentData.buttonItems", "EQUIP_BUTTON_B"], bytes = 1 }
+status = { at = ["gCommonData", "CommonData.buttonStatus", "EQUIP_BUTTON_B"], bytes = 1 }
+rect = [322, 38, 22, 22]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+verb = "action"
+label = { at = ["PlayState.aButtonDoAction"], through = "gPlayState", bytes = 2 }
+rect = [352, 38, 22, 22]
+
 
 # The Items and Masks screens and the ocarina's song list: every slot on a panel at the right
 # edge. A slot's input puts the item under the cursor, or the song, on it. On the Items and
@@ -165,6 +279,7 @@ rect = [294, 0, 106, 240]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 0
@@ -172,6 +287,7 @@ rect = [336, 12, 22, 22]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 1
@@ -179,6 +295,7 @@ rect = [362, 34, 22, 22]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 2
@@ -186,12 +303,14 @@ rect = [376, 6, 18, 18]
 
 [[element]]
 kind = "prompt"
+device = "pad"
 assign = true
 glyph = "dpad"
 rect = [339, 95, 16, 16]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 bare = true
@@ -200,6 +319,7 @@ rect = [338, 74, 18, 18]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 bare = true
@@ -208,6 +328,7 @@ rect = [358, 94, 18, 18]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 bare = true
@@ -216,6 +337,7 @@ rect = [338, 114, 18, 18]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 bare = true
@@ -224,12 +346,14 @@ rect = [318, 94, 18, 18]
 
 [[element]]
 kind = "prompt"
+device = "pad"
 assign = true
 chord = true
 rect = [302, 152, 22, 14]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 10
@@ -237,6 +361,7 @@ rect = [337, 164, 20, 20]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 9
@@ -244,6 +369,7 @@ rect = [315, 184, 20, 20]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 8
@@ -251,7 +377,105 @@ rect = [359, 184, 20, 20]
 
 [[element]]
 kind = "button"
+device = "pad"
 frame = "ring"
 assign = true
 slot = 7
 rect = [337, 204, 20, 20]
+
+# The keyboard's slots on the same panel: the number keys down one column, Shift's three beside it.
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 0
+rect = [338, 10, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 1
+rect = [338, 38, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 2
+rect = [338, 66, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 3
+rect = [338, 94, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 4
+rect = [338, 122, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 5
+rect = [338, 150, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 6
+rect = [338, 178, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 7
+rect = [338, 206, 20, 20]
+
+[[element]]
+kind = "prompt"
+device = "keyboard"
+assign = true
+chord = true
+rect = [366, 14, 18, 12]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 8
+rect = [368, 38, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 9
+rect = [368, 66, 20, 20]
+
+[[element]]
+kind = "button"
+device = "keyboard"
+frame = "ring"
+assign = true
+slot = 10
+rect = [368, 94, 20, 20]
