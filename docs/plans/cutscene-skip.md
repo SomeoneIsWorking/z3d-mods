@@ -50,6 +50,13 @@ to the end (flags, items, time of day, entrance, music), with no other change.
   context differs only in the counter at +0x15B4. Same on standalone Azahar in real time.
   From a file made in the same run (`oot-nf2`: File 2 named, "Save completed", A on the list's
   File 2, A on Start): the same script at frame 74 after 10 s, and Start lands in scene 81.
+- MM3D's title needs no skip of ours (`mm-q-title`, `mm-q-title2`, `mm-q-title3`, 2026-11-14). From
+  boot the game plays its intro (`v_l_mujyura.jdb`, Majora's Mask in the dark) and then, with no
+  input, demo scenes of Clock Town (`v_l_clocktower.jdb` and others) without the logo. Start
+  during either shows the title at once, the logo and "PRESS START" over the scene that is
+  playing (frame 119 of the intro, frame 580 of the demo), and Start again opens file select.
+  The game's own Start already ends the demo to the title cleanly, so the patch leaves it alone
+  (`CommonData.setup` keeps our skip out of these play-state cutscenes).
 - MM3D, new file from boot in the harness: Start on the title demo (frame 650) still opens file
   select and the demo is not skipped. Start at frame 119 of the opening narration (`legend.jdb`)
   closes each box and lands in the Lost Woods script `lw_meetstk.jdb` (scene 101), where watching
