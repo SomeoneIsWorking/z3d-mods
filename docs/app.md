@@ -145,6 +145,10 @@ extent (800x384 at scale 2).
    which can move the surface storage; the held reference then crashed the app (SIGSEGV in
    `boost::icl` under `ValidateSurface`), at boot or after a `loadstate`, on a set with a texture
    pack.
+4. `renderer_vulkan`: a screenshot whose buffer the driver will not import as host memory is
+   taken through the staging copy. `TryRenderScreenshotWithHostMemory` let that refusal throw
+   (`vk::Device::allocateMemoryUnique: ErrorInvalidExternalHandle`), which ended a tool run now
+   and then; radv refuses pages the kernel cannot pin, file-backed ones every time.
 
 The checkout is named in `env-assets/local.json` as `"azahar_source"`; `app.py` refuses one that is
 not at the pinned revision. `app.core` builds and installs the core once per revision and
