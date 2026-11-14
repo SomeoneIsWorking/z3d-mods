@@ -41,7 +41,10 @@ public:
   HudAtlas &operator=(HudAtlas &&) = delete;
 
   // Each draws its art once per size and returns it again after that.
-  [[nodiscard]] HudSprite svg(const std::string &set, const std::string &name, int width, int height);
+  // `tint` (0xRRGGBB) multiplies the art's colours: white art takes it, dark outlines stay.
+  [[nodiscard]] HudSprite svg(const std::string &set, const std::string &name, int width, int height,
+                              uint32_t tint = kNoTint);
+  static constexpr uint32_t kNoTint = 0xFFFFFF;
   // Lettering in port-assets' key typeface with capitals `height` pixels tall, cut to its ink.
   [[nodiscard]] HudSprite text(const std::string &text, int height, HudInk ink);
   // The outline's width around lettering of that height that has one; a plate's edge is as far out.

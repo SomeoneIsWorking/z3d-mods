@@ -11,12 +11,15 @@ SECTIONS {
   .patch.save_entry kSramWriteSave : { KEEP(*(.patch.save_entry)) }
   .patch.interpreter_catchup kCutsceneRunScript + 0xF0 : { KEEP(*(.patch.interpreter_catchup)) }
   .patch.interpreter_tail kCutsceneRunScript + 0x120 : { KEEP(*(.patch.interpreter_tail)) }
+  .patch.song_notes kPadRequestData + 0x98 : { KEEP(*(.patch.song_notes)) }
   .patch.play_update kGameplayUpdate + 0x9C : { KEEP(*(.patch.play_update)) }
   .patch.base_camera kGameplayUpdate + 0xA8 : { KEEP(*(.patch.base_camera)) }
   /* The One Screen 891b60e's payload: Hud_Submit's visible flag (decomp docs/hud.md). */
   .patch.base_hud 0x612C84 : { KEEP(*(.patch.base_hud)) }
   . = PAYLOAD;
   .payload : { KEEP(*(.options)) *(.text*) *(.rodata*) *(.data*) }
+  /* The item slots' block the app reads and writes (tools/z3dmods/slot_link.py). */
+  .link : { KEEP(*(.link)) }
   .payload_zero (NOLOAD) : { *(.bss*) *(COMMON) }
   /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment) *(.note*) *(.eh_frame*) }
 }

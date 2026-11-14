@@ -32,12 +32,6 @@ label = "Free camera: invert Y"
 default = false
 
 [[option]]
-id = "chord_items"
-field = "chordItems"
-label = "Second item page (hold the chord button)"
-default = true
-
-[[option]]
 id = "autosave"
 field = "autosave"
 label = "Autosave after each scene change"

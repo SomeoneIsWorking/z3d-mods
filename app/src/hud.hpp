@@ -6,6 +6,7 @@
 #include "hud_atlas.hpp"
 #include "pad_input.hpp"
 #include "screen_overlay.hpp"
+#include "slot_link.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -23,7 +24,7 @@ class GameWindow;
 class Hud {
 public:
   // Draws nothing without `assets` (a port-assets copy) or without "hud" in `manifest`.
-  Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const ScreenOverlay &overlay,
+  Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const SlotLink &link, const ScreenOverlay &overlay,
       const std::filesystem::path &assets, const std::filesystem::path &manifest);
   ~Hud();
   Hud(const Hud &) = delete;
@@ -49,7 +50,7 @@ private:
     uint32_t most = 0;
   };
 
-  enum class Kind : uint8_t { Hearts, Meter, Counter, Button };
+  enum class Kind : uint8_t { Hearts, Meter, Counter, Button, Prompt, Panel };
 
   // Positions and sizes are in the top screen's 400x240 pixels.
   struct Element {
@@ -76,24 +77,25 @@ private:
     GuestValue tier;
     // Counter: the most it holds, drawn in the full colour: the game's table by `tier`.
     GuestValue limit;
-    // Button: its frame (hud set), the 3DS button that presses it (if one does) and the item
-    // button it is (if it is one). An item without an icon is an empty button.
+    // Button and Panel: the frame (hud set). A button shows an item slot's content (`slot`), or
+    // the item `value` reads, under the prompt of its slot or of the verb that presses it; while
+    // the chord is held it shows `chordSlot` instead, where it has one. An item without an icon
+    // is an empty button.
     std::string frame;
-    std::optional<Settings::NativeButton::Values> button;
-    std::optional<ItemButton> itemButton;
-    // Button: the game's array of counts, the index in it of each item that has one, and the
-    // button's status with the value that dims it.
-    GuestValue ammo;
-    std::vector<std::pair<uint32_t, uint32_t>> ammoIndex;
-    GuestValue status;
-    uint32_t disabled = 0;
-    // Button: what it shows instead while the chord is held, where the chord gives its pad
-    // button to an item: that item, its status and the item button it then is.
-    GuestValue chordValue;
-    GuestValue chordStatus;
-    std::optional<ItemButton> chordItem;
-    // Button: the game's number of the action it does now; its word is the game's art.
+    std::optional<size_t> slot;
+    std::optional<size_t> chordSlot;
+    std::optional<Verb> verb;
+    // Button: the game's number of the action it does now; its word is the game's art. The
+    // status of the button whose item `value` reads.
     GuestValue label;
+    GuestValue status;
+    // Prompt: the chord's own glyph, on its own; or a pad glyph by name, for a pad only.
+    bool chord = false;
+    std::string glyph;
+    // Button: no pad glyph of its own, where a shared one beside it says which it is.
+    bool bare = false;
+    // Drawn while a screen that assigns slots is up, instead of in play.
+    bool assign = false;
   };
 
   void requireArt();
@@ -105,19 +107,30 @@ private:
   void quad(const HudSprite &sprite, const OverlayRect &at, float opacity = 1.0F);
   // The game's art of that name, scaled to the size.
   [[nodiscard]] HudSprite art(const std::string &name, float width, float height);
-  // Whether the chord is held and this button then shows an item instead: `chordValue`.
-  [[nodiscard]] bool chordContent(const Element &element) const;
-  // The pad glyph or key cap of what presses a button element, on its top left corner.
-  void prompt(const Element &element, const OverlayRect &box);
+  // A button element with what it shows now.
+  void button(const Element &element, const OverlayRect &box);
+  // An item's icon in a button's box, its count on a plate below; a song's note.
+  void content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song, uint8_t lane);
+  // The pad glyph or key cap of `by`, `size` pixels, its top left corner at (x, y).
+  void prompt(const Prompt &by, float x, float y, float size);
 
   GameWindow &window_;
   Emulator &emulator_;
   const PadInput &pad_;
+  const SlotLink &link_;
   const ScreenOverlay &overlay_;
   std::optional<HudAtlas> atlas_;
   std::vector<Element> elements_;
   // A game without an overlay table (screen_overlay.hpp) is in play while all of these hold.
   std::vector<Condition> show_;
+  // The game's array of counts and the index in it of each item that has one; the game's array
+  // of button statuses, by the game's button index, and the value that dims an item.
+  GuestValue ammo_;
+  std::vector<std::pair<uint32_t, uint32_t>> ammoIndex_;
+  GuestValue status_;
+  uint32_t disabled_ = 0;
+  // A song's colour by its number, 0xRRGGBB.
+  std::vector<uint32_t> songColours_;
   // <icons>/<name>.png: the game's or the pack's art, an item's icon by its id; `art_` names
   // what is there.
   std::filesystem::path icons_;

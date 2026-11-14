@@ -142,8 +142,9 @@ HudSprite HudAtlas::place(const std::string &key, SDL_Surface *surface, float ba
   return sprites_[key] = sprite;
 }
 
-HudSprite HudAtlas::svg(const std::string &set, const std::string &name, int width, int height) {
-  const std::string key = set + "/" + name + "@" + std::to_string(width) + "x" + std::to_string(height);
+HudSprite HudAtlas::svg(const std::string &set, const std::string &name, int width, int height, uint32_t tint) {
+  const std::string key =
+      set + "/" + name + "@" + std::to_string(width) + "x" + std::to_string(height) + "#" + std::to_string(tint);
   if (const auto found = sprites_.find(key); found != sprites_.end()) {
     return found->second;
   }
@@ -153,7 +154,22 @@ HudSprite HudAtlas::svg(const std::string &set, const std::string &name, int wid
   if (stream != nullptr) {
     SDL_CloseIO(stream);
   }
-  return place(key, surface);
+  if (surface == nullptr || tint == kNoTint) {
+    return place(key, surface);
+  }
+  SDL_Surface *rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+  SDL_DestroySurface(surface);
+  for (int y = 0; rgba != nullptr && y < rgba->h; ++y) {
+    uint8_t *row = static_cast<uint8_t *>(rgba->pixels) + static_cast<size_t>(y) * static_cast<size_t>(rgba->pitch);
+    for (int x = 0; x < rgba->w; ++x) {
+      uint8_t *pixel = row + static_cast<size_t>(x) * kBytesPerPixel;
+      for (size_t channel = 0; channel < 3; ++channel) {
+        const uint32_t share = (tint >> (16 - 8 * channel)) & 0xFFU;
+        pixel[channel] = static_cast<uint8_t>(pixel[channel] * share / 0xFFU);
+      }
+    }
+  }
+  return place(key, rgba);
 }
 
 int HudAtlas::outline(int height) {

@@ -11,7 +11,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import config, ips, options, symbols
+from z3dmods import config, ips, options, slot_link, symbols
 
 CODE_BASE = 0x00100000
 SHT_PROGBITS, SHT_NOBITS, SHF_ALLOC = 1, 8, 2
@@ -31,13 +31,15 @@ class Patch:
     expected: dict[int, bytes]
     payload_start: int
     payload_end: int
+    # Where the item slots' block is (slot_link.py); None for a patch without one.
+    link: int | None = None
 
 
 def save(patch: Patch, folder: Path) -> None:
     """Writes a build for a package."""
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "code.ips").write_bytes(ips.build(patch.records))
-    hooks = {"payload": patch.payload_start, "payload_end": patch.payload_end,
+    hooks = {"payload": patch.payload_start, "payload_end": patch.payload_end, "link": patch.link,
              "expected": {str(offset): original.hex() for offset, original in patch.expected.items()}}
     (folder / "hooks.json").write_text(json.dumps(hooks, indent=2) + "\n")
 
@@ -45,7 +47,8 @@ def save(patch: Patch, folder: Path) -> None:
 def _load(folder: Path) -> Patch:
     hooks = json.loads((folder / "hooks.json").read_text())
     expected = {int(offset): bytes.fromhex(original) for offset, original in hooks["expected"].items()}
-    return Patch(ips.parse((folder / "code.ips").read_bytes()), expected, hooks["payload"], hooks["payload_end"])
+    return Patch(ips.parse((folder / "code.ips").read_bytes()), expected, hooks["payload"], hooks["payload_end"],
+                 hooks.get("link"))
 
 
 def patch(repo: Path, game: str, payload: int) -> Patch:
@@ -91,6 +94,7 @@ def build(repo: Path, game: str, payload: int, build_dir: Path) -> Patch:
     build_dir.mkdir(parents=True, exist_ok=True)
     generated = symbols.generate(repo, game, build_dir / "generated")
     options.generate(repo, game, generated.header.parent)
+    slot_link.generate(generated.header.parent)
     objects = []
     for path in sorted(source.glob("*.cpp")) + sorted(source.glob("*.s")):
         obj = build_dir / (path.name + ".o")
@@ -104,10 +108,12 @@ def build(repo: Path, game: str, payload: int, build_dir: Path) -> Patch:
     sections = _sections(elf_path.read_bytes())
     expects = {label.removeprefix(".expect."): data for label, kind, flags, _, _, data in sections
                if label.startswith(".expect.") and not flags & SHF_ALLOC}
-    records, expected, end = [], {}, payload
+    records, expected, end, link = [], {}, payload, None
     for label, kind, flags, addr, size, data in sections:
         if not flags & SHF_ALLOC:
             continue
+        if label == ".link":
+            link = addr
         if addr >= payload:
             end = max(end, addr + size)
         elif not label.startswith(".patch."):
@@ -119,4 +125,4 @@ def build(repo: Path, game: str, payload: int, build_dir: Path) -> Patch:
             expected[addr - CODE_BASE] = original
         if kind == SHT_PROGBITS:
             records.append(ips.Record(addr - CODE_BASE, data))
-    return Patch(records, expected, payload, end)
+    return Patch(records, expected, payload, end, link)

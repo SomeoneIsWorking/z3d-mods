@@ -95,6 +95,16 @@ std::string Repl::execute(const std::string &line) {
     pad_.setDevice(device == "pad" ? HostDevice::Pad : HostDevice::Keyboard);
     return "ok";
   }
+  if (command == "slots") {
+    unsigned mask = 0;
+    unsigned chord = 0;
+    if (!(args >> std::hex >> mask) || mask >= (1U << kSlotCount)) {
+      return "err slots <hex mask> [chord 0|1]";
+    }
+    args >> chord;
+    pad_.setSlots(static_cast<uint16_t>(mask), chord != 0);
+    return "ok";
+  }
   if (command == "gyro") {
     float x = 0.0F;
     float y = 0.0F;

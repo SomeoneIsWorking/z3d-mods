@@ -154,7 +154,8 @@ def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: 
     (mods / "code.bin").write_bytes(code)
     (mods / "code.ips").write_bytes(ips.build(ours.records))
     (mods / "exheader.bin").write_bytes(bytes(grown))
-    (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start, layers))
+    (mods / options.MANIFEST).write_text(options.manifest(cfg.repo, game.patch, ours.payload_start, layers,
+                                                              ours.link))
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: TexturePack | None,

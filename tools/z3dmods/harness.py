@@ -41,6 +41,8 @@ class HarnessSession:
         self._log_path = log
         self._process: subprocess.Popen | None = None
         self._held = 0
+        self._slots = 0
+        self._chord = False
         self._recording: Path | None = None
         self._recorded = 0
 
@@ -154,6 +156,29 @@ class HarnessSession:
     def cstick(self, x: str, y: str, seconds: str) -> str:
         """Holds the New 3DS C-stick at (x, y), as `stick` holds the circle pad."""
         return self._hold_analog("cstick", x, y, seconds)
+
+    def slotdown(self, number: str) -> str:
+        """Holds item slot `number` (0 to 10, app/src/pad_input.hpp) until slotup."""
+        self._slots |= 1 << int(number)
+        return self._send_slots()
+
+    def slotup(self, number: str) -> str:
+        self._slots &= ~(1 << int(number))
+        return self._send_slots()
+
+    def slot(self, number: str, seconds: str = "0.15") -> str:
+        """Holds item slot `number` for `seconds`, then lets go."""
+        self.slotdown(number)
+        self.run_frames(max(1, round(float(seconds) * FPS)))
+        return self.slotup(number)
+
+    def chord(self, state: str) -> str:
+        """Holds the chord (on) or lets it go (off): the HUD shows the chord's slots while it is held."""
+        self._chord = state == "on"
+        return self._send_slots()
+
+    def _send_slots(self) -> str:
+        return self._send(f"slots {self._slots:x} {int(self._chord)}")
 
     def device(self, name: str) -> str:
         """The device the held input stands for from now on: `pad` or `keyboard` (the HUD's prompts follow it)."""

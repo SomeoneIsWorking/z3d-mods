@@ -3,7 +3,7 @@
 
 namespace z3dmods::oot3d {
 
-void updateChordItems(void *play);
+void updateSlotItems(void *play);
 void updateAutosave(void *play);
 
 } // namespace z3dmods::oot3d

@@ -49,7 +49,18 @@
     mov r0, #0
 .section .expect.base_hud, "", %progbits
     .word 0xC3A00001 @ movgt r0, #1
+@ PadMgr_RequestPadData: the pad word its ocarina note mapping reads, after The One Screen's hook.
+.section .patch.song_notes, "ax", %progbits
+    bl song_notes
+.section .expect.song_notes, "", %progbits
+    .word 0xE1A08000 @ mov r8, r0
 .text
+song_notes:
+    push {r0, lr}
+    bl _ZN7z3dmods5oot3d13nextSongNotesEv
+    pop {r1, lr}
+    orr r8, r0, r1
+    bx lr
 quick_text_element:
     push {r0-r3, r12, lr}
     mov r0, r5

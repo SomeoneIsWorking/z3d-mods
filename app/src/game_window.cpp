@@ -134,7 +134,7 @@ void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> 
       if (event.key.repeat) {
         break;
       }
-      if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
+      if (event.key.scancode == SDL_SCANCODE_F10) {
         menuRequested_ = true;
       } else if (event.key.scancode == SDL_SCANCODE_F5) {
         modKey_ = ModKey::ReloadPatch;

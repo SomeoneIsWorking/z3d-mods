@@ -10,7 +10,7 @@ using PlayUpdateFn = void (*)(void *play);
 
 // Called instead of Play_Update by Gameplay_Update (hooks.s).
 void updatePlay(void *play) {
-  updateChordItems(play);
+  updateSlotItems(play);
   updateAutosave(play);
   guest::function<PlayUpdateFn>(kPlayUpdate)(play);
 }

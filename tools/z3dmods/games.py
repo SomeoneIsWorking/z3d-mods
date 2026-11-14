@@ -130,7 +130,8 @@ def _hud(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object] | None:
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
-    return {"icons": HUD_ICONS, "show": _resolved(d, table.get("show", [])), "elements": _resolved(d, table["element"])}
+    shared = {key: _resolved(d, table[key]) for key in HUD_SHARED if key in table}
+    return {"icons": HUD_ICONS, "show": _resolved(d, table.get("show", [])), "elements": _resolved(d, table["element"])} | shared
 
 
 def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
@@ -139,6 +140,9 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
     return {key: _guest_address(d, terms) for key, terms in table.items()} | {
         "play": symbols.global_(d, "gPlayState"), "player": _player_list_head(d)}
 
+
+# hud.toml's tables every button shares: the counts, the statuses and the songs' colours.
+HUD_SHARED = ("ammo", "ammo_index", "status", "disabled", "song_colours")
 
 # The folder of item icons beside the installed patch: <item id>.png.
 HUD_ICONS = "z3d-hud-icons"

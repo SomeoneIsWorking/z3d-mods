@@ -39,13 +39,15 @@
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
 - `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld; saves a build for a package and reads it back there (`prebuilt/<game>/code.ips`, `hooks.json`).
 - `tools/z3dmods/options.py`: a patch's switches (`patch/<game>/options.toml`): the generated `options.hpp` and the manifest the app's options menu reads.
+- `tools/z3dmods/slot_link.py`: the item slots' block a patch shares with the app: the generated `slot_link.hpp` and its addresses in the manifest.
 - `decomp/oot3d/`: submodule, our fork of zeldaret/oot3d (CC0): OoT3D symbols, structs and RE docs.
 - `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT, private): MM3D 1.0-layout symbols, structs and RE docs.
 - `patch/<game>/symbols.toml`: which decomp functions, globals and offsets a patch uses.
 - `patch/common/`: guest memory and call helpers for the patches, and the Start cutscene skip shared by both games.
+  - `slots.hpp`: the item slots both games' patches share: slot values packed for a save's spare bytes, and which of the game's item buttons carry the slots in use.
   - `ctr.hpp`: 3DS kernel calls and service IPC from inside a title.
   - `cstick.hpp`: the New 3DS C-stick, read from `ir:rst`'s shared memory.
-- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), the chord item page (`chord_items.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
+- `patch/oot3d/`: our OoT3D patch: guest layout (`game.hpp`), the Start cutscene skip, its script reader (`cutscene_script.hpp`), Quick Text (`quick_text.cpp`), the right-stick free camera (`free_camera.cpp`), the item slots (`slot_items.cpp`) and a slot's song played on the ocarina (`song_player.cpp`), autosave (`autosave.cpp`), the per-frame hook that runs them (`play_update.cpp`), its switches (`options.toml`), hook sites and link script.
 - `patch/mm3d/`: our MM3D patch on Project Restoration's code layout: guest layout (`game.hpp`), the skip's layout, its script reader (`cutscene_script.hpp`), the chord item page (`chord_items.cpp`), the game's own A button hidden (`base_hud.cpp`), its switches (`options.toml`), hook sites and link script.
 - `app/`: `z3d`, a frontend linked to Azahar's core (the fork's installed `AzaharCore` package): a window to play in, or hidden and driven by stdin lines.
   - `app_config`: the typed command line; a game's setup (ROM, layout, textures).
@@ -54,7 +56,7 @@
   - `game_library`: the picker's games from the tools' library file, titles and icons from each dump's SMDH.
   - `game_options`: a game's options: the patch's switches from its manifest plus layout and textures, the player's stored choices, the write into the guest block.
   - `screen_overlay`: the overlay layout: pieces of the touch screen drawn on the top screen from the game's table of layouts (`patch/<game>/overlay.toml`) by which touch screen is up, and the mouse mapped back through them.
-  - `hud`: the play HUD for every game: element kinds (hearts, meter, counter, button) read from guest memory by the game's table (`patch/<game>/hud.toml`) and drawn as quads of the atlas.
+  - `hud`: the play HUD for every game: element kinds (hearts, meter, counter, button, prompt, panel) read from guest memory and the item slots by the game's table (`patch/<game>/hud.toml`) and drawn as quads of the atlas.
   - `hud_atlas`: port-assets SVGs, lettering and item icons rasterized at the window's size into the image the core draws.
   - `tool_process`: one run of the tools as a child process: its printed lines and its refusal.
   - `set_install`: whether a game's set in the user folder is the one the tools make now (missing, or made from other inputs), and the tools' setup run on the player's dump when it is not.
@@ -65,7 +67,8 @@
   - `options_menu`: the picker's options screen for one game.
   - `title_picker`: the in-window title picker (SDL3_ttf outline text on the menu canvas), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
-  - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
+  - `pad_input`: the core's `z3d` input engine: the pad, keyboard and mouse tables (verbs and item slots in play, 3DS buttons by name elsewhere) and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
+  - `slot_link`: the item slots' block in the running game's patch: the held slots written in, the pad table the game wants and each slot's content read out.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`).
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.

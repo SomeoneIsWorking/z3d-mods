@@ -1,5 +1,7 @@
-// The 3DS pad the core reads: an input engine ("z3d") whose state the player's keyboard and
-// gamepads or the tools' commands set.
+// The 3DS pad the core reads: an input engine ("z3d") whose state the player's keyboard, mouse
+// and gamepads or the tools' commands set. In play the host's inputs follow one layout for every
+// game (docs/plans/pc-controls-hud.md): verbs on fixed buttons and eleven item slots, which the
+// game's patch takes from the slot link (slot_link.hpp).
 #pragma once
 
 #include "common/settings.h"
@@ -46,27 +48,21 @@ struct PadState {
   GyroSource *gyroSource = nullptr;
 };
 
-// An item button of a game's second page (plans/pad-features.md), by the name its HUD gives it.
-enum class ItemButton : uint8_t { X, Y, I, II };
+// The item slots: Y, B and RB, the D-pad's Up, Right, Down and Left, then A, B, X and Y with the
+// chord held.
+inline constexpr size_t kSlotCount = 11;
 
-// What one face button does while the chord is held.
-struct ChordSlot {
-  SDL_GamepadButton face;
-  ItemButton item;
-  // The 3DS buttons that press that item button in this game's mod set: NativeButton bits.
-  uint32_t buttons;
-};
+// Which table the host's inputs go through, as the game's patch asks (tools/z3dmods/slot_link.py):
+// by name outside play (the 3DS button of the same name: menus, the ocarina), the play layout,
+// or the play layout with the mouse left as the stylus (a screen that assigns slots).
+enum class PadMode : uint8_t { ByName, Play, Assign };
 
-// A game's chord: while `chord` is held, A, B, X and Y press the second page's four item
-// buttons and nothing else; released, they are the game's own buttons.
-struct ChordLayout {
-  std::string_view titleId;
-  SDL_GamepadButton chord;
-  std::array<ChordSlot, 4> slots;
-};
+// What a host input does in play, the same in every game.
+enum class Verb : uint8_t { Action, Sword, Shield, Target, FirstPerson, Pause, Map, ItemScreen, Ocarina };
+inline constexpr size_t kVerbCount = 9;
 
 // What the picker and menus read: the host's buttons by their names on an Xbox pad, and the
-// keys that stand for them, before any game's own translation (its chord, a set's X/Y trade).
+// keys that stand for them, before any game's layout.
 struct MenuPad {
   // The D-pad, the left stick or the arrow keys.
   bool up = false;
@@ -80,17 +76,24 @@ struct MenuPad {
   bool start = false;
 };
 
-// What the player last pressed something on.
+// What the player last pressed something on; the mouse counts as the keyboard.
 enum class HostDevice : uint8_t { Pad, Keyboard };
 
-// The host button and key that press something, for whoever draws a prompt.
+// The host inputs that press something, for whoever draws a prompt: a pad button (with the
+// chord held or not), and a key (with Shift or not) or a mouse button (SDL_BUTTON_*).
 struct Prompt {
   std::optional<SDL_GamepadButton> pad;
+  bool chord = false;
   std::optional<SDL_Scancode> key;
+  bool shift = false;
+  std::optional<uint8_t> mouse;
 };
 
 class PadInput {
 public:
+  // The pad button that is the chord, and the keys that are.
+  static constexpr SDL_GamepadButton kChord = SDL_GAMEPAD_BUTTON_LEFT_SHOULDER;
+
   // Registers the engine; the core's devices made from profile() read this pad until destruction.
   PadInput();
   ~PadInput();
@@ -104,7 +107,7 @@ public:
 
   // Opens and closes gamepads as they come and go.
   void handle(const SDL_Event &event);
-  // The player's keyboard and gamepads, as they are held now.
+  // The player's keyboard, mouse buttons and gamepads, as they are held now.
   void readHost();
   // NativeButton bits.
   void setButtons(uint32_t mask);
@@ -115,12 +118,27 @@ public:
   void setGyroSource(GyroSource *source) {
     state_->gyroSource = source;
   }
-  // The chord layout of the game with this title ID from here on; none for a game without one.
+  // The play layout of the game with this title ID from here on; a game without one is by name.
   void bindGame(std::string_view titleId);
-  // The bound game's chord, for whoever draws it; null without one. It is held while
-  // state().buttons[NativeButton::Debug] is set.
-  [[nodiscard]] const ChordLayout *chord() const {
+  // The table from the next readHost on.
+  void setMode(PadMode mode) {
+    mode_ = mode;
+  }
+  [[nodiscard]] PadMode mode() const {
+    return mode_;
+  }
+  // The slots held now, bit n for slot n.
+  [[nodiscard]] uint16_t slotsHeld() const {
+    return slots_;
+  }
+  // Whether the chord is held: the pad's or, on the keyboard, Shift.
+  [[nodiscard]] bool chordHeld() const {
     return chord_;
+  }
+  // The tools hold slots and the chord themselves.
+  void setSlots(uint16_t slots, bool chord) {
+    slots_ = slots;
+    chord_ = chord;
   }
   [[nodiscard]] HostDevice lastDevice() const {
     return lastDevice_;
@@ -129,11 +147,9 @@ public:
   void setDevice(HostDevice device) {
     lastDevice_ = device;
   }
-  // What presses a 3DS button (a Settings::NativeButton).
-  [[nodiscard]] static Prompt prompt(Settings::NativeButton::Values button);
-  // What presses an item button of the bound game: on a pad its face button under the chord, on
-  // the keyboard 1 to 4 for the first page and 5 to 8 for the second.
-  [[nodiscard]] Prompt itemPrompt(ItemButton item, bool secondPage) const;
+  // What presses a slot and a verb in play.
+  [[nodiscard]] static Prompt slotPrompt(size_t slot);
+  [[nodiscard]] static Prompt verbPrompt(Verb verb);
   // A game option (game_options.hpp).
   void invertCStick(bool x, bool y) {
     state_->cStickInverted = {x, y};
@@ -148,10 +164,20 @@ public:
   }
 
 private:
+  // The 3DS buttons a game's mod set reads for each verb: NativeButton bits by Verb.
+  struct GameVerbs {
+    std::string_view titleId;
+    std::array<uint32_t, kVerbCount> buttons;
+  };
+  static const std::array<GameVerbs, 2> kGames;
+
   std::shared_ptr<PadState> state_;
   MenuPad menu_;
   std::vector<SDL_Gamepad *> pads_;
-  const ChordLayout *chord_ = nullptr;
+  const GameVerbs *game_ = nullptr;
+  PadMode mode_ = PadMode::ByName;
+  uint16_t slots_ = 0;
+  bool chord_ = false;
   HostDevice lastDevice_ = HostDevice::Pad;
 };
 

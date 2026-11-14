@@ -4,6 +4,7 @@
 #include "core/frontend/input.h"
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_mouse.h>
 
 #include <algorithm>
 #include <cmath>
@@ -17,50 +18,104 @@ constexpr const char *kEngine = "z3d";
 using Button = Settings::NativeButton::Values;
 using Stick = Settings::NativeAnalog::Values;
 
+constexpr uint32_t bit(Button button) {
+  return 1U << button;
+}
+
+constexpr int kNoSlot = -1;
+
+// What a pad button does in play: a verb or a slot, and the slot it is while the chord is held.
+struct PlayButton {
+  SDL_GamepadButton pad;
+  std::optional<Verb> verb;
+  int slot = kNoSlot;
+  int chordSlot = kNoSlot;
+};
+
+// The play layout (docs/plans/pc-controls-hud.md). The triggers are axes: LT targets, RT shields.
+constexpr std::array kPlayButtons{
+    PlayButton{SDL_GAMEPAD_BUTTON_SOUTH, Verb::Action, kNoSlot, 7},
+    PlayButton{SDL_GAMEPAD_BUTTON_EAST, std::nullopt, 1, 8},
+    PlayButton{SDL_GAMEPAD_BUTTON_WEST, Verb::Sword, kNoSlot, 9},
+    PlayButton{SDL_GAMEPAD_BUTTON_NORTH, std::nullopt, 0, 10},
+    PlayButton{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, std::nullopt, 2, 2},
+    PlayButton{SDL_GAMEPAD_BUTTON_DPAD_UP, std::nullopt, 3, 3},
+    PlayButton{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, std::nullopt, 4, 4},
+    PlayButton{SDL_GAMEPAD_BUTTON_DPAD_DOWN, std::nullopt, 5, 5},
+    PlayButton{SDL_GAMEPAD_BUTTON_DPAD_LEFT, std::nullopt, 6, 6},
+    PlayButton{SDL_GAMEPAD_BUTTON_RIGHT_STICK, Verb::FirstPerson},
+    PlayButton{SDL_GAMEPAD_BUTTON_START, Verb::Pause},
+    PlayButton{SDL_GAMEPAD_BUTTON_BACK, Verb::Map},
+};
+
+struct PlayKey {
+  SDL_Scancode key;
+  Verb verb;
+};
+
+// A verb's first key is the one its prompt shows.
+constexpr std::array kPlayKeys{
+    PlayKey{SDL_SCANCODE_E, Verb::Action},       PlayKey{SDL_SCANCODE_SPACE, Verb::Action},
+    PlayKey{SDL_SCANCODE_Q, Verb::Target},       PlayKey{SDL_SCANCODE_F, Verb::FirstPerson},
+    PlayKey{SDL_SCANCODE_R, Verb::Ocarina},      PlayKey{SDL_SCANCODE_TAB, Verb::ItemScreen},
+    PlayKey{SDL_SCANCODE_M, Verb::Map},          PlayKey{SDL_SCANCODE_ESCAPE, Verb::Pause},
+};
+
+struct PlayMouse {
+  uint8_t button;
+  Verb verb;
+};
+
+constexpr std::array kPlayMouse{PlayMouse{SDL_BUTTON_LEFT, Verb::Sword}, PlayMouse{SDL_BUTTON_RIGHT, Verb::Shield},
+                                PlayMouse{SDL_BUTTON_MIDDLE, Verb::Target}};
+
+// 1 to 8 are slots 0 to 7; with Shift, 1 to 3 are slots 8 to 10 and the others stay.
+constexpr std::array kSlotKeys{SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
+                               SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7, SDL_SCANCODE_8};
+constexpr size_t kShiftSlots = kSlotCount - kSlotKeys.size();
+
 struct KeyBinding {
   SDL_Scancode key;
   Button button;
 };
 
-// The player's Azahar keyboard profile (qt-config.ini [Controls] profiles\1).
-constexpr std::array kKeys{
-    KeyBinding{SDL_SCANCODE_A, Settings::NativeButton::A},
-    KeyBinding{SDL_SCANCODE_S, Settings::NativeButton::B},
-    KeyBinding{SDL_SCANCODE_Z, Settings::NativeButton::X},
-    KeyBinding{SDL_SCANCODE_X, Settings::NativeButton::Y},
-    KeyBinding{SDL_SCANCODE_M, Settings::NativeButton::Start},
-    KeyBinding{SDL_SCANCODE_N, Settings::NativeButton::Select},
+// Outside play a key is a 3DS button: confirm, back, the menus' own buttons, and the ocarina's
+// five notes on 1 to 5 from the lowest.
+constexpr std::array kNameKeys{
+    KeyBinding{SDL_SCANCODE_E, Settings::NativeButton::A},
+    KeyBinding{SDL_SCANCODE_SPACE, Settings::NativeButton::A},
+    KeyBinding{SDL_SCANCODE_RETURN, Settings::NativeButton::A},
+    KeyBinding{SDL_SCANCODE_BACKSPACE, Settings::NativeButton::B},
+    KeyBinding{SDL_SCANCODE_ESCAPE, Settings::NativeButton::Start},
+    KeyBinding{SDL_SCANCODE_M, Settings::NativeButton::Select},
     KeyBinding{SDL_SCANCODE_Q, Settings::NativeButton::L},
-    KeyBinding{SDL_SCANCODE_W, Settings::NativeButton::R},
-    KeyBinding{SDL_SCANCODE_E, Settings::NativeButton::ZL},
-    KeyBinding{SDL_SCANCODE_R, Settings::NativeButton::ZR},
-    KeyBinding{SDL_SCANCODE_TAB, Settings::NativeButton::Debug},
-    KeyBinding{SDL_SCANCODE_T, Settings::NativeButton::Up},
-    KeyBinding{SDL_SCANCODE_G, Settings::NativeButton::Down},
-    KeyBinding{SDL_SCANCODE_F, Settings::NativeButton::Left},
-    KeyBinding{SDL_SCANCODE_H, Settings::NativeButton::Right},
+    KeyBinding{SDL_SCANCODE_F, Settings::NativeButton::R},
+    KeyBinding{SDL_SCANCODE_UP, Settings::NativeButton::Up},
+    KeyBinding{SDL_SCANCODE_DOWN, Settings::NativeButton::Down},
+    KeyBinding{SDL_SCANCODE_LEFT, Settings::NativeButton::Left},
+    KeyBinding{SDL_SCANCODE_RIGHT, Settings::NativeButton::Right},
+    KeyBinding{SDL_SCANCODE_1, Settings::NativeButton::L},
+    KeyBinding{SDL_SCANCODE_2, Settings::NativeButton::R},
+    KeyBinding{SDL_SCANCODE_3, Settings::NativeButton::Y},
+    KeyBinding{SDL_SCANCODE_4, Settings::NativeButton::X},
+    KeyBinding{SDL_SCANCODE_5, Settings::NativeButton::A},
 };
-
-// The eight item slots: a chord layout's four slots on the first page, then on the second.
-constexpr std::array kItemKeys{SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
-                               SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7, SDL_SCANCODE_8};
-constexpr size_t kPageSlots = 4;
 
 struct PadBinding {
   SDL_GamepadButton pad;
   Button button;
 };
 
-// By name on an Xbox pad, which is what the sets' HUDs draw: A is A (south), B is B (east), the
-// triggers are L and R. The left bumper is the chord (kChords), so ZL is the right stick's click.
-constexpr std::array kPadButtons{
+// Outside play a pad button is the 3DS button of its name on an Xbox pad: A is A (south), B is
+// B (east); the triggers are L and R, the bumpers ZL and ZR.
+constexpr std::array kNameButtons{
     PadBinding{SDL_GAMEPAD_BUTTON_SOUTH, Settings::NativeButton::A},
     PadBinding{SDL_GAMEPAD_BUTTON_EAST, Settings::NativeButton::B},
     PadBinding{SDL_GAMEPAD_BUTTON_WEST, Settings::NativeButton::X},
     PadBinding{SDL_GAMEPAD_BUTTON_NORTH, Settings::NativeButton::Y},
     PadBinding{SDL_GAMEPAD_BUTTON_START, Settings::NativeButton::Start},
     PadBinding{SDL_GAMEPAD_BUTTON_BACK, Settings::NativeButton::Select},
-    PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_STICK, Settings::NativeButton::ZL},
+    PadBinding{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, Settings::NativeButton::ZL},
     PadBinding{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, Settings::NativeButton::ZR},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_UP, Settings::NativeButton::Up},
     PadBinding{SDL_GAMEPAD_BUTTON_DPAD_DOWN, Settings::NativeButton::Down},
@@ -73,15 +128,15 @@ struct MenuKey {
   bool MenuPad::*held;
 };
 
-// kKeys' face buttons and D-pad by name, and the arrow keys.
+// The picker's keys: confirm and back as in a game's menus, X for a game's options.
 constexpr std::array kMenuKeys{
-    MenuKey{SDL_SCANCODE_A, &MenuPad::a},        MenuKey{SDL_SCANCODE_S, &MenuPad::b},
-    MenuKey{SDL_SCANCODE_Z, &MenuPad::x},        MenuKey{SDL_SCANCODE_X, &MenuPad::y},
-    MenuKey{SDL_SCANCODE_M, &MenuPad::start},    MenuKey{SDL_SCANCODE_T, &MenuPad::up},
-    MenuKey{SDL_SCANCODE_G, &MenuPad::down},     MenuKey{SDL_SCANCODE_F, &MenuPad::left},
-    MenuKey{SDL_SCANCODE_H, &MenuPad::right},    MenuKey{SDL_SCANCODE_UP, &MenuPad::up},
-    MenuKey{SDL_SCANCODE_DOWN, &MenuPad::down},  MenuKey{SDL_SCANCODE_LEFT, &MenuPad::left},
-    MenuKey{SDL_SCANCODE_RIGHT, &MenuPad::right},
+    MenuKey{SDL_SCANCODE_E, &MenuPad::a},        MenuKey{SDL_SCANCODE_SPACE, &MenuPad::a},
+    MenuKey{SDL_SCANCODE_RETURN, &MenuPad::a},   MenuKey{SDL_SCANCODE_BACKSPACE, &MenuPad::b},
+    MenuKey{SDL_SCANCODE_X, &MenuPad::x},        MenuKey{SDL_SCANCODE_Y, &MenuPad::y},
+    MenuKey{SDL_SCANCODE_W, &MenuPad::up},       MenuKey{SDL_SCANCODE_S, &MenuPad::down},
+    MenuKey{SDL_SCANCODE_A, &MenuPad::left},     MenuKey{SDL_SCANCODE_D, &MenuPad::right},
+    MenuKey{SDL_SCANCODE_UP, &MenuPad::up},      MenuKey{SDL_SCANCODE_DOWN, &MenuPad::down},
+    MenuKey{SDL_SCANCODE_LEFT, &MenuPad::left},  MenuKey{SDL_SCANCODE_RIGHT, &MenuPad::right},
 };
 
 struct MenuButton {
@@ -99,35 +154,6 @@ constexpr std::array kMenuButtons{
     MenuButton{SDL_GAMEPAD_BUTTON_DPAD_DOWN, &MenuPad::down},
     MenuButton{SDL_GAMEPAD_BUTTON_DPAD_LEFT, &MenuPad::left},
     MenuButton{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, &MenuPad::right},
-};
-
-constexpr uint32_t bit(Button button) {
-  return 1U << button;
-}
-
-// The chord is the left bumper in both games: the left index finger holds it while the left
-// thumb steers and the right thumb presses a face button, which a stick's click does not allow.
-// It holds pad bit 12 (the core's Debug button), which no 3DS button sets and our patches read
-// as "second item page" (plans/pad-features.md). X and Y are the X and Y item buttons on both
-// pages; A and B press I and II on the second, as each game's mod set presses them.
-constexpr std::array kChords{
-    // Ocarina of Time 3D, The One Screen: I is ZL, II is ZR, and in play it trades the pad
-    // word's X and Y bits (its source/input/policy.h), so the 3DS Y presses the game's X.
-    ChordLayout{"0004000000033500",
-                SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
-                {ChordSlot{SDL_GAMEPAD_BUTTON_WEST, ItemButton::X, bit(Settings::NativeButton::Y)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_NORTH, ItemButton::Y, bit(Settings::NativeButton::X)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_SOUTH, ItemButton::I, bit(Settings::NativeButton::ZL)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_EAST, ItemButton::II, bit(Settings::NativeButton::ZR)}}},
-    // Majora's Mask 3D, Project Restoration: I is ZR with X, II is ZR with Y.
-    ChordLayout{"0004000000125500",
-                SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
-                {ChordSlot{SDL_GAMEPAD_BUTTON_WEST, ItemButton::X, bit(Settings::NativeButton::X)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_NORTH, ItemButton::Y, bit(Settings::NativeButton::Y)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_SOUTH, ItemButton::I,
-                           bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::X)},
-                 ChordSlot{SDL_GAMEPAD_BUTTON_EAST, ItemButton::II,
-                           bit(Settings::NativeButton::ZR) | bit(Settings::NativeButton::Y)}}},
 };
 
 constexpr int16_t kTriggerPressed = 16384;
@@ -282,54 +308,96 @@ void PadInput::readHost() {
   state.cStickInverted = state_->cStickInverted;
   state.gyro = state_->gyro;
   state.gyroSource = state_->gyroSource;
+  const bool play = game_ != nullptr && mode_ != PadMode::ByName;
+  uint32_t held = 0;
+  uint16_t slots = 0;
+  const auto press = [&](Verb verb) {
+    // A screen that assigns slots closes on its own key as on Pause.
+    const Verb does = mode_ == PadMode::Assign && verb == Verb::ItemScreen ? Verb::Pause : verb;
+    held |= game_->buttons[static_cast<size_t>(does)];
+  };
   const bool *keys = SDL_GetKeyboardState(nullptr);
-  bool keyHeld = keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_LEFT] || keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_DOWN];
-  for (const KeyBinding &binding : kKeys) {
-    state.buttons[binding.button] = keys[binding.key];
-    keyHeld = keyHeld || keys[binding.key];
-  }
-  for (size_t i = 0; chord_ != nullptr && i < kItemKeys.size(); ++i) {
-    if (!keys[kItemKeys[i]]) {
-      continue;
+  const bool shift = keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
+  bool keyHeld = false;
+  if (play) {
+    for (const PlayKey &binding : kPlayKeys) {
+      if (keys[binding.key]) {
+        keyHeld = true;
+        press(binding.verb);
+      }
     }
-    keyHeld = true;
-    const uint32_t held = chord_->slots[i % kPageSlots].buttons | (i >= kPageSlots ? bit(Settings::NativeButton::Debug) : 0);
-    for (size_t button = 0; button < state.buttons.size(); ++button) {
-      state.buttons[button] = state.buttons[button] || ((held >> button) & 1U) != 0;
+    for (size_t i = 0; i < kSlotKeys.size(); ++i) {
+      if (keys[kSlotKeys[i]]) {
+        keyHeld = true;
+        slots |= static_cast<uint16_t>(1U << (shift && i < kShiftSlots ? kSlotKeys.size() + i : i));
+      }
+    }
+    const SDL_MouseButtonFlags mouse = mode_ == PadMode::Play ? SDL_GetMouseState(nullptr, nullptr) : 0;
+    for (const PlayMouse &binding : kPlayMouse) {
+      if ((mouse & SDL_BUTTON_MASK(binding.button)) != 0) {
+        keyHeld = true;
+        press(binding.verb);
+      }
+    }
+  } else {
+    for (const KeyBinding &binding : kNameKeys) {
+      if (keys[binding.key]) {
+        keyHeld = true;
+        held |= bit(binding.button);
+      }
     }
   }
   MenuPad menu;
   for (const MenuKey &binding : kMenuKeys) {
     menu.*binding.held = menu.*binding.held || keys[binding.key];
   }
-  bool padHeld = false;
   auto &circle = state.sticks[Settings::NativeAnalog::CirclePad];
-  circle[0] = (keys[SDL_SCANCODE_RIGHT] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_LEFT] ? 1.0F : 0.0F);
-  circle[1] = (keys[SDL_SCANCODE_UP] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_DOWN] ? 1.0F : 0.0F);
+  circle[0] = (keys[SDL_SCANCODE_D] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_A] ? 1.0F : 0.0F);
+  circle[1] = (keys[SDL_SCANCODE_W] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_S] ? 1.0F : 0.0F);
+  keyHeld = keyHeld || circle[0] != 0.0F || circle[1] != 0.0F;
+  bool padHeld = false;
+  bool chord = play && shift;
   auto &cStick = state.sticks[Settings::NativeAnalog::CStick];
   for (SDL_Gamepad *pad : pads_) {
-    const bool chord = chord_ != nullptr && SDL_GetGamepadButton(pad, chord_->chord);
-    uint32_t held = chord ? bit(Settings::NativeButton::Debug) : 0;
-    padHeld = padHeld || chord;
-    for (const PadBinding &binding : kPadButtons) {
-      if (!SDL_GetGamepadButton(pad, binding.pad)) {
-        continue;
+    const bool padChord = play && SDL_GetGamepadButton(pad, kChord);
+    chord = chord || padChord;
+    padHeld = padHeld || padChord;
+    if (play) {
+      for (const PlayButton &binding : kPlayButtons) {
+        if (!SDL_GetGamepadButton(pad, binding.pad)) {
+          continue;
+        }
+        padHeld = true;
+        const int slot = padChord ? binding.chordSlot : binding.slot;
+        if (slot != kNoSlot) {
+          slots |= static_cast<uint16_t>(1U << slot);
+        } else if (binding.verb) {
+          press(*binding.verb);
+        }
       }
-      padHeld = true;
-      const auto *slot =
-          chord_ != nullptr ? std::ranges::find(chord_->slots, binding.pad, &ChordSlot::face) : nullptr;
-      const bool itemButton = slot != nullptr && slot != chord_->slots.end() &&
-                              (chord || slot->item == ItemButton::X || slot->item == ItemButton::Y);
-      held |= itemButton ? slot->buttons : bit(binding.button);
-    }
-    for (size_t i = 0; i < state.buttons.size(); ++i) {
-      state.buttons[i] = state.buttons[i] || ((held >> i) & 1U) != 0;
+    } else {
+      for (const PadBinding &binding : kNameButtons) {
+        if (SDL_GetGamepadButton(pad, binding.pad)) {
+          padHeld = true;
+          held |= bit(binding.button);
+        }
+      }
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerPressed) {
-      state.buttons[Settings::NativeButton::L] = true;
+      padHeld = true;
+      if (play) {
+        press(Verb::Target);
+      } else {
+        held |= bit(Settings::NativeButton::L);
+      }
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerPressed) {
-      state.buttons[Settings::NativeButton::R] = true;
+      padHeld = true;
+      if (play) {
+        press(Verb::Shield);
+      } else {
+        held |= bit(Settings::NativeButton::R);
+      }
     }
     // SDL's y grows downward; the 3DS's grows upward.
     circle[0] = stronger(circle[0], axis(pad, SDL_GAMEPAD_AXIS_LEFTX));
@@ -346,7 +414,12 @@ void PadInput::readHost() {
     menu.up = menu.up || axis(pad, SDL_GAMEPAD_AXIS_LEFTY) < -kStickMoved;
     menu.down = menu.down || axis(pad, SDL_GAMEPAD_AXIS_LEFTY) > kStickMoved;
   }
+  for (size_t i = 0; i < state.buttons.size(); ++i) {
+    state.buttons[i] = ((held >> i) & 1U) != 0;
+  }
   menu_ = menu;
+  slots_ = slots;
+  chord_ = chord;
   // The keyboard wins a frame both are held in: it is the one in the player's hands last.
   if (keyHeld) {
     lastDevice_ = HostDevice::Keyboard;
@@ -356,32 +429,58 @@ void PadInput::readHost() {
   *state_ = state;
 }
 
-Prompt PadInput::prompt(Button button) {
+Prompt PadInput::slotPrompt(size_t slot) {
   Prompt prompt;
-  if (const auto *pad = std::ranges::find(kPadButtons, button, &PadBinding::button); pad != kPadButtons.end()) {
+  for (const PlayButton &binding : kPlayButtons) {
+    if (binding.slot == static_cast<int>(slot)) {
+      prompt.pad = binding.pad;
+      break;
+    }
+    if (binding.chordSlot == static_cast<int>(slot)) {
+      prompt.pad = binding.pad;
+      prompt.chord = true;
+    }
+  }
+  prompt.shift = slot >= kSlotKeys.size();
+  prompt.key = kSlotKeys[prompt.shift ? slot - kSlotKeys.size() : slot];
+  return prompt;
+}
+
+Prompt PadInput::verbPrompt(Verb verb) {
+  Prompt prompt;
+  if (const auto *pad = std::ranges::find(kPlayButtons, std::optional(verb), &PlayButton::verb); pad != kPlayButtons.end()) {
     prompt.pad = pad->pad;
   }
-  if (const auto *key = std::ranges::find(kKeys, button, &KeyBinding::button); key != kKeys.end()) {
+  if (const auto *key = std::ranges::find(kPlayKeys, verb, &PlayKey::verb); key != kPlayKeys.end()) {
     prompt.key = key->key;
+  }
+  if (const auto *mouse = std::ranges::find(kPlayMouse, verb, &PlayMouse::verb); mouse != kPlayMouse.end()) {
+    prompt.mouse = mouse->button;
   }
   return prompt;
 }
 
-Prompt PadInput::itemPrompt(ItemButton item, bool secondPage) const {
-  if (chord_ == nullptr) {
-    return {};
-  }
-  const auto *slot = std::ranges::find(chord_->slots, item, &ChordSlot::item);
-  if (slot == chord_->slots.end()) {
-    return {};
-  }
-  const auto index = static_cast<size_t>(slot - chord_->slots.begin());
-  return {slot->face, kItemKeys[index + (secondPage ? kPageSlots : 0)]};
-}
+// The 3DS buttons each game's mod set reads for a verb, in Verb's order: Action, Sword, Shield,
+// Target, FirstPerson, Pause, Map, ItemScreen, Ocarina.
+const std::array<PadInput::GameVerbs, 2> PadInput::kGames{
+    // Ocarina of Time 3D, The One Screen (its source/input/shortcuts.h): the D-pad's Left is
+    // View, Up the item screen, Right the ocarina; Select the map.
+    GameVerbs{"0004000000033500",
+              {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B), bit(Settings::NativeButton::R),
+               bit(Settings::NativeButton::L), bit(Settings::NativeButton::Left), bit(Settings::NativeButton::Start),
+               bit(Settings::NativeButton::Select), bit(Settings::NativeButton::Up),
+               bit(Settings::NativeButton::Right)}},
+    // Majora's Mask 3D, Project Restoration: ZL is View, Select the Items screen.
+    GameVerbs{"0004000000125500",
+              {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B), bit(Settings::NativeButton::R),
+               bit(Settings::NativeButton::L), bit(Settings::NativeButton::ZL), bit(Settings::NativeButton::Start),
+               0, bit(Settings::NativeButton::Select), 0}},
+};
 
 void PadInput::bindGame(std::string_view titleId) {
-  const auto *found = std::ranges::find(kChords, titleId, &ChordLayout::titleId);
-  chord_ = found != kChords.end() ? found : nullptr;
+  const auto *found = std::ranges::find(kGames, titleId, &GameVerbs::titleId);
+  game_ = found != kGames.end() ? found : nullptr;
+  mode_ = PadMode::ByName;
 }
 
 void PadInput::setButtons(uint32_t mask) {

@@ -66,7 +66,7 @@ public:
   [[nodiscard]] SDL_Window *sdlWindow() const {
     return window_;
   }
-  // Escape or the gamepad's guide button since the last call.
+  // F10 or the gamepad's guide button since the last call.
   [[nodiscard]] bool takeMenuRequest() {
     return std::exchange(menuRequested_, false);
   }
