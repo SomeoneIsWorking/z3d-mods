@@ -8,13 +8,11 @@ field = "cutsceneSkip"
 label = "Cutscene skip (Start)"
 default = true
 
-# Off until a save made with the second page showing is checked against the game without the patch
-# (plans/pad-features.md).
 [[option]]
 id = "chord_items"
 field = "chordItems"
 label = "Second item page (hold the chord button)"
-default = false
+default = true
 
 # The game turns its camera with the C-stick itself; the app turns the stick around.
 [[option]]

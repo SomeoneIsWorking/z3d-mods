@@ -38,8 +38,16 @@ public:
     chordIn_ = wanted;
   }
 
+  // The file always holds the first page on the buttons.
+  void beforeSave() {
+    if (chordIn_) {
+      trade(reinterpret_cast<uint8_t *>(kCommonData) + kCommonSave);
+      chordIn_ = false;
+    }
+  }
+
 private:
-  // Plain play: no cutscene, scene change or text box (a save is offered in one), the HUD up.
+  // Plain play: no cutscene, scene change or text box, the HUD up.
   static bool settled(void *play, const uint8_t *common) {
     return guest::read<uint8_t>(play, kPlayCutscene + kCsState) == 0 &&
            guest::read<int8_t>(play, kPlayTransitionTrigger) == 0 &&
@@ -80,6 +88,11 @@ constinit ChordItems chordItems;
 // Called once a frame from Actor_UpdateAll (hooks.s).
 void updateChordItems(void *play) {
   chordItems.update(play);
+}
+
+// Called at the start of Play_SaveAtStatue (hooks.s).
+void beforeSave() {
+  chordItems.beforeSave();
 }
 
 } // namespace z3dmods::mm3d

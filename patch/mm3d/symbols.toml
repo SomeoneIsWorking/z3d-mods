@@ -9,6 +9,7 @@ kMessageGetState = "Message_GetState"
 kMessageCloseTextbox = "Message_CloseTextbox"
 kActorUpdateAll = "Actor_UpdateAll"
 kActorUpdateFirstCall = "func_0016EBAC"
+kPlaySaveAtStatue = "Play_SaveAtStatue"
 
 [globals]
 kCommonData = "gCommonData"
