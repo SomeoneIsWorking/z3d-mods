@@ -39,6 +39,8 @@ private:
   void line(const std::string &text, float x, float y, Rgb color) const;
   // `folder` as it fits in `width` at the font's size now, its leading folders left out.
   [[nodiscard]] std::string fitted(const std::filesystem::path &folder, float width) const;
+  // `name` as it fits in `width`, its middle left out.
+  [[nodiscard]] std::string shortened(const std::string &name, float width) const;
 
   const MenuCanvas &canvas_;
   GameWindow &window_;

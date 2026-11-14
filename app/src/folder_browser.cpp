@@ -10,13 +10,14 @@
 #include <algorithm>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
 namespace z3d::app {
 namespace {
 
 constexpr const char *kTake = "Use this folder";
 constexpr const char *kParent = "..";
-// Stands for the leading folders of a path too long for its line.
+// Stands for what is left out of a path or a name too long for its line.
 constexpr std::string_view kElided = "...";
 constexpr const char *kUnreadable = "This folder cannot be read";
 constexpr const char *kHint = "A  Open    B  Up    X  Use this folder    Esc  Cancel";
@@ -207,6 +208,44 @@ std::string FolderBrowser::fitted(const std::filesystem::path &folder, float wid
   return shown;
 }
 
+std::string FolderBrowser::shortened(const std::string &name, float width) const {
+  const auto wide = [this](std::string_view text) {
+    int measured = 0;
+    TTF_GetStringSize(canvas_.font(), text.data(), text.size(), &measured, nullptr);
+    return static_cast<float>(measured);
+  };
+  if (wide(name) <= width) {
+    return name;
+  }
+  // Where each character starts, so a cut never splits one.
+  std::vector<size_t> starts;
+  for (size_t at = 0; at < name.size(); ++at) {
+    if ((static_cast<unsigned char>(name[at]) & 0xC0U) != 0x80U) {
+      starts.push_back(at);
+    }
+  }
+  // The most characters kept, split evenly around the middle, that still fit.
+  size_t fits = 0;
+  for (size_t low = 1, high = starts.size() - 1; low <= high;) {
+    const size_t kept = (low + high) / 2;
+    const size_t head = (kept + 1) / 2;
+    const size_t tail = kept - head;
+    const std::string shown =
+        name.substr(0, starts[head]) + std::string(kElided) +
+        (tail == 0 ? std::string() : name.substr(starts[starts.size() - tail]));
+    if (wide(shown) <= width) {
+      fits = kept;
+      low = kept + 1;
+    } else {
+      high = kept - 1;
+    }
+  }
+  const size_t head = (fits + 1) / 2;
+  const size_t tail = fits - head;
+  return name.substr(0, starts[head]) + std::string(kElided) +
+         (tail == 0 ? std::string() : name.substr(starts[starts.size() - tail]));
+}
+
 void FolderBrowser::line(const std::string &text, float x, float y, Rgb color) const {
   TTF_Text *made = canvas_.text(text, color);
   TTF_DrawRendererText(made, x, y);
@@ -219,8 +258,8 @@ void FolderBrowser::draw(const Layout &layout) {
                   std::min(layout.height * kHeadingShare, layout.width * kHeadingWidthShare));
   line(heading_, layout.left, layout.height * 0.06F, kMenuText);
   TTF_SetFontSize(canvas_.font(), layout.rowSize);
-  line(fitted(folder_, layout.width - 2.0F * layout.left), layout.left, layout.height * 0.16F,
-       kMenuDim);
+  const float wide = layout.width - 2.0F * layout.left;
+  line(fitted(folder_, wide), layout.left, layout.height * 0.16F, kMenuDim);
   const size_t count = rows_.size() + 1;
   float y = layout.top;
   size_t drawn = 0;
@@ -231,7 +270,7 @@ void FolderBrowser::draw(const Layout &layout) {
       canvas_.fill(kMenuTile, {layout.left * 0.5F, y - layout.pitch * 0.15F,
                                layout.width - layout.left, layout.pitch});
     }
-    line(name(row), layout.left, y, selected ? kMenuSelected : kMenuText);
+    line(shortened(name(row), wide), layout.left, y, selected ? kMenuSelected : kMenuText);
   }
   if (unreadable_ && drawn < layout.visible) {
     line(kUnreadable, layout.left, y, kMenuDim);
@@ -240,7 +279,8 @@ void FolderBrowser::draw(const Layout &layout) {
   for (size_t file = 0; file < files_.size() && drawn < layout.visible;
        ++file, ++drawn, y += layout.pitch) {
     const bool last = drawn + 1 == layout.visible && file + 1 < files_.size();
-    line(last ? "and " + std::to_string(files_.size() - file) + " more files" : files_[file],
+    line(last ? "and " + std::to_string(files_.size() - file) + " more files"
+              : shortened(files_[file], wide),
          layout.left, y, kMenuDim);
   }
   line(kHint, layout.left, layout.height * 0.9F, kMenuDim);
