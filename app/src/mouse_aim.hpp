@@ -1,5 +1,6 @@
 // The mouse in play. While the game's look follows the gyroscope (first person, an aimed item),
-// the mouse turns the 3DS for it, so a mouse count turns the view by kDegreesPerCount. The game
+// the mouse turns the 3DS for it, so a mouse count turns the view by kDegreesPerCount times the
+// game's mouse sensitivity (PadInput::mouseScale). The game
 // adds the SDK gyroscope reader's direction to the look (decomp docs/motion.md); here the reader is
 // set to integrate our samples as they are, and each sample is one turn around the 3DS's x (pitch)
 // or around world up (yaw). Otherwise in play it turns the patch's free camera by the same angle
@@ -22,7 +23,7 @@ class GameWindow;
 
 class MouseAim final : public GyroSource {
 public:
-  // View degrees per mouse count, both axes.
+  // View degrees per mouse count, both axes, at a sensitivity of 1.
   static constexpr double kDegreesPerCount = 0.05;
 
   // `manifest` is the game's z3d-options.json; without its "aim" the mouse stays the stylus.
@@ -61,6 +62,9 @@ private:
     uint32_t play = 0;
     uint32_t player = 0;
     uint32_t lookFlags = 0;
+    // The player's state flags, and the bit of them set while an item is aimed.
+    uint32_t stateFlags = 0;
+    uint32_t itemAimed = 0;
     // The bits of the look's flags that are all set while the gyroscope sets a first-person view.
     uint32_t lookActive = 0;
     uint32_t lookBase = 0;
@@ -81,6 +85,8 @@ private:
   [[nodiscard]] std::optional<uint32_t> exactReader();
   // The player actor while its look follows the gyroscope.
   [[nodiscard]] std::optional<uint32_t> lookingPlayer() const;
+  // View degrees per mouse count now.
+  [[nodiscard]] double degreesPerCount() const;
   // How far the 3DS has turned past each of the look's limits, in its own degrees: pitch, yaw.
   [[nodiscard]] std::array<double, 2> pastLimits(uint32_t player) const;
   template <typename T> [[nodiscard]] std::optional<T> read(uint32_t address) const;

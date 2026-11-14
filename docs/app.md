@@ -89,7 +89,8 @@ follows the gyroscope (the first-person look, an aimed bow or Slingshot; both `P
 flags of the decomp's `docs/motion.md`), `MouseAim` asks the window for the mouse
 (`GameWindow::captureMouse`: SDL's relative mode, the pointer hidden and held, the stylus
 lifted) and turns the 3DS by its motion, so a count turns the view 0.05 degrees
-(`kDegreesPerCount`) on both axes; when the look ends, the game shuts down or the window is
+(`kDegreesPerCount`) times the game's "Mouse sensitivity" (`PadInput::mouseScale`, Options) on
+both axes; when the look ends, the game shuts down or the window is
 hidden, the mouse is the stylus again. How it is exact:
 - The core asks our motion device for every HID gyroscope sample
   (`Input::MotionDevice::TakeGyroscopeSample`, Core 7) and takes it as it is; `PadInput`'s device
@@ -110,8 +111,18 @@ hidden, the mouse is the stylus again. How it is exact:
 - At a limit of the look (the view is held while the 3DS turns on) motion further past it is
   dropped, and once the game has read every sample the 3DS comes back to the limit, so the way
   back starts at once.
-- Not covered: Master Quest's mirrored yaw, a look that starts without the first-person draw,
-  and mouse buttons (the item's own button fires).
+- An item aimed (`stateFlags1` has the decomp's `PLAYER_STATE1_ITEM_AIMED`, read through
+  `"aim"`'s `state_flags` and `item_aimed`; clear in the plain look) makes `PadInput` send the
+  left mouse button and RT to the slot pressed last, the one that took the item out: its own
+  button fires it (OoT3D on the press, MM3D's bow when let go). The games' R does not fire
+  (`pol-fire-oot2`, `pol-fire-mm2`). In the plain look and the rest of play the left button is
+  the sword. Seen in a window with real mouse clicks (`z3dmods inputtest fire`, `fire-mm3d`):
+  the sword swings, slot 1 aims the Slingshot or the bow, two clicks take the count from 20 to
+  18, E puts it away and the click swings the sword again.
+- At 2x sensitivity (`z3dmods inputtest aim-fast`, `camera-fast`) half of `aim`'s and
+  `camera`'s travel shows their frames.
+- Not covered: Master Quest's mirrored yaw in the aim (the camera is seen right there,
+  `camera-mq`), and a look that starts without the first-person draw.
 
 Seen: on the harness (`mouse:<dx>,<dy>`), MM3D at South Clock Town's owl statue (`aim-mm5`) and
 OoT3D inside the Deku Tree (`aim-oot3`), first person and with the bow or Slingshot aimed: 400
@@ -126,7 +137,7 @@ first person logs "mouse camera: aim took 1600 by 600 counts", the travel the te
 
 Mouse camera (`mouse_aim`, plans/pc-controls-hud.md): in the rest of play (the pad table in
 `Play` mode, a patch whose link block has `look`) the mouse is held the same way and its motion,
-0.05 degrees a count with the remainder carried, is added to the link block's `look` (right,
+0.05 degrees a count times the sensitivity with the remainder carried, is added to the link block's `look` (right,
 down, binary angles; `SlotLink::look`, clamped to int16). The patch takes it once a frame and
 writes 0 (`patch/common/mouse_look.hpp`): OoT3D's free camera (`free_camera.cpp`) adds it to
 its orbit as a stick turn would start it, mirrored in Master Quest; MM3D turns the game's own
@@ -161,7 +172,8 @@ is the row that asks for the folders again (Setup above). `GameOptions` owns the
   relative to the user folder.
 - An `[[option]]` with `pad` instead of `field` is the app's: `cstick_invert_x` and
   `cstick_invert_y` turn the C-stick around on its way to the game (MM3D's camera stick, which the
-  game reads itself).
+  game reads itself); `mouse_scale`, with `scales` (its choices, "0.25x" to "4x"), multiplies
+  the mouse's degrees a count for the aim and the camera.
 - An `[[option]]` with `layer` names a folder of replacement game files beside the set's `romfs/`
   (`load/mods/<title id>/<layer>/`, written by the install): on, the app lists it in the core's
   `Settings::values.romfs_layers` and the core stacks it over `romfs/` when the game loads

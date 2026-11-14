@@ -22,8 +22,10 @@ struct Option {
   // What the value picks from; a switch has "Off" and "On".
   std::vector<std::string> choices;
   uint8_t value = 0;
-  // An app switch on the pad (cstick_invert_x, cstick_invert_y); empty for the others.
+  // An app option on the pad (cstick_invert_x, cstick_invert_y, mouse_scale); empty for the others.
   std::string pad;
+  // What each choice is, for an option that picks a scale (mouse_scale); empty for a switch.
+  std::vector<double> scales;
   // A folder of replacement game files the app layers in while the switch is on; empty for the others.
   std::string layer;
 };

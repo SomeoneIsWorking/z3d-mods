@@ -67,12 +67,14 @@ MouseAim::MouseAim(GameWindow &window, Emulator &emulator, PadInput &pad, SlotLi
   if (aim == nullptr) {
     return;
   }
-  layout_ = Layout{address(*aim, "reader"),     address(*aim, "angles"),      address(*aim, "valid"),
-                   address(*aim, "yaw_scale"),  address(*aim, "pitch_scale"), address(*aim, "motion_off"),
-                   address(*aim, "play"),       address(*aim, "player"),      address(*aim, "look_flags"),
-                   address(*aim, "look_active"), address(*aim, "look_base"),  address(*aim, "focus_rot"),
-                   address(*aim, "direction"),  address(*aim, "filters"),     address(*aim, "drift_radius"),
-                   address(*aim, "drift_bias"), address(*aim, "scale")};
+  layout_ = Layout{
+      address(*aim, "reader"),      address(*aim, "angles"),       address(*aim, "valid"),
+      address(*aim, "yaw_scale"),   address(*aim, "pitch_scale"),  address(*aim, "motion_off"),
+      address(*aim, "play"),        address(*aim, "player"),       address(*aim, "look_flags"),
+      address(*aim, "state_flags"), address(*aim, "item_aimed"),   address(*aim, "look_active"),
+      address(*aim, "look_base"),   address(*aim, "focus_rot"),    address(*aim, "direction"),
+      address(*aim, "filters"),     address(*aim, "drift_radius"), address(*aim, "drift_bias"),
+      address(*aim, "scale")};
   pad_.setGyroSource(this);
 }
 
@@ -80,6 +82,7 @@ MouseAim::~MouseAim() {
   if (layout_) {
     pad_.setGyroSource(nullptr);
   }
+  pad_.aimItem(false);
   window_.captureMouse(false);
 }
 
@@ -100,11 +103,16 @@ std::string_view MouseAim::job() const {
   return looking_ ? "camera" : "stylus";
 }
 
+double MouseAim::degreesPerCount() const {
+  return kDegreesPerCount * pad_.mouseScale();
+}
+
 void MouseAim::move(double dx, double dy) {
-  travel_ = {travel_[0] + std::abs(dx), travel_[1] + std::abs(dy)};  if (looking_) {
+  travel_ = {travel_[0] + std::abs(dx), travel_[1] + std::abs(dy)};
+  if (looking_) {
     // Right and down, as the mouse went.
-    const std::array<double, 2> wanted{lookCarry_[0] + dx * kDegreesPerCount * kBinaryAngle,
-                                       lookCarry_[1] + dy * kDegreesPerCount * kBinaryAngle};
+    const std::array<double, 2> wanted{lookCarry_[0] + dx * degreesPerCount() * kBinaryAngle,
+                                       lookCarry_[1] + dy * degreesPerCount() * kBinaryAngle};
     const std::array<double, 2> whole{std::trunc(wanted[0]), std::trunc(wanted[1])};
     lookCarry_ = {wanted[0] - whole[0], wanted[1] - whole[1]};
     link_.look(static_cast<int32_t>(whole[0]), static_cast<int32_t>(whole[1]));
@@ -114,8 +122,8 @@ void MouseAim::move(double dx, double dy) {
     return;
   }
   // A turn on y looks left and a turn on x looks down.
-  const double pitch = dy * kDegreesPerCount / pitchScale_;
-  const double yaw = -dx * kDegreesPerCount / yawScale_;
+  const double pitch = dy * degreesPerCount() / pitchScale_;
+  const double yaw = -dx * degreesPerCount() / yawScale_;
   // The view does not follow a turn further past a limit, so the 3DS does not make it.
   if (pitch * past_[0] <= 0.0) {
     pitch_ += pitch;
@@ -229,6 +237,9 @@ void MouseAim::update() {
   }
   const std::string_view before = job();
   active_ = reader && yawScale && *yawScale > 0.0F && pitchScale && *pitchScale > 0.0F && player;
+  const std::optional<uint32_t> state =
+      active_ && layout_ && player ? read<uint32_t>(*player + layout_->stateFlags) : std::nullopt;
+  pad_.aimItem(state && layout_ && (*state & layout_->itemAimed) != 0);
   looking_ = !active_ && link_.looks() && link_.mode() == PadMode::Play;
   if (job() != before) {
     lucent::info("z3d", "mouse {}: {} took {} by {} counts", job(), before, travel_[0], travel_[1]);

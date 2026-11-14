@@ -7,6 +7,7 @@
 #include <SDL3/SDL_mouse.h>
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <optional>
 #include <ostream>
@@ -355,6 +356,8 @@ void PadInput::readHost() {
   const bool play = game_ != nullptr && mode_ != PadMode::ByName;
   uint32_t held = 0;
   uint16_t slots = 0;
+  // The left mouse button or RT while an item is aimed.
+  bool fire = false;
   const auto press = [&](Verb verb) {
     // A screen that assigns slots closes on the input that opened it.
     const bool leaves = mode_ == PadMode::Assign && verb == Verb::ItemScreen;
@@ -384,7 +387,11 @@ void PadInput::readHost() {
     for (const PlayMouse &binding : kPlayMouse) {
       if ((mouse & SDL_BUTTON_MASK(binding.button)) != 0) {
         keyHeld = true;
-        press(binding.verb);
+        if (binding.verb == Verb::Sword && itemAimed_) {
+          fire = true;
+        } else {
+          press(binding.verb);
+        }
       }
     }
   } else {
@@ -454,7 +461,9 @@ void PadInput::readHost() {
     }
     if (SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerPressed) {
       padHeld = true;
-      if (play) {
+      if (play && itemAimed_) {
+        fire = true;
+      } else if (play) {
         press(Verb::Shield);
       } else {
         held |= bit(Settings::NativeButton::R);
@@ -477,6 +486,13 @@ void PadInput::readHost() {
   }
   for (size_t i = 0; i < state.buttons.size(); ++i) {
     state.buttons[i] = ((held >> i) & 1U) != 0;
+  }
+  if (const uint16_t pressed = slots & static_cast<uint16_t>(~slots_);
+      mode_ == PadMode::Play && pressed != 0) {
+    lastSlot_ = static_cast<size_t>(std::countr_zero(pressed));
+  }
+  if (fire && lastSlot_) {
+    slots |= static_cast<uint16_t>(1U << *lastSlot_);
   }
   menu_ = menu;
   slots_ = slots;

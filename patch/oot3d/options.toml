@@ -37,6 +37,14 @@ field = "autosave"
 label = "Autosave after each scene change"
 default = false
 
+# Times the mouse's 0.05 degrees a count, for the camera and the aim.
+[[option]]
+id = "mouse_sensitivity"
+pad = "mouse_scale"
+label = "Mouse sensitivity"
+scales = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
+default = 1.0
+
 [[option]]
 id = "stairs"
 label = "Stepped stairs"

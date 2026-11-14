@@ -20,7 +20,7 @@ prints the keyboard's and the mouse's.
 | A | Context action (talk, open, climb, roll, put away) |
 | X | Sword (hold for spin); MM form action |
 | Y, B, RB | Item slots 1 to 3 (RB keeps the right thumb on aim) |
-| RT | Shield; fires the item in hand while aiming |
+| RT | Shield; while an item is aimed, presses the slot that took it out, which fires it |
 | LT | Hold to Z-target; tap to recenter |
 | D-pad | Item slots 4 to 7 (Up, Right, Down, Left); a new file has the ocarina on Down |
 | LB held | Chord: A, B, X, Y are item slots 8 to 11; the HUD shows them while held |
@@ -33,7 +33,7 @@ prints the keyboard's and the mouse's.
 | WASD | Move |
 | Mouse | Camera and aim |
 | E or Space | Context action |
-| Left mouse | Sword |
+| Left mouse | Sword; while an item is aimed, fires it as RT does |
 | Right mouse | Shield |
 | Q or middle mouse | Target / recenter |
 | F | First person |
@@ -316,7 +316,9 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   OoT3D's `free_camera.cpp` adds it to its orbit; MM3D's `mouse_camera.cpp` makes the game's
   C-stick test read as moved and turns `Camera_Follow`'s eye around its look-at point (the
   decomp's `docs/camera.md`).
-- Not built: a sensitivity option, firing from a mouse button.
+- Built: "Mouse sensitivity" in each game's options (0.25x to 4x of 0.05 degrees a count, the
+  aim and the camera), and the left mouse button and RT firing an aimed item through its own
+  slot; the games' R never fired it (docs/app.md "Mouse aim").
 
 ## Status
 - Slots, pad, keyboard and HUD: built in both games. Seen with a real pad's and real key events
@@ -342,7 +344,10 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   OoT3D's free camera by 3640 binary angles for 3641 and back, 200 up by 1820
   (`mm-q-oot-mouse2`); MM3D's camera at South Clock Town's owl statue by 3626 and 3642 for 3641,
   200 up by 1789 for 1820 (`mm-q-mouse8`, at moving with the eye). In a window with real mouse
-  motion: `inputtest camera`, `camera-mm3d`. Not run: Master Quest.
+  motion: `inputtest camera`, `camera-mm3d`. A Master Quest file (`inputtest camera-mq`, the
+  mirrored Deku Tree): right turns the view right as in `camera`. At 2x sensitivity half the
+  travel gives `camera`'s and `aim`'s frames (`camera-fast`, `aim-fast`; the log counts 800 by
+  300 for `aim`'s 1600 by 600).
 - Not done: item counts are not coloured at capacity.
 - Missing from MM3D's HUD: View, the minimap (what decides it is not found), the ice and light
   arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The

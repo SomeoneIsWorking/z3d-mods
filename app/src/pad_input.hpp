@@ -169,9 +169,21 @@ public:
   // (tools/z3dmods/app_keys.py): menu, name (a 3DS button outside play), play (a verb), mouse
   // (a verb's mouse button, or a 3DS button's outside play), slot, stick and chord.
   static void listKeys(std::ostream &out);
-  // A game option (game_options.hpp).
+  // Game options (game_options.hpp).
   void invertCStick(bool x, bool y) {
     state_->cStickInverted = {x, y};
+  }
+  void scaleMouse(double scale) {
+    mouseScale_ = scale;
+  }
+  // Times the mouse's degrees a count (mouse_aim.hpp).
+  [[nodiscard]] double mouseScale() const {
+    return mouseScale_;
+  }
+  // Whether an item is aimed in first person (mouse_aim.hpp): the left mouse button and RT then
+  // press the slot pressed last, which fires it, instead of the sword and the shield.
+  void aimItem(bool aimed) {
+    itemAimed_ = aimed;
   }
 
   [[nodiscard]] const PadState &state() const {
@@ -200,6 +212,10 @@ private:
   uint16_t slots_ = 0;
   bool chord_ = false;
   HostDevice lastDevice_ = HostDevice::Pad;
+  double mouseScale_ = 1.0;
+  bool itemAimed_ = false;
+  // The slot last pressed in play: the one that took out the item in hand.
+  std::optional<size_t> lastSlot_;
 };
 
 } // namespace z3d::app

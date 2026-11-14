@@ -8,6 +8,7 @@ screenshots. Output: scratch/input-test/<game>/.
 
 from __future__ import annotations
 
+import json
 import os
 import shlex
 import shutil
@@ -20,7 +21,7 @@ from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, config, ctr, desktop_container, games, harness, package, play, shortcut, source_check, steps, symbols
+from z3dmods import app, config, ctr, desktop_container, games, harness, options, package, play, shortcut, source_check, steps, symbols
 from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.install import GameSet
@@ -267,6 +268,8 @@ OOT3D_AMMO = 20
 # Inventory.upgrades with a Bomb Bag and a Bullet Bag and room for the sticks and nuts: using ammo
 # clamps its count to the bag (decomp/oot3d/docs/item_buttons.md).
 OOT3D_BAGS = 0x8 | 0x4000 | 0x40000 | 0x100000
+# The Kokiri Sword, Tunic and Boots, as worn (ItemEquips.equipment) and as owned (Inventory.equipment).
+OOT3D_EQUIPMENT = 0x1101
 # Inside the Deku Tree: a file saved in a dungeon loads there, and the Slingshot is usable.
 OOT3D_DEKU_TREE = 0x0
 # What the slots file holds beside the ocarina, and the songs a child learns.
@@ -290,10 +293,13 @@ def _copy_file(made: Path, user: Path) -> None:
     shutil.copytree(made, target, dirs_exist_ok=True)
 
 
-def _oot3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
+def _oot3d_slots_file(cfg: Config, user: Path, out: Path, aimed_on_y: bool = False,
+                      master_quest: bool = False) -> None:
     """File 1 inside the Deku Tree with sticks, nuts, bombs, a Slingshot, the ocarina and a
     child's six songs, written by the game's own save: the items and songs go into the
-    inventory and autosave writes the file on a scene change."""
+    inventory and autosave writes the file on a scene change. With `aimed_on_y` the Slingshot is
+    on the game's Y and so on slot 1 (the patch's slots are made again from the game's buttons),
+    and the Kokiri Sword on B. With `master_quest` the file is a Master Quest one."""
     d = symbols.load(cfg.repo, "oot3d")
     inventory = symbols.global_(d, "gSaveContext") + symbols.offset(d, "SaveContext.inventory")
     items = inventory + symbols.offset(d, "Inventory.items")
@@ -305,8 +311,19 @@ def _oot3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
     songs = sum(1 << d.define(f"QUEST_SONG_{name}") for name in OOT3D_SONGS)
     script += [f"poke:{items + d.define('SLOT_OCARINA'):#x},{d.define('ITEM_OCARINA_FAIRY'):02x}",
                f"poke:{inventory + symbols.offset(d, 'Inventory.questItems'):#x},{songs.to_bytes(4, 'little').hex()}",
-               f"poke:{inventory + symbols.offset(d, 'Inventory.upgrades'):#x},{OOT3D_BAGS.to_bytes(4, 'little').hex()}",
-               "wait:1", "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
+               f"poke:{inventory + symbols.offset(d, 'Inventory.upgrades'):#x},{OOT3D_BAGS.to_bytes(4, 'little').hex()}"]
+    if aimed_on_y:
+        save = symbols.global_(d, "gSaveContext")
+        layout = save + symbols.offset(d, "SaveContext.itemMenuChild")
+        equips = save + symbols.offset(d, "SaveContext.equips")
+        script += [f"poke:{layout + d.define('ITEM_MENU_NODE_Y'):#x},{d.define('SLOT_SLINGSHOT'):02x}",
+                   f"poke:{save + symbols.offset(d, 'SaveContext.unused_6C'):#x},00",
+                   f"poke:{equips + symbols.offset(d, 'ItemEquips.buttonItems'):#x},{d.define('ITEM_SWORD_KOKIRI'):02x}",
+                   f"poke:{equips + symbols.offset(d, 'ItemEquips.equipment'):#x},{OOT3D_EQUIPMENT.to_bytes(2, 'little').hex()}",
+                   f"poke:{inventory + symbols.offset(d, 'Inventory.equipment'):#x},{OOT3D_EQUIPMENT.to_bytes(2, 'little').hex()}"]
+    if master_quest:
+        script.append(f"poke:{symbols.global_(d, 'gSaveContext') + symbols.offset(d, 'SaveContext.masterQuestFlag'):#x},01")
+    script += ["wait:1", "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
     _copy_file(_harness_file(cfg, "oot3d", script, out), user)
 
 
@@ -323,10 +340,12 @@ MM3D_BAGS = 0x00120000 | 0x1 | 0x8
 MM3D_ITEMS = ("BOW", "BOMB")
 
 
-def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False, maps: bool = False) -> None:
+def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False, maps: bool = False,
+                     aimed_on_y: bool = False) -> None:
     """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle,
-    the Bunny Hood, every song, with `notebook` the Bombers' Notebook and with `maps` every
-    region's map, written by the game's own save there."""
+    the Bunny Hood, every song, with `notebook` the Bombers' Notebook, with `maps` every
+    region's map and with `aimed_on_y` the bow on the game's Y and so on slot 1 (the patch's
+    slots are made again from the game's buttons), written by the game's own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
     items = save + symbols.offset(d, "SaveData.items")
@@ -347,6 +366,15 @@ def _mm3d_slots_file(cfg: Config, user: Path, out: Path, notebook: bool = False,
     if maps:
         regions = save + symbols.offset(d, 'SaveData.weekEventReg') + d.define('WEEK_EVENT_REGION_MAPS')
         script.insert(-1, f"poke:{regions:#x},{(1 << d.define('REGION_MAP_COUNT')) - 1:02x}")
+    if aimed_on_y:
+        equipment = save + symbols.offset(d, "SaveData.equipment")
+        button_slots = equipment + symbols.offset(d, "EquipmentData.buttonSlots")
+        y = d.define("EQUIP_BUTTON_Y")
+        row = d.define("EQUIP_BUTTON_II") + 1
+        # Row 1's Y holds the patch's marker: without it the slots are made again.
+        script[-1:-1] = [f"poke:{equipment + symbols.offset(d, 'EquipmentData.buttonItems') + y:#x},{d.define('ITEM_BOW'):02x}",
+                         f"poke:{button_slots + y:#x},{d.define('SLOT_BOW'):02x}",
+                         f"poke:{button_slots + row + y:#x},00"]
     _copy_file(_harness_file(cfg, "mm3d", script + MM3D_SAVE, out), user)
 
 
@@ -753,21 +781,22 @@ def _setup(session: Session, pad: Gamepad) -> None:
 AIM_MOVES = (("right-400", 400, 0), ("left-800", -800, 0), ("down-300", 400, 300), ("back", 0, -300))
 
 
-def _aim_turns(session: Session) -> None:
+def _aim_turns(session: Session, moves: tuple[tuple[str, int, int], ...] = AIM_MOVES) -> None:
     """Mouse aim once the look is first person: the app takes the mouse, each move turns the
-    view by 0.05 degrees a count (app/src/mouse_aim.hpp), and the last one comes back to the start."""
+    view by 0.05 degrees a count at a sensitivity of 1 (app/src/mouse_aim.hpp), and the last one
+    comes back to the start."""
     session.expect("mouse aim:")
     session.wait(1)
     session.shot("first-person")
-    for name, dx, dy in AIM_MOVES:
+    for name, dx, dy in moves:
         session.mouse(dx, dy)
         session.wait(1)
         session.shot(name)
 
 
-def _aim_released(session: Session) -> None:
+def _aim_released(session: Session, moves: tuple[tuple[str, int, int], ...] = AIM_MOVES) -> None:
     """The app's own count of the mouse's travel while it aimed is what the test sent."""
-    travel = (sum(abs(dx) for _, dx, _ in AIM_MOVES), sum(abs(dy) for _, _, dy in AIM_MOVES))
+    travel = (sum(abs(dx) for _, dx, _ in moves), sum(abs(dy) for _, _, dy in moves))
     line = session.expect(": aim took")
     if not line.endswith(f"aim took {travel[0]} by {travel[1]} counts"):
         raise RuntimeError(f"the app counted another travel than {travel}: {line}")
@@ -818,13 +847,13 @@ def _aim_mm3d(session: Session, pad: Gamepad) -> None:
 CAMERA_MOVES = (("right-400", 400, 0), ("left-400", -400, 0), ("up-200", 0, -200), ("down-200", 0, 200))
 
 
-def _camera_turns(session: Session) -> None:
+def _camera_turns(session: Session, moves: tuple[tuple[str, int, int], ...] = CAMERA_MOVES) -> None:
     """In play the app takes the mouse for the camera, and each move turns it (app/src/mouse_aim.hpp)."""
     session.shot("file")
     session.expect("mouse camera:")
     session.wait(1)
     session.shot("play")
-    for name, dx, dy in CAMERA_MOVES:
+    for name, dx, dy in moves:
         session.mouse(dx, dy)
         session.wait(1)
         session.shot(name)
@@ -840,6 +869,95 @@ def _camera_mm3d(session: Session, pad: Gamepad) -> None:
     """MM3D: the game's own C-stick camera at South Clock Town's owl statue turned by real mouse motion."""
     _mm3d_file_1(session)
     _camera_turns(session)
+
+
+# The mouse sensitivity the fast scenarios choose, and the travel that turns the view as far as
+# AIM_MOVES and CAMERA_MOVES at 1.
+FAST = 2.0
+
+
+def _fast_option(cfg: Config, user: Path, game: str) -> None:
+    """The player's choice of FAST for `game`, kept where the options menu keeps it
+    (app/src/main.cpp, storedOptions)."""
+    scales = next(o.scales for o in options.load(cfg.repo, game) if o.id == "mouse_sensitivity")
+    stored = user / "options" / f"{cfg.rom(GameSet.named(cfg.repo, game).title_id).stem}.json"
+    stored.parent.mkdir(parents=True, exist_ok=True)
+    stored.write_text(json.dumps({"mouse_sensitivity": scales.index(FAST)}) + "\n")
+
+
+def _fast_moves(moves: tuple[tuple[str, int, int], ...]) -> tuple[tuple[str, int, int], ...]:
+    return tuple((name, round(dx / FAST), round(dy / FAST)) for name, dx, dy in moves)
+
+
+def _aim_fast(session: Session, pad: Gamepad) -> None:
+    """OoT3D at twice the mouse sensitivity: half of `aim`'s travel turns the first-person view
+    as far, frame for frame."""
+    _oot3d_file_1(session)
+    session.key("play", "first_person")
+    _aim_turns(session, _fast_moves(AIM_MOVES))
+    session.mouse_button("sword")
+    _aim_released(session, _fast_moves(AIM_MOVES))
+
+
+def _camera_fast(session: Session, pad: Gamepad) -> None:
+    """OoT3D at twice the mouse sensitivity: half of `camera`'s travel turns the free camera as far."""
+    _oot3d_file_1(session)
+    _camera_turns(session, _fast_moves(CAMERA_MOVES))
+
+
+def _fire(session: Session, pad: Gamepad) -> None:
+    """OoT3D: the left mouse button swings the sword in play; slot 1 aims the Slingshot, and
+    the left button then fires a seed (the count falls by one); E puts it away and the left
+    button is the sword again."""
+    _oot3d_file_1(session)
+    session.shot("play")
+    session.mouse_button("sword")
+    session.wait(0.3)
+    session.shot("sword")
+    session.wait(1.5)
+    session.key("slot", "0")
+    session.expect("mouse aim:")
+    session.wait(1.5)
+    session.shot("aimed")
+    session.mouse_button("sword")
+    session.wait(1)
+    session.shot("fired")
+    session.mouse_button("sword")
+    session.wait(1)
+    session.shot("fired-again")
+    session.key("play", "action")
+    session.expect("mouse camera:")
+    session.wait(1.5)
+    session.mouse_button("sword")
+    session.wait(0.3)
+    session.shot("sword-again")
+
+
+def _fire_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D: the left mouse button swings the sword in play; slot 1 aims the bow, the left button
+    held draws it and let go fires an arrow (the count falls by one); E puts it away."""
+    _mm3d_file_1(session)
+    session.shot("play")
+    session.mouse_button("sword")
+    session.wait(0.3)
+    session.shot("sword")
+    session.wait(1.5)
+    session.key("slot", "0")
+    session.expect("mouse aim:")
+    session.wait(1.5)
+    session.shot("aimed")
+    session.mouse_button("sword", 1.0)
+    session.wait(1)
+    session.shot("fired")
+    session.mouse_button("sword", 1.0)
+    session.wait(1)
+    session.shot("fired-again")
+    session.key("play", "action")
+    session.expect("mouse camera:")
+    session.wait(1.5)
+    session.mouse_button("sword")
+    session.wait(0.3)
+    session.shot("sword-again")
 
 
 def _setup_refused(session: Session, pad: Gamepad) -> None:
@@ -1172,11 +1290,14 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
 
 # Direct launches of one game, and the installed shortcut's picker.
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "camera": _camera, "camera-mm3d": _camera_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
-          "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
+          "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d,
+          "aim-fast": _aim_fast, "camera-fast": _camera_fast, "camera-mq": _camera, "fire": _fire,
+          "fire-mm3d": _fire_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
                "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
-               "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d"}
+               "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d", "aim-fast": "oot3d",
+               "camera-fast": "oot3d", "camera-mq": "oot3d", "fire": "oot3d", "fire-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
@@ -1185,6 +1306,11 @@ PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-
            "notebook-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, notebook=True),
            "map-zoom-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, maps=True),
            "autosave-mm3d": _mm3d_autosave_file, "camera": _oot3d_slots_file, "camera-mm3d": _mm3d_slots_file,
+           "aim-fast": lambda cfg, user, out: (_oot3d_slots_file(cfg, user, out), _fast_option(cfg, user, "oot3d")),
+           "camera-fast": lambda cfg, user, out: (_oot3d_slots_file(cfg, user, out), _fast_option(cfg, user, "oot3d")),
+           "camera-mq": lambda cfg, user, out: _oot3d_slots_file(cfg, user, out, master_quest=True),
+           "fire": lambda cfg, user, out: _oot3d_slots_file(cfg, user, out, aimed_on_y=True),
+           "fire-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, aimed_on_y=True),
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}

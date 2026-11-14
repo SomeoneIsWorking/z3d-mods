@@ -7,6 +7,7 @@
 #include <lucent/log.h>
 
 #include <array>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <optional>
@@ -20,6 +21,7 @@ constexpr const char *kLayoutId = "layout";
 constexpr const char *kTexturesId = "textures";
 constexpr std::string_view kCStickInvertX = "cstick_invert_x";
 constexpr std::string_view kCStickInvertY = "cstick_invert_y";
+constexpr std::string_view kMouseScale = "mouse_scale";
 // In ScreenLayout's order.
 constexpr std::array<const char *, 5> kLayoutNames{"Both screens", "Top screen only", "Large top screen",
                                                    "Side by side", "Single screen"};
@@ -58,9 +60,32 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
       const lucent::json::Value *id = entry.find("id");
       const lucent::json::Value *label = entry.find("label");
       const lucent::json::Value *fallback = entry.find("default");
-      if (id == nullptr || id->string() == nullptr || label == nullptr || label->string() == nullptr ||
-          fallback == nullptr || fallback->boolean() == nullptr) {
+      if (id == nullptr || id->string() == nullptr || label == nullptr ||
+          label->string() == nullptr || fallback == nullptr) {
         throw std::runtime_error(manifest.string() + ": an option wants id, label and default");
+      }
+      // A switch is on or off by default; a choice of scales starts on one of them.
+      std::vector<std::string> choices = switchChoices();
+      std::vector<double> scales;
+      std::optional<int64_t> value;
+      if (const lucent::json::Value *list = entry.find("scales");
+          list != nullptr && list->array() != nullptr) {
+        choices.clear();
+        for (const lucent::json::Value &scale : *list->array()) {
+          if (!scale.real()) {
+            throw std::runtime_error(manifest.string() + ": " + *id->string() +
+                                     "'s scales are numbers");
+          }
+          scales.push_back(*scale.real());
+          choices.push_back(std::format("{}x", scales.back()));
+        }
+        value = fallback->integer();
+      } else if (fallback->boolean() != nullptr) {
+        value = *fallback->boolean() ? 1 : 0;
+      }
+      if (!value || *value < 0 || static_cast<size_t>(*value) >= choices.size()) {
+        throw std::runtime_error(manifest.string() + ": " + *id->string() +
+                                 "'s default is not one of its choices");
       }
       const lucent::json::Value *pad = entry.find("pad");
       const lucent::json::Value *layer = entry.find("layer");
@@ -70,18 +95,21 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
       if (inBlock && blockCount_ != items_.size()) {
         throw std::runtime_error(manifest.string() + ": the patch's options come before the app's");
       }
-      items_.push_back({*id->string(), *label->string(), switchChoices(),
-                        static_cast<uint8_t>(*fallback->boolean() ? 1 : 0),
-                        onPad ? *pad->string() : std::string(),
-                        isLayer ? *layer->string() : std::string()});
+      items_.push_back({*id->string(), *label->string(), std::move(choices),
+                        static_cast<uint8_t>(*value), onPad ? *pad->string() : std::string(),
+                        std::move(scales), isLayer ? *layer->string() : std::string()});
       blockCount_ += inBlock ? 1 : 0;
     }
   }
-  items_.push_back({kLayoutId, "Screen layout",
+  items_.push_back({kLayoutId,
+                    "Screen layout",
                     std::vector<std::string>(kLayoutNames.begin(), kLayoutNames.end()),
-                    static_cast<uint8_t>(setup_.layout), {}, {}});
+                    static_cast<uint8_t>(setup_.layout),
+                    {},
+                    {},
+                    {}});
   if (setup_.customTextures) {
-    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}, {}});
+    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}, {}, {}});
   }
   if (stored_.empty()) {
     return;
@@ -132,11 +160,16 @@ GameSetup GameOptions::setup() const {
 void GameOptions::apply(Emulator &emulator, PadInput &pad) const {
   bool invertX = false;
   bool invertY = false;
+  double mouseScale = 1.0;
   for (const Option &item : items_) {
     invertX = invertX || (item.pad == kCStickInvertX && item.value != 0);
     invertY = invertY || (item.pad == kCStickInvertY && item.value != 0);
+    if (item.pad == kMouseScale) {
+      mouseScale = item.scales.at(item.value);
+    }
   }
   pad.invertCStick(invertX, invertY);
+  pad.scaleMouse(mouseScale);
   // The manifest sits in the mod folder named by the title ID.
   pad.bindGame(setup_.options.parent_path().filename().string());
   if (blockCount_ == 0) {

@@ -1,6 +1,7 @@
 """A game's switches (patch/<game>/options.toml). Those with a `field` are the patch's: one byte
 each, in file order, in a block at the start of the patch's payload. Those with a `pad` are the
-app's, applied to the pad it feeds the game (app/src/pad_input.hpp). Those with a `layer` name a
+app's, applied to the pad it feeds the game (app/src/pad_input.hpp); one with `scales` is a
+choice of those instead of on or off, its `default` one of them. Those with a `layer` name a
 folder of replacement game files beside the installed `romfs/`, which the app layers in while the
 switch is on. Generates the patch's `options.hpp` and the manifest the app's options
 menu reads and writes guest memory from (docs/app.md, "Options").
@@ -23,23 +24,29 @@ MANIFEST = "z3d-options.json"
 class Option:
     id: str
     label: str
-    default: bool
+    # On or off; for an option with scales, the scale it starts on.
+    default: bool | float
     # The member of the patch's Options struct, or None for an app switch.
     field: str | None
     # What the app does to the pad for it: cstick_invert_x or cstick_invert_y.
     pad: str | None
     # The folder in the installed mod that holds the game files it switches.
     layer: str | None
+    # What the option picks from (mouse_scale: times the mouse's degrees a count), or None for a switch.
+    scales: tuple[float, ...] | None = None
 
 
 def load(repo: Path, game: str) -> list[Option]:
     path = repo / "patch" / game / "options.toml"
     entries = tomllib.loads(path.read_text())["option"]
-    options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad"), e.get("layer"))
+    options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad"), e.get("layer"),
+                      tuple(e["scales"]) if "scales" in e else None)
                for e in entries]
     for option in options:
         if sum(kind is not None for kind in (option.field, option.pad, option.layer)) != 1:
             raise ValueError(f"{path}: {option.id} wants one of field, pad and layer")
+        if option.scales is not None and (option.pad is None or option.default not in option.scales):
+            raise ValueError(f"{path}: {option.id}'s scales are the pad's, its default one of them")
     return options
 
 
@@ -76,6 +83,7 @@ def manifest(repo: Path, game: str, address: int, layers: set[str], link: int | 
     (slot_link.py)."""
     items = [{"id": o.id, "label": o.label, "default": o.default} | ({"pad": o.pad} if o.pad else {})
              | ({"layer": o.layer} if o.layer else {})
+             | ({"scales": list(o.scales), "default": o.scales.index(o.default)} if o.scales else {})
              for o in load(repo, game) if o.layer is None or o.layer in layers]
     document: dict[str, object] = {"address": address, "options": items,
                                    set_inputs.KEY: inputs}
