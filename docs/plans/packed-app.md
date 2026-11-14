@@ -225,6 +225,13 @@ maintainer's:
   Those stay on the maintainer's machines.
 
 ### Seen (2026-11-14)
+- The release, `v0.2.0` (commit 587af4b): built by the tag's workflow run (43611544851), which
+  made the release from `docs/releases/v0.2.0.md`. The downloaded AppImage matches its
+  `.sha256`. Unpacked, it holds 1436 files. None of them holds a home path, a dump or a mod's
+  file. The two `code.ips` files are our patches, and `sets/` is byte for byte the tagged
+  commit's. On the Ally, on an empty data folder told the dump folder, it opens the picker with
+  both tiles. `z3dmods shortcut --host ally`, run from a clean worktree of the tag, put the same
+  package in Games/z3d after backing up its user folder. Its launcher opens the same picker.
 - The release, `v0.1.0` (commit 0d77076): the AppImage downloaded from the release has the
   build's SHA-256; on the Ally, with an empty data folder and the dump folder, it opens the
   picker, and unpacked it sets Majora's Mask 3D up with its own tools and boots it to the
