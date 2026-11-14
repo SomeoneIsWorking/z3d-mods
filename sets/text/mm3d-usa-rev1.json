@@ -1,200 +1,23 @@
 {
-  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: English prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\"); markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, 5 L (LT), 6 R (RT), 7 START (Menu), 9 the power button's cell (View), 11 the circle pad, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad (sets/hud/mm3d-usa-rev1.json). 0x0E is the +Control Pad Left's cell, which no message uses, drawn as Pause: LB over Menu, Esc on the keyboard.",
+  "about": "MM3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Jost (sets/fonts, SIL OFL 1.1). messages: one table a language, each the prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\") in that language's own words. Markup is gmsg.py's: {25:x} is a prompt icon (decomp/mm3d docs/message.md): 1 A, 2 B, 3 X, 4 Y, 5 L (LT), 6 R (RT), 7 START (Menu), 9 the power button's cell (View), 11 the circle pad, and the item buttons 18 and 1B, which the prompt sheet draws as RB and the D-pad (sets/hud/mm3d-usa-rev1.json). 0x0E is the +Control Pad Left's cell, which no message uses, drawn as Pause: LB over Menu, Esc on the keyboard.",
   "font": {
     "file": "message/ltn16.gzf",
     "outline": "Jost[wght].ttf",
     "weight": 600,
     "scale": 8
   },
-  "messages": {
-    "file": "message/us/use.gmsg",
-    "edits": [
-      {
-        "why": "The sword and each form's action are X. B stays where the pad is read by name: the ocarina, a menu, a minigame's Quit.",
-        "except": [
-          "004C",
-          "00FF",
-          "05E6",
-          "1B5A",
-          "1BAD",
-          "1BB0",
-          "2A00"
-        ],
-        "find": "\\{25:2\\}",
-        "put": "{25:3}"
-      },
-      {
-        "why": "The slots in their order: Y, B, RB, the D-pad.",
-        "find": "\\{25:3\\}, \\{25:4\\}, \\{25:18\\} or \\{25:1B\\}",
-        "put": "{25:4}, {25:2}, {25:18} or {25:1B}"
-      },
-      {
-        "why": "Menu opens the Items screen.",
-        "find": "Select Item Screen",
-        "put": "Items screen"
-      },
-      {
-        "why": "Menu opens the Items screen (the coloured spellings).",
-        "find": "\\{3A:3\\}Select\\{3A:B\\} \\{3A:3\\}Item Screen",
-        "put": "{3A:3}Items screen"
-      },
-      {
-        "why": "Menu opens the Items screen (the coloured spellings).",
-        "find": "\\{3A:3\\}Select Item \\{3A:0\\}\\{3A:3\\}Screen",
-        "put": "{3A:3}Items {3A:0}{3A:3}screen"
-      },
-      {
-        "why": "View opens the Map Screen (Project Restoration's ZR and Select); the map zooms and pans by mouse on the touch screen, at the right of the split layout.",
-        "only": [
-          "003E"
-        ],
-        "find": "Tap \\{25:2E\\} to view the \\{3A:1\\}Map Screen\\{3A:B\\}\\.\n\\{3A:1\\}Tap\\{3A:B\\} the map to zoom in or out\\.(.*)\\{3A:1\\}slide\\{3A:B\\}",
-        "put": "Press {25:9} to view the {3A:1}Map Screen{3A:B}.\n{3A:1}Click{3A:B} the map to zoom in or out.\\1{3A:1}drag{3A:B}"
-      },
-      {
-        "why": "View opens the Map Screen; the map zooms by mouse on the touch screen, at the right.",
-        "only": [
-          "1D18"
-        ],
-        "find": "\\{3A:1\\}Tap\\{3A:B\\} the map on the lower screen to\nzoom in and out\\.(.*)Tap \\{25:2E\\} to view",
-        "put": "{3A:1}Click{3A:B} the map on the right to\nzoom in and out.\\1Press {25:9} to view"
-      },
-      {
-        "why": "The Pictograph Box is used from an item slot.",
-        "only": [
-          "0043"
-        ],
-        "find": "Tap \\{25:20\\}\\{3A:4\\} \\{3A:B\\}to look through it\\.",
-        "put": "Set it to a slot, and press the slot's\nbutton to look through it."
-      },
-      {
-        "why": "The Pictograph Box is used from an item slot.",
-        "only": [
-          "09E3"
-        ],
-        "find": "with \\{25:20\\}, then press",
-        "put": "from its slot, then press"
-      },
-      {
-        "why": "The Pictograph Box is used from an item slot.",
-        "only": [
-          "170D"
-        ],
-        "find": "Use it with \\{25:20\\} and",
-        "put": "Use it from a slot and"
-      },
-      {
-        "why": "The ocarina is used from an item slot (R on the keyboard).",
-        "only": [
-          "004C"
-        ],
-        "find": "Take it out with \\{25:1F\\}, and use",
-        "put": "Take it out from its slot, and use"
-      },
-      {
-        "why": "Menu, then LT, opens the Masks screen; a mask is set to a slot with the slot's button and worn with it.",
-        "only": [
-          "0078"
-        ],
-        "find": "Tap \\{25:1E\\} on the lower screen to\nopen the \\{3A:2\\}Mask Menu\\{3A:B\\}, and slide\nthe mask to \\{25:4\\}, \\{25:2\\}, \\{25:18\\} or \\{25:1B\\}\non the right\\.\\{31:1\\}\\{02\\}\\{3A:B\\}Tap the corresponding icon to\nwear the mask\\. If you set it to \\{25:3\\} or\n\\{25:4\\}, you can also do this by pressing\nthe corresponding button\\.",
-        "put": "Press {25:7}, then {25:5}, to open the\n{3A:2}Masks screen{3A:B}. Move to the mask,\nand press {25:4}, {25:2}, {25:18} or a direction\nof {25:1B} to set it to that slot.{31:1}{02}{3A:B}Press the slot's button to wear the\nmask, and again to take it off."
-      },
-      {
-        "why": "The item to show is chosen on the Items screen, wherever it is drawn.",
-        "only": [
-          "00FF"
-        ],
-        "find": "Select an item on the lower screen\\.",
-        "put": "Select an item."
-      },
-      {
-        "why": "Menu opens the Items screen.",
-        "only": [
-          "026B"
-        ],
-        "find": "Tap \\{25:1C\\} on the lower screen to bring\nup the ",
-        "put": "Press {25:7} to bring up the\n"
-      },
-      {
-        "why": "An item is assigned with a slot's button.",
-        "only": [
-          "026B"
-        ],
-        "find": "and assign it\nto \\{3A:5\\}\\{25:3\\},\\{3A:5\\} \\{25:4\\}, \\{25:18\\} or \\{25:1B\\} on the right\\.",
-        "put": "and press\n{25:4}, {25:2}, {25:18} or a direction of {25:1B} to\nassign it to that slot."
-      },
-      {
-        "why": "No touch screen to slide on.",
-        "only": [
-          "026B"
-        ],
-        "find": "\\{3A:5\\}You can also \\{3A:1\\}tap and slide \\{3A:5\\}to assign\nan item, so do it whichever way you\nlike best!\\{31:1\\}\\{02\\}",
-        "put": ""
-      },
-      {
-        "why": "A slot is a button.",
-        "only": [
-          "026B"
-        ],
-        "find": "press\nthe corresponding button or tap the\ncorresponding icon to use it\\.",
-        "put": "press\nthe slot's button to use it."
-      },
-      {
-        "why": "Pause opens the Gear screen: LB and Menu (Project Restoration's ZR and Start), Esc on the keyboard (icon 0x0E).",
-        "only": [
-          "0270"
-        ],
-        "find": "Tap \\{25:2D\\} on the lower screen if you\never want to take a look at the\ngear-like things you've collected\\.",
-        "put": "Press {25:E} if you ever want to take a\nlook at the gear-like things you've\ncollected."
-      },
-      {
-        "why": "The notebook shows in the split layout: the top screen at the left, the touch screen at the right.",
-        "only": [
-          "033F"
-        ],
-        "find": "events on the upper screen and the\nselected event on the lower screen\\.",
-        "put": "events on the left and the selected\nevent on the right."
-      },
-      {
-        "why": "No touch screen in play.",
-        "only": [
-          "1BAE"
-        ],
-        "find": "\\{3A:1\\}Items highlighted\\{3A:B\\} on the touch\nscreen will be",
-        "put": "{3A:1}Highlighted items{3A:B} will be"
-      },
-      {
-        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
-        "only": [
-          "0050"
-        ],
-        "find": "Press \\{3A:1\\}START\\{3A:B\\} to read it\\.",
-        "put": "Press {25:9} twice to read it."
-      },
-      {
-        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
-        "only": [
-          "0737"
-        ],
-        "find": "Press \\{3A:1\\}START\\{3A:B\\} to check your",
-        "put": "Press {25:9} twice to check your"
-      },
-      {
-        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
-        "only": [
-          "1796"
-        ],
-        "find": "Press \\{3A:1\\}START \\{3A:B\\}to open it\\.",
-        "put": "Press {25:9} twice to open it."
-      },
-      {
-        "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
-        "only": [
-          "033F"
-        ],
-        "find": "Press \\{3A:1\\}START \\{3A:B\\}to look at any info\nyou've gathered so far\\.",
-        "put": "Press {25:9} twice to look at any\ninfo you've gathered so far."
-      }
-    ]
-  }
+  "messages": [
+    {
+      "file": "message/us/use.gmsg",
+      "edits": "mm3d-usa-rev1.en.json"
+    },
+    {
+      "file": "message/us/usf.gmsg",
+      "edits": "mm3d-usa-rev1.fr.json"
+    },
+    {
+      "file": "message/us/uss.gmsg",
+      "edits": "mm3d-usa-rev1.es.json"
+    }
+  ]
 }

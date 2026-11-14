@@ -1,0 +1,209 @@
+{
+  "about": "English: the sweep and the choices are in docs/plans/pc-controls-hud.md, \"The games' text\".",
+  "edits": [
+    {
+      "why": "The Know-It-All Brother's item lesson, for slots with buttons: no touch screen, and the chord's four more.",
+      "only": [
+        "1036"
+      ],
+      "find": "(?s)\\A.+\\Z",
+      "put": "{24:1e}, {24:1f}, {24:1c}, and each direction of {24:1d}\nare your {1D:43}item slots{1D:00}.{01}\nTo use an item you've found, first press {24:0c}\nto open the {1D:43}Items subscreen{1D:00}. Move to the\nitem, and then press a slot's button to\nassign it. It's as easy as that!{01}\nTo use the item, press its slot's button.{01}\nHold {24:02}, and {24:05} are four more\nslots, so every item can have a\nbutton. You'll find it pretty handy!{00}"
+    },
+    {
+      "why": "The sword is X. B stays where the pad is read by name: the ocarina.",
+      "except": [
+        "004A",
+        "086E",
+        "087C",
+        "08A0"
+      ],
+      "find": "\\{24:07\\}",
+      "put": "{24:08}"
+    },
+    {
+      "why": "The slots in their order: Y, B, RB, the D-pad.",
+      "find": "\\{24:1c\\}, \\{24:1e\\}, \\{24:1f\\},(\\s+(?:or|and)\\s+)\\{24:1d\\}",
+      "put": "{24:1e}, {24:1f}, {24:1c},\\1{24:1d}"
+    },
+    {
+      "why": "Menu opens the Items subscreen.",
+      "find": "Tap \\{24:1a\\} on the lower screen",
+      "put": "Press {24:0c}"
+    },
+    {
+      "why": "Menu opens the Items subscreen; an item is assigned with the slot's button.",
+      "only": [
+        "103A"
+      ],
+      "find": "tap \\{24:1a\\}\nto open the \\{1D:43\\}Items subscreen\\{1D:00\\}. Tap the item\nyou want to assign, and then tap ",
+      "put": "press {24:0c}\nto open the {1D:43}Items subscreen{1D:00}. Move to the item\nyou want to assign, and then press "
+    },
+    {
+      "why": "A slot is a button.",
+      "only": [
+        "103A"
+      ],
+      "find": "They are used by tapping the\nassigned button or icon\\.",
+      "put": "They are used by pressing the\nslot's button."
+    },
+    {
+      "why": "A dungeon's map is the Map subscreen, next to Items: Menu, then LT (View opens nothing there).",
+      "only": [
+        "0066"
+      ],
+      "find": "Tap \\{24:1b\\} on the lower screen to look\nat the detailed map\\.",
+      "put": "Press {24:0c}, then {24:0a}, to look at\nthe detailed map."
+    },
+    {
+      "why": "The left stick picks the floor.",
+      "only": [
+        "0066"
+      ],
+      "find": "Tap floor numbers to select a floor\nto view\\.",
+      "put": "Use {24:00} to select a floor to view."
+    },
+    {
+      "why": "The minimap is at the bottom right of the one screen.",
+      "only": [
+        "1039"
+      ],
+      "find": "bottom left of\nthe upper screen\\.",
+      "put": "bottom right of\nthe screen."
+    },
+    {
+      "why": "The +Control Pad is item slots in play: no input turns the minimap off.",
+      "only": [
+        "1039"
+      ],
+      "find": "Hold \\{24:04\\} to turn off the map display\\. To turn\nit back on, press \\{24:01\\} in any direction\\.\\{01\\}\n",
+      "put": ""
+    },
+    {
+      "why": "View opens the area's map.",
+      "only": [
+        "1039"
+      ],
+      "find": "In the middle of the lower screen is the\noverall map of your current area\\.\\{01\\}\nTap \\{24:1b\\} on the lower screen to see the map\nwith area names\\.",
+      "put": "Press {24:1b} to see the overall map of\nyour current area, with area names."
+    },
+    {
+      "why": "View opens the map.",
+      "find": "Tap \\{24:1b\\}(?: on the lower screen)?",
+      "put": "Press {24:1b}"
+    },
+    {
+      "why": "View opens the map.",
+      "find": "(?:tap|touch) \\{24:1b\\}(?: on the lower screen)?",
+      "put": "press {24:1b}"
+    },
+    {
+      "why": "The Gear subscreen is right of Items: Menu, then RT; gear is equipped with A.",
+      "only": [
+        "00A4"
+      ],
+      "find": "Tap \\{24:19\\} on the lower screen to open\nthe \\{1D:42\\}Gear subscreen\\{1D:00\\}, and then tap\nthe weapon to equip it\\.",
+      "put": "Press {24:0c}, then {24:0b}, to open\nthe {1D:42}Gear subscreen{1D:00}. Move to the\nweapon, and press {24:06} to equip it."
+    },
+    {
+      "why": "Gear is equipped with A.",
+      "only": [
+        "004C"
+      ],
+      "find": "Switch to the \\{1D:42\\}Gear subscreen \\{1D:00\\}and\ntap the shield to equip it, or select\nit with \\{24:00\\} and press \\{24:06\\} to equip it\\.",
+      "put": "Switch to the {1D:42}Gear subscreen{1D:00}, select\nthe shield with {24:00}, and press {24:06} to\nequip it."
+    },
+    {
+      "why": "Gear is equipped with A.",
+      "only": [
+        "004D"
+      ],
+      "find": "Switch to the \\{1D:42\\}Gear subscreen\\{1D:00\\} and\ntap the shield to equip it\\.",
+      "put": "Switch to the {1D:42}Gear subscreen{1D:00}, select\nthe shield, and press {24:06} to equip it."
+    },
+    {
+      "why": "Menu, then RT, opens the Gear subscreen; gear is equipped with A.",
+      "only": [
+        "103A"
+      ],
+      "find": "tap \\{24:19\\} on the\nlower screen to open the \\{1D:42\\}Gear s\\{1D:00\\}\\{1D:42\\}ubscreen\\{1D:00\\}\\.\\{01\\}\nTo equip an item of gear, simply tap it\\.",
+      "put": "press {24:0c}, then\n{24:0b}, to open the {1D:42}Gear subscreen{1D:00}.{01}\nTo equip an item of gear, move to it and\npress {24:06}."
+    },
+    {
+      "why": "Menu, then RT, opens the Gear subscreen; gear is equipped with A.",
+      "only": [
+        "103D"
+      ],
+      "find": "tap \\{24:19\\} to get into\nthe \\{1D:42\\}Gear subscreen\\{1D:00\\}\\.\\{01\\}\nOn the \\{1D:42\\}Gear subscreen\\{1D:00\\}, tap the shield to\nequip it\\. You can also select it with \\{24:00\\} and\npress \\{24:06\\} to equip it\\.",
+      "put": "press {24:0c}, then {24:0b},\nto get into the {1D:42}Gear subscreen{1D:00}.{01}\nOn the {1D:42}Gear subscreen{1D:00}, select the shield\nwith {24:00} and press {24:06} to equip it."
+    },
+    {
+      "why": "View and Navi are a press of R3 (The One Screen's View, the 3DS's Left).",
+      "only": [
+        "103F"
+      ],
+      "find": "Also, when \\{24:17\\} is displayed in place of \\{24:18\\},\nthat means Navi the fairy wants to talk to\nyou\\. Use \\{24:17\\} to listen to her!",
+      "put": "Also, when Navi the fairy wants to talk to\nyou, press {24:17} to listen to her!"
+    },
+    {
+      "why": "View is a press of R3.",
+      "find": "tap \\{24:18\\}",
+      "put": "press {24:18}"
+    },
+    {
+      "why": "The ocarina is on a slot (D-pad Down on a new file; R on the keyboard).",
+      "only": [
+        "004A"
+      ],
+      "find": "Tap \\{24:16\\} on the lower screen to\nstart playing it!",
+      "put": "Press {24:16} to start playing it!"
+    },
+    {
+      "why": "With the ocarina out, RB (R on the keyboard) opens the song list: icon 0x03, drawn as RB with the key of ZR by name.",
+      "only": [
+        "10C7"
+      ],
+      "find": "open the \\{1D:44\\}Ocarina subscreen\\{1D:00\\} and tap the\nicon in the bottom-right corner\\.",
+      "put": "take out the ocarina and press {24:03}."
+    },
+    {
+      "why": "The brother's lessons: the item slots, and the Action Icon at the top right.",
+      "only": [
+        "1035"
+      ],
+      "find": "Icons on right side of lower screen\nUpper-screen icon",
+      "put": "Your item slots\nThe Action Icon"
+    },
+    {
+      "why": "The Action Icon is at the top right of the one screen.",
+      "only": [
+        "1037"
+      ],
+      "find": "The upper-screen icon",
+      "put": "The top-right icon"
+    },
+    {
+      "why": "The Action Icon is at the top right of the one screen.",
+      "only": [
+        "0103"
+      ],
+      "find": "on the\nupper screen!",
+      "put": "at the\ntop right!"
+    },
+    {
+      "why": "Saving is the pause screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
+      "only": [
+        "103B"
+      ],
+      "find": "if you want to \\{1D:41\\}save\\{1D:00\\},\npress \\{1D:41\\}START\\{1D:00\\}\\. Don't forget to save before\nyou quit!",
+      "put": "if you want to {1D:41}save{1D:00},\npress {24:0e}. Don't forget to save before\nyou quit!"
+    },
+    {
+      "why": "Saving is the pause screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
+      "only": [
+        "010F"
+      ],
+      "find": "be sure to press\\{1D:00\\}\nSTART\\{1D:44\\} and save your progress before\nquitting!",
+      "put": "be sure to press{1D:00}\n{24:0e}{1D:44} to save your progress before\nquitting!"
+    }
+  ]
+}

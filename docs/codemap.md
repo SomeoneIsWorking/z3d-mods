@@ -32,6 +32,7 @@
 - `tools/z3dmods/steps.py`: the scripted step language for runs, over either backend.
 - `tools/z3dmods/app.py`: the z3d app's build: the pinned Azahar fork's core into a per-revision prefix, then the app against it; its user folders (copies of the player's data, a link to `load/`) and its flags for a set.
 - `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
+- `tools/z3dmods/system_config.py`: the 3DS system settings in a user folder's NAND (the language a run boots in).
 - `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad; the picker scenario runs the installed shortcut.
 - `tools/z3dmods/app_keys.py`: the app's key and mouse bindings read from `z3d --keys`, as X keysyms for the input tests.
 - `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.

@@ -10,7 +10,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from z3dmods import app
+from z3dmods import app, system_config
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -28,10 +28,13 @@ RESOLUTION = 1
 class HarnessSession:
     def __init__(self, cfg: Config, game: GameSet, name: str, log: Path,
                  textures: bool | None = None, dump_textures: bool = False,
-                 resolution: int = RESOLUTION, options: list[str] | None = None) -> None:
+                 resolution: int = RESOLUTION, options: list[str] | None = None,
+                 language: str | None = None) -> None:
         self._cfg = cfg
         # <id>=<value> choices the game boots with (docs/app.md "Options").
         self._options = options or []
+        # The system language the game boots in (system_config.LANGUAGES), else the player's.
+        self._language = language
         self._resolution = resolution
         self._game = game
         self._textures = textures
@@ -48,6 +51,8 @@ class HarnessSession:
 
     def __enter__(self) -> HarnessSession:
         app.seed_user(self._cfg, self._user, fresh=True)
+        if self._language:
+            system_config.set_language(self._user / "Azahar", self._language)
         args = app.launch_args(self._cfg, self._game, self._user, self._resolution, self._textures) + ["--hidden"]
         if self._dump_textures:
             args.append("--dump-textures")

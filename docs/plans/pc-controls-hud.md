@@ -204,8 +204,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   in `sets/fonts/` (docs/mods.md has the licences and the choice). The outline font is fitted
   to the game's own font: capitals as tall and on the same row, tracked until a few lines of
   prose are as long (OoT3D: Arimo at 13.08 px an em; MM3D: Jost at 14.29).
-- Prompt words: the table's `edits`, regular expressions over a message's markup, English
-  only. OoT3D, 71 messages: the sword's B is X except in the ocarina's messages; the item
+- Prompt words: a table of `edits` a language, regular expressions over a message's markup;
+  English below, French and Spanish further down. OoT3D, 71 messages: the sword's B is X except in the ocarina's messages; the item
   buttons are in the slots' order (Y, B, RB, D-pad); "Tap the Items icon on the lower screen"
   is "Press Menu" (the START icon, drawn as Menu); the Know-It-All Brother's item lesson
   (0x1036) is written again for slots and names the LB chord. MM3D, 88 messages: the sword's
@@ -271,17 +271,25 @@ The path is texture replacement, in both games, with nothing drawn by the app:
 - Not done: the fonts' characters the outline font lacks
   keep the game's bitmap, enlarged (MM3D's Greek and Cyrillic sheets, the US text uses none).
   sys8.qbf is not redrawn.
-- French and Spanish are not reworded, and the English tables do not carry over: the finds
-  are English phrases, so of the tables' edits only one or two match anything in the other
-  languages (OoT3D's `us.qm` holds all three, languages 4 and 6; MM3D's are
-  `message/us/usf.gmsg` and `uss.gmsg`, read the same way). Each language needs its own edits
-  for the same messages, written and checked against its own words: the touch screen is named
-  in OoT3D by 24 English, 14 French and 29 Spanish messages, in MM3D by 10, 8 and 21 (FR:
-  "écran tactile", "écran inférieur", "touchez", "stylet"; ES: "pantalla táctil", "pantalla
-  inferior", "puntero"; Spanish "tocar" is also playing the ocarina). The item-button and sword
-  prompts are rewritten by the words around the icon, so they need the same. `text.py` applies
-  a table to English only; a language's table would name its language (QM index or file). The
-  MM3D pack has no French prompt sheet, so French MM3D keeps the 3DS art.
+- French and Spanish are reworded by tables of their own (`sets/text/<game>.fr.json`, `.es.json`;
+  OoT3D's `us.qm` holds all three, languages 4 and 6; MM3D's are `message/us/usf.gmsg` and
+  `uss.gmsg`): the same messages as the English table, each edit written against that
+  language's words (FR: "touchez", "écran tactile", appuyez sur, écran des objets, écran de
+  quête, emplacement; ES: "toca", "pantalla táctil", oprime, pantalla de objetos, casilla).
+  Spanish "tocar" is also playing an instrument, so no Spanish edit is a blind match: each
+  names its message. The sword's rule carries over by icon (MM3D's French and Spanish
+  instrument texts 1700, 1790 to 1792 also name B to quit, by name, so they are excepted), the
+  slots' order by "ou"/"et" and "o"/"y". Every edit matches (text.py refuses one that does
+  not), no line is wider than the language's own widest and no box taller. Seen with the
+  harness's system language (`run --language fr|es`, tools/z3dmods/system_config.py):
+  OoT3D 0x103B (Pause) and 0x1036 through a sign (`txt-oot-fr`, `txt-oot-es`), MM3D 0x0270
+  (Pause) and 0x0078 (Masks) through the owl statue (`txt-mm-fr`, `txt-mm-es`,
+  `txt-mm-es2`), with the pad and the keyboard. The A button's word on our HUD is still the
+  English sheet's ("Open" below).
+- The MM3D pack has no French copies of the prompt textures; the French ones are drawn on the
+  English copies where their pixels agree, every prompt cell, and from the French pixels
+  enlarged where they differ, their words (`stand_in` in `sets/hud/mm3d-usa-rev1.json`), so
+  French prompts are pad glyphs and key caps too (`txt-mm-fr`).
 
 ## Keyboard and mouse
 - The HUD follows the last input device: a pad shows Xbox glyphs, the keyboard shows key caps.

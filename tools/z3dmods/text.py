@@ -5,9 +5,11 @@ of its messages reworded for our inputs. One table per game, sets/text/<game>.js
 - "font": the game's font file, the outline font (sets/fonts/), its weight and the scale of
   the pack's images. The image's name is the hash of the texture the game makes of the font
   (OoT3D: its static glyph texture, patch/oot3d/font_atlas.cpp; MM3D: each sheet).
-- "messages": the message file, the language (QM), and "edits": each a regular expression
-  over the message's markup (qm.py, gmsg.py) and what to put; "only" or "except" name
-  messages by number. An edit that changes nothing is an error."""
+- "messages": one table a language, applied in order: the message file, the language (QM:
+  its index in the file; GMSG files hold one each) and "edits", a file beside the table with
+  the language's own edits: each a regular expression over the message's markup (qm.py,
+  gmsg.py) and what to put; "only" or "except" name messages by number. An edit that changes
+  nothing is an error."""
 
 from __future__ import annotations
 
@@ -146,12 +148,16 @@ def build(read: Callable[[str], bytes], table: Path, new_hash: bool) -> tuple[di
         files[font["file"]], textures, fit = make(read(font["file"]), table.parent.parent / FONTS / font["outline"],
                                                   font.get("weight"), font["scale"], new_hash)
         print(f"{font['file']}: {font['outline']} at {fit}")
-    messages = document.get("messages")
-    if messages:
+    for messages in document.get("messages", []):
         path = messages["file"]
-        if path.endswith(".qm"):
-            files[path], changed = _qm_messages(read(path), messages["language"], messages["edits"])
-        else:
-            files[path], changed = _gmsg_messages(read(path), messages["edits"])
-        print(f"{path}: {changed} messages reworded")
+        edits = json.loads((table.parent / messages["edits"]).read_text())["edits"]
+        data = files[path] if path in files else read(path)
+        try:
+            if path.endswith(".qm"):
+                files[path], changed = _qm_messages(data, messages["language"], edits)
+            else:
+                files[path], changed = _gmsg_messages(data, edits)
+        except ValueError as error:
+            raise ValueError(f"{messages['edits']}: {error}") from error
+        print(f"{path}: {changed} messages reworded by {messages['edits']}")
     return files, textures

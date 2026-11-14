@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, sources, steps
+from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, sources, steps, system_config
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -43,7 +43,7 @@ def run_steps(args: argparse.Namespace) -> None:
     out = cfg.repo / "scratch" / "runs" / args.name
     if args.harness:
         with harness.HarnessSession(cfg, game, args.game, out / "harness.log", args.textures,
-                                    args.dump_textures, args.resolution, args.option) as session:
+                                    args.dump_textures, args.resolution, args.option, args.language) as session:
             steps.run(session, args.steps, out, games.layout(cfg.repo, args.game))
             print(f"{session.frames()} frames")
         return
@@ -108,6 +108,8 @@ def main() -> None:
                      help="harness only: every texture the game uploads, as PNG under scratch/harness/<game>/Azahar/dump/textures/")
     run.add_argument("--option", action="append", metavar="ID=VALUE",
                      help="harness only: a game option set before boot (repeatable), e.g. stairs=0")
+    run.add_argument("--language", choices=sorted(system_config.LANGUAGES),
+                     help="harness only: the system language the game boots in (default: the player's)")
     run.add_argument("--resolution", type=int, default=harness.RESOLUTION,
                      help="harness only: render scale, 1 is the 3DS's 400x240")
     run.set_defaults(run=run_steps)

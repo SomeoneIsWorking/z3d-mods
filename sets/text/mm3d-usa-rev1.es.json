@@ -1,0 +1,212 @@
+{
+  "about": "Spanish (message/us/uss.gmsg), for the same messages as the English table, in the Spanish text's own words (oprime, inventario, casilla). Tocar is also playing an instrument (004C, 1700, 1790 to 1792), so every edit names its message. The instruments' item texts name B to quit, which the English ones do not.",
+  "edits": [
+    {
+      "why": "The sword and each form's action are X. B stays where the pad is read by name: the ocarina and the instruments' quit, a menu, a minigame's Quit.",
+      "except": [
+        "004C",
+        "00FF",
+        "05E6",
+        "1700",
+        "1790",
+        "1791",
+        "1792",
+        "1B5A",
+        "1BAD",
+        "1BB0",
+        "2A00"
+      ],
+      "find": "\\{25:2\\}",
+      "put": "{25:3}"
+    },
+    {
+      "why": "The slots in their order: Y, B, RB, the D-pad.",
+      "find": "\\{25:3\\},(\\s*)\\{25:4\\},(\\s*)\\{25:18\\}(\\s*(?:o)\\s+)\\{25:1B\\}",
+      "put": "{25:4},\\1{25:2},\\2{25:18}\\3{25:1B}"
+    },
+    {
+      "why": "View opens the Map Screen (Project Restoration's ZR and Select); the map zooms by mouse, at the right of the split layout.",
+      "only": [
+        "003E"
+      ],
+      "find": "Toca\\ el\\ icono\\\n\\{25:2E\\}\\ para\\ ver",
+      "put": "Oprime\n{25:9} para ver"
+    },
+    {
+      "why": "View opens the Map Screen (Project Restoration's ZR and Select); the map zooms by mouse, at the right of the split layout.",
+      "only": [
+        "003E"
+      ],
+      "find": "\\{3A:1\\}Toca\\{3A:B\\}\\ el\\ mapa\\ para\\ ampliarlo",
+      "put": "{3A:1}Haz clic{3A:B} en el mapa para ampliarlo"
+    },
+    {
+      "why": "View opens the Map Screen (Project Restoration's ZR and Select); the map zooms by mouse, at the right of the split layout.",
+      "only": [
+        "003E"
+      ],
+      "find": "\\{3A:1\\}Desliza\\{3A:B\\}\\ la\\ zona\\ ampliada",
+      "put": "{3A:1}Arrastra{3A:B} la zona ampliada"
+    },
+    {
+      "why": "The Pictograph Box is used from an item slot.",
+      "only": [
+        "0043"
+      ],
+      "find": "Toca\\ \\{25:20\\}\\{3A:4\\}\\ \\{3A:B\\}para\\ mirar\\ a\\ través\\\nde\\ ella\\ y\\ oprime\\ \\{25:1\\}\\ para\\ tomar\\\nuna\\ luminografía\\.",
+      "put": "Asígnala a una casilla y úsala\npara mirar a través de ella. Oprime\n{25:1} para tomar una luminografía."
+    },
+    {
+      "why": "The ocarina is used from an item slot (R on the keyboard).",
+      "only": [
+        "004C"
+      ],
+      "find": "Sácala\\ con\\ \\{25:1F\\}\\ y\\ usa\\ \\{25:1\\},\\ \\{25:3\\},\\ \\{25:4\\},\\\n\\{25:5\\}\\ y\\ \\{25:6\\}\\ para\\ tocarla\\.\\ Oprime\\ \\{25:2\\}\\\npara\\ dejar\\ de\\ tocar\\.",
+      "put": "Sácala desde su casilla y usa\n{25:1}, {25:3}, {25:4}, {25:5} y {25:6} para\ntocarla. Oprime {25:2} para dejar de tocar."
+    },
+    {
+      "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+      "only": [
+        "0050"
+      ],
+      "find": "Oprime\\ \\{3A:1\\}START\\{3A:B\\}\\ para\\ leerlo\\.",
+      "put": "Oprime {25:9} dos veces para leerlo."
+    },
+    {
+      "why": "Menu, then LT, opens the Masks screen; a mask is set to a slot with the slot's button and worn with it.",
+      "only": [
+        "0078"
+      ],
+      "find": "Toca\\ \\{25:1E\\}\\ en\\ la\\ pantalla\\ táctil\\\npara\\ abrir\\ el\\ \\{3A:2\\}menú\\ de\\ máscaras\\\n\\{3A:B\\}y\\ asígnala\\ a\\ \\{25:4\\},\\ \\{25:2\\},\\ \\{25:18\\}\\ o\\ \\{25:1B\\}\\ \\\nen\\ el\\ lado\\ derecho\\.\\{31:1\\}\\{02\\}\\{3A:B\\}Para\\ ponerte\\ la\\ máscara,\\ toca\\\nel\\ icono\\ correspondiente\\.\\ Si\\ la\\\nhas\\ asignado\\ a\\ \\{25:3\\}\\ o\\ \\{25:4\\},\\ basta\\\ncon\\ que\\ oprimas\\ ese\\ botón\\.",
+      "put": "Oprime {25:7} y luego {25:5} para abrir\nel {3A:2}menú de máscaras{3A:B}. Ve a la máscara\ny oprime {25:4}, {25:2}, {25:18} o una\ndirección de {25:1B} para asignarla.{31:1}{02}{3A:B}Oprime el botón de la casilla para\nponerte la máscara, y otra vez\npara quitártela."
+    },
+    {
+      "why": "The item to show is chosen on the Items screen, wherever it is drawn.",
+      "only": [
+        "00FF"
+      ],
+      "find": "Selecciona\\ un\\ objeto\\ en\\\nla\\ pantalla\\ táctil\\.\\\n",
+      "put": "Selecciona un objeto.\n"
+    },
+    {
+      "why": "Menu opens the Items screen.",
+      "only": [
+        "026B"
+      ],
+      "find": "Toca\\ \\{3A:5\\}\\{25:1C\\}\\ en\\ la\\ pantalla\\ táctil\\\n",
+      "put": "Oprime {3A:5}{25:7}\n"
+    },
+    {
+      "why": "An item is assigned with a slot's button.",
+      "only": [
+        "026B"
+      ],
+      "find": "y\\ asígnalo\\ a\\ \\{3A:5\\}\\{3A:5\\}\\{25:3\\},\\{3A:5\\}\\ \\{25:4\\},\\ \\{25:18\\}\\ o\\ \\{25:1B\\},\\\na\\ la\\ derecha\\.",
+      "put": "y oprime {25:4}, {25:2}, {25:18} o una\ndirección de {25:1B} para asignarlo."
+    },
+    {
+      "why": "No touch screen to slide on.",
+      "only": [
+        "026B"
+      ],
+      "find": "\\{31:1\\}\\{02\\}\\{3A:5\\}También\\ puedes\\ \\{3A:1\\}tocar\\ y\\ arrastrar\\{3A:5\\}\\\npara\\ asignar\\ un\\ objeto,\\ así\\ que\\\nutiliza\\ la\\ forma\\ que\\ prefieras\\.\\{3A:5\\}\\{3A:5\\}",
+      "put": ""
+    },
+    {
+      "why": "A slot is a button.",
+      "only": [
+        "026B"
+      ],
+      "find": "oprime\\ el\\ botón\\ o\\ toca\\ el\\\nicono\\ correspondiente\\ para\\ usarlo\\.",
+      "put": "oprime el botón de su\ncasilla para usarlo."
+    },
+    {
+      "why": "Pause opens the Gear screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
+      "only": [
+        "0270"
+      ],
+      "find": "Toca\\ \\{3A:5\\}\\{25:2D\\}\\ en\\ la\\ pantalla\\ táctil\\\npara\\ ver\\ cuáles\\ llevas\\ contigo\\.",
+      "put": "Oprime {3A:5}{25:E} para ver cuáles\nllevas contigo."
+    },
+    {
+      "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+      "only": [
+        "033F"
+      ],
+      "find": "Oprime\\ \\{3A:1\\}START\\ \\{3A:B\\}para\\ ver\\ la",
+      "put": "Oprime {25:9} dos veces para ver la"
+    },
+    {
+      "why": "The notebook shows in the split layout: the top screen at the left, the touch screen at the right.",
+      "only": [
+        "033F"
+      ],
+      "find": "en\\ la\\\npantalla\\ superior\\.",
+      "put": "a la\nizquierda."
+    },
+    {
+      "why": "The notebook shows in the split layout: the top screen at the left, the touch screen at the right.",
+      "only": [
+        "033F"
+      ],
+      "find": "En\\ la\\ pantalla\\ táctil\\ podrás\\\n",
+      "put": "A la derecha podrás\n"
+    },
+    {
+      "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+      "only": [
+        "0737"
+      ],
+      "find": "Si\\ usas\\ \\{3A:1\\}START\\{3A:B\\}\\ podrás\\ comprobar",
+      "put": "Si oprimes {25:9} dos veces, verás"
+    },
+    {
+      "why": "The Pictograph Box is used from an item slot.",
+      "only": [
+        "09E3"
+      ],
+      "find": "Por\\ favor,\\ saca\\ tu\\ caja\\\nluminográfica\\ con\\ \\{25:20\\}\\ y\\ oprime\\ \\{25:1\\}\\\n",
+      "put": "Por favor, saca tu caja luminográfica\ndesde su casilla y oprime {25:1}\n"
+    },
+    {
+      "why": "The Pictograph Box is used from an item slot.",
+      "only": [
+        "170D"
+      ],
+      "find": "Úsala\\ con\\ \\{25:20\\}\\ y\\ toma\\ luminografías\\\ncon\\ \\{25:1\\}\\.\\ Solo\\ puedes\\ tener\\ una\\\nluminografía\\ a\\ la\\ vez\\.",
+      "put": "Úsala desde una casilla y toma\nluminografías con {25:1}. Solo puedes\ntener una a la vez."
+    },
+    {
+      "why": "View opens the Map Screen, and View again the Bombers' Notebook (patch/mm3d/notebook.cpp).",
+      "only": [
+        "1796"
+      ],
+      "find": "Para\\ verlo,\\ oprime\\ \\{3A:1\\}START\\{3A:B\\}\\.",
+      "put": "Para verlo, oprime {25:9} dos veces."
+    },
+    {
+      "why": "No touch screen in play.",
+      "only": [
+        "1BAE"
+      ],
+      "find": "\\{3A:1\\}objetos\\ iluminados\\{3A:B\\}\\ en\\\nla\\ pantalla\\ táctil\\ \\{3A:1\\}se",
+      "put": "{3A:1}objetos iluminados{3A:B}\n{3A:1}se"
+    },
+    {
+      "why": "View opens the Map Screen (Project Restoration's ZR and Select); the map zooms by mouse, at the right of the split layout.",
+      "only": [
+        "1D18"
+      ],
+      "find": "\\{3A:1\\}Toque\\{3A:B\\}\\ el\\ mapa\\ en\\ la\\ pantalla\\ táctil\\\npara\\ acercar",
+      "put": "{3A:1}Haga clic{3A:B} en el mapa de la derecha\npara acercar"
+    },
+    {
+      "why": "View opens the Map Screen (Project Restoration's ZR and Select); the map zooms by mouse, at the right of the split layout.",
+      "only": [
+        "1D18"
+      ],
+      "find": "Y\\ si\\ toca\\ \\{25:2E\\}\\ podrá",
+      "put": "Y si oprime {25:9} podrá"
+    }
+  ]
+}

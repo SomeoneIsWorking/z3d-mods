@@ -1,0 +1,246 @@
+{
+  "about": "Spanish (us.qm language 6), for the same messages as the English table, in the Spanish text's own words (oprime; pantalla de objetos, pantalla de equipo). Tocar is also playing the ocarina (4078 and others), so every edit names its message.",
+  "edits": [
+    {
+      "why": "Menu opens the Items subscreen.",
+      "only": [
+        "0030",
+        "0037"
+      ],
+      "find": "Toca\\ \\{24:1a\\}\\ en\\ la\\ pantalla\\ táctil",
+      "put": "Oprime {24:0c}"
+    },
+    {
+      "why": "The ocarina is on a slot (D-pad Down on a new file; R on the keyboard).",
+      "only": [
+        "004A"
+      ],
+      "find": "Toca\\ \\{24:16\\}\\\nen\\ la\\ pantalla\\ táctil\\ para\\ usarla\\.",
+      "put": "Oprime {24:16}\npara usarla."
+    },
+    {
+      "why": "Gear is equipped with A.",
+      "only": [
+        "004C"
+      ],
+      "find": "Dirígete\\ a\\ la\\ \\{1D:42\\}pantalla\\ de\\ equipo\\\n\\{1D:00\\}y\\ tócalo\\ para\\ equiparlo\\ o\\ elígelo\\\ncon\\ \\{24:00\\}\\ y\\ oprime\\ \\{24:06\\}\\.",
+      "put": "Dirígete a la {1D:42}pantalla de equipo{1D:00},\nelígelo con {24:00} y oprime {24:06}\npara equiparlo."
+    },
+    {
+      "why": "Gear is equipped with A.",
+      "only": [
+        "004D"
+      ],
+      "find": "Ve\\ a\\ la\\ \\{1D:42\\}pantalla\\ de\\ equipo\\{1D:00\\}\\ y\\ toca\\\neste\\ escudo\\ para\\ equiparlo\\.",
+      "put": "Ve a la {1D:42}pantalla de equipo{1D:00}, elige\neste escudo y oprime {24:06}\npara equiparlo."
+    },
+    {
+      "why": "A dungeon's map is the Map subscreen, next to Items: Menu, then LT.",
+      "only": [
+        "0066"
+      ],
+      "find": "¡Toca\\ \\{24:1b\\}\\ en\\ la\\ pantalla\\ táctil\\ para\\\nver\\ la\\ pantalla\\ del\\ mapa!",
+      "put": "¡Oprime {24:0c} y luego {24:0a} para\nver la pantalla del mapa!"
+    },
+    {
+      "why": "The left stick picks the floor.",
+      "only": [
+        "0066"
+      ],
+      "find": "de\\ la\\ mazmorra,\\ toca\\ su\\ número\\\ncorrespondiente\\.",
+      "put": "de la mazmorra, elígelas con {24:00}."
+    },
+    {
+      "why": "The Gear subscreen is right of Items: Menu, then RT; gear is equipped with A.",
+      "only": [
+        "00A4"
+      ],
+      "find": "Toca\\ \\{24:19\\}\\ en\\ la\\ pantalla\\ táctil\\\npara\\ abrir\\ la\\ \\{1D:43\\}\\{1D:42\\}pantalla\\ de\\ equipo\\{1D:43\\}\\\n\\{1D:00\\}y\\ equiparla\\.",
+      "put": "Oprime {24:0c} y luego {24:0b} para abrir\nla {1D:42}pantalla de equipo{1D:00}, elige la espada\ny oprime {24:06} para equiparla."
+    },
+    {
+      "why": "The Action Icon is at the top right of the one screen.",
+      "only": [
+        "0103"
+      ],
+      "find": "que\\ está\\ en\\ la\\ pantalla\\ superior!",
+      "put": "que está arriba a la derecha!"
+    },
+    {
+      "why": "Saving is the pause screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
+      "only": [
+        "010F"
+      ],
+      "find": "oprimir\\ \\{1D:00\\}START\\{1D:44\\}",
+      "put": "oprimir {1D:00}{24:0e}{1D:44}"
+    },
+    {
+      "why": "One screen, no upper and lower.",
+      "only": [
+        "1035"
+      ],
+      "find": "\\{1D:41\\}iconos\\{1D:00\\}\\ de\\ las\\ pantallas\\?",
+      "put": "{1D:41}iconos{1D:00} de la pantalla?"
+    },
+    {
+      "why": "The brother's lessons: the item slots, and the Action Icon at the top right.",
+      "only": [
+        "1035"
+      ],
+      "find": "Los\\ de\\ la\\ derecha\\ de\\ la\\ pantalla\\ táctil\\\nEl\\ de\\ la\\ pantalla\\ superior",
+      "put": "Tus casillas de objetos\nEl icono de acción"
+    },
+    {
+      "why": "The Know-It-All Brother's item lesson, for slots with buttons: no touch screen, and the chord's four more.",
+      "only": [
+        "1036"
+      ],
+      "find": "(?s)\\A.+\\Z",
+      "put": "{24:1e}, {24:1f}, {24:1c} y cada dirección de {24:1d}\nson tus {1D:43}casillas de objetos{1D:00}.{01}\nPara usar un objeto, oprime {24:0c} para\nabrir la {1D:43}pantalla de objetos{1D:00}. Ve al\nobjeto y oprime el botón de una casilla\npara asignarlo. ¡Es muy sencillo!{01}\nUsa el objeto con el botón de su casilla.{01}\nMantén {24:02} y {24:05} serán cuatro\ncasillas más: así cada objeto tendrá\nsu botón. ¡Ya verás qué práctico!{00}"
+    },
+    {
+      "why": "The Action Icon is at the top right of the one screen.",
+      "only": [
+        "1037"
+      ],
+      "find": "El\\ icono\\ redondo\\ de\\ la\\ pantalla\\ superior\\\n",
+      "put": "El icono redondo de arriba a la derecha\n"
+    },
+    {
+      "why": "The minimap is at the bottom right of the one screen.",
+      "only": [
+        "1039"
+      ],
+      "find": "En\\ la\\ parte\\ inferior\\ izquierda\\ de\\ la\\ pantalla\\\nsuperior\\ verás",
+      "put": "En la parte inferior derecha de la pantalla\nverás"
+    },
+    {
+      "why": "The +Control Pad is item slots in play: no input turns the minimap off.",
+      "only": [
+        "1039"
+      ],
+      "find": "Oprime\\ \\{24:04\\}\\ un\\ instante\\ para\\ ocultar\\ el\\ mapa\\.\\\nPara\\ que\\ vuelva\\ a\\ mostrarse,\\ oprime\\ \\{24:01\\}\\ en\\\ncualquier\\ dirección\\.\\{01\\}\\\n",
+      "put": ""
+    },
+    {
+      "why": "View opens the area's map.",
+      "only": [
+        "1039"
+      ],
+      "find": "En\\ la\\ parte\\ central\\ de\\ la\\ pantalla\\ inferior\\\npuedes\\ ver\\ el\\ mapa\\ general\\ de\\ la\\ zona\\\ndonde\\ te\\ encuentras\\.\\{01\\}\\\nToca\\ \\{24:1b\\}\\ en\\ la\\ pantalla\\ inferior\\ para\\ ver\\ el\\\nmapa\\ con\\ nombres\\ de\\ lugares\\.",
+      "put": "Oprime {24:1b} para ver el mapa general de\nla zona donde te encuentras, con nombres\nde lugares."
+    },
+    {
+      "why": "A slot is a button.",
+      "only": [
+        "103A"
+      ],
+      "find": "Si\\ quieres\\ utilizarlos,\\ debes\\\nusar\\ el\\ icono\\ o\\ botón\\ correspondiente\\.",
+      "put": "Si quieres utilizarlos, oprime\nel botón de su casilla."
+    },
+    {
+      "why": "Menu, then RT, opens the Gear subscreen; gear is equipped with A.",
+      "only": [
+        "103A"
+      ],
+      "find": "toca\\ \\{24:19\\}\\ en\\ la\\\npantalla\\ inferior\\ para\\ abrir\\ la\\ \\{1D:42\\}pantalla\\ de\\\nequipo\\{1D:00\\}\\.\\{01\\}\\\nA\\ continuación,\\ toca\\ el\\ objeto\\ o\\ prenda\\\ncon\\ la\\ que\\ quieras\\ equiparte\\.",
+      "put": "oprime {24:0c} y\nluego {24:0b} para abrir la {1D:42}pantalla de\nequipo{1D:00}.{01}\nA continuación, elige el objeto o prenda\ncon la que quieras equiparte y oprime {24:06}."
+    },
+    {
+      "why": "Menu opens the Items subscreen; an item is assigned with the slot's button.",
+      "only": [
+        "103A"
+      ],
+      "find": "toca\\ \\{24:1a\\}\\ para\\ abrir\\ la\\ \\{1D:43\\}pantalla\\ de\\ objetos,\\{1D:00\\}\\\nluego\\ toca\\ el\\ objeto\\ que\\ quieras\\ asignar\\\ny\\ finalmente\\ toca\\ \\{24:1c\\},\\ \\{24:1e\\},\\ \\{24:1f\\}\\ o\\ \\{24:1d\\}\\.",
+      "put": "oprime {24:0c} para abrir la {1D:43}pantalla de objetos,{1D:00}\nluego ve al objeto que quieras asignar\ny finalmente oprime {24:1e}, {24:1f}, {24:1c} o {24:1d}."
+    },
+    {
+      "why": "Saving is the pause screen: LB and Menu, Esc on the keyboard (icon 0x0E).",
+      "only": [
+        "103B"
+      ],
+      "find": "oprime\\\n\\{1D:41\\}START\\{1D:00\\}\\.",
+      "put": "oprime\n{24:0e}."
+    },
+    {
+      "why": "Menu, then RT, opens the Gear subscreen; gear is equipped with A.",
+      "only": [
+        "103D"
+      ],
+      "find": "toca\\ \\{24:19\\}\\ para\\ abrir\\ la\\\n\\{1D:42\\}pantalla\\ de\\ equipo\\{1D:00\\}\\.\\{01\\}\\\nUna\\ vez\\ allí,\\ toca\\ el\\ escudo\\ para\\ equiparte\\\ncon\\ él\\.\\ También\\ puedes\\ elegirlo\\ usando\\ \\{24:00\\}\\\ny\\ oprimir\\ \\{24:06\\}\\ para\\ equiparte\\ con\\ él\\.",
+      "put": "oprime {24:0c} y luego {24:0b}\npara abrir la {1D:42}pantalla de equipo{1D:00}.{01}\nUna vez allí, elige el escudo con {24:00}\ny oprime {24:06} para equiparte con él."
+    },
+    {
+      "why": "View is a press of R3.",
+      "only": [
+        "103F"
+      ],
+      "find": "Si\\ tocas\\ \\{24:18\\},\\ podrás",
+      "put": "Si oprimes {24:18}, podrás"
+    },
+    {
+      "why": "Navi is a press of R3 (The One Screen's View, the 3DS's Left).",
+      "only": [
+        "103F"
+      ],
+      "find": "Cuando\\ se\\ muestra\\ \\{24:17\\}\\ en\\ lugar\\ de\\ \\{24:18\\},\\\nsignifica\\ que\\ Navi\\ tiene\\ algo\\ que\\ decirte\\.\\\n¡Usa\\ \\{24:17\\}\\ para\\ escucharla!",
+      "put": "Cuando Navi tenga algo que decirte,\n¡oprime {24:17} para escucharla!"
+    },
+    {
+      "why": "With the ocarina out, RB (R on the keyboard) opens the song list: icon 0x03.",
+      "only": [
+        "10C7"
+      ],
+      "find": "ve\\ a\\ la\\ \\{1D:44\\}pantalla\\ de\\ la\\ ocarina\\{1D:00\\}\\ y\\ toca\\ el\\\nicono\\ de\\ la\\ esquina\\ inferior\\ derecha\\.",
+      "put": "saca la ocarina y oprime {24:03}."
+    },
+    {
+      "why": "The song list is moved through, not touched.",
+      "only": [
+        "10C7"
+      ],
+      "find": "Toca\\ los\\ iconos\\ para\\ ver",
+      "put": "Elige los iconos para ver"
+    },
+    {
+      "why": "View opens the map.",
+      "only": [
+        "2065"
+      ],
+      "find": "Toca\\ \\{24:1b\\}\\ en\\ la\\ pantalla\\ inferior\\\n",
+      "put": "Oprime {24:1b}\n"
+    },
+    {
+      "why": "View opens the map.",
+      "only": [
+        "2071"
+      ],
+      "find": "toca\\ \\{24:1b\\}\\ para\\ abrir",
+      "put": "oprime {24:1b} para abrir"
+    },
+    {
+      "why": "View is a press of R3.",
+      "only": [
+        "5056"
+      ],
+      "find": "toca\\ \\{24:18\\}\\ y",
+      "put": "oprime {24:18} y"
+    },
+    {
+      "why": "The sword is X. B stays where the pad is read by name: the ocarina.",
+      "except": [
+        "004A",
+        "086E",
+        "087C",
+        "08A0"
+      ],
+      "find": "\\{24:07\\}",
+      "put": "{24:08}"
+    },
+    {
+      "why": "The slots in their order: Y, B, RB, the D-pad.",
+      "find": "\\{24:1c\\},(\\s*)\\{24:1e\\},(\\s*)\\{24:1f\\}(\\s+(?:o|y)\\s+)\\{24:1d\\}",
+      "put": "{24:1e},\\1{24:1f},\\2{24:1c}\\3{24:1d}"
+    }
+  ]
+}
