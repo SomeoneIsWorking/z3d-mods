@@ -2,15 +2,18 @@
 but the desktop's own libraries (docs/plans/packed-app.md).
 
     z3d                 the launcher: `python/bin/python3 -I -m z3dmods.packed play`
-    bin/z3d, lib/       the app, the core library and SDL3
+    AppRun, z3d.desktop what makes the folder an AppDir; `appimage` packs it into one file
+    bin/z3d, lib/       the app and every library it links but the C and C++ runtimes
     python/             a relocatable CPython (uv's), with the locked wheels in its site-packages
-    tools/z3dmods/      these tools; the app runs `z3dmods.packed setup` as its installer
+    tools/z3dmods/      these tools; the app runs `z3dmods.packed folders` and `setup`
     sets/, patch/       the sets and each patch's tables (options, HUD, overlay)
     prebuilt/<game>/    our patch built for the set's base, and the decomp's names the tools read
+    prebuilt/glyphs/    port-assets' pad glyphs drawn for the menu textures
     assets/, fonts/     port-assets' glyphs and key typeface, the picker's font
 
 Nothing third-party that is not ours to give is in it: no game data, no mod. The player's data
-is `user/` inside the folder when that exists, else their data folder (config.py).
+is `user/` inside the folder when that exists, else their data folder (config.py); an AppImage
+is read-only, so it always uses the data folder.
 """
 
 from __future__ import annotations
@@ -20,7 +23,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from z3dmods import app, config, patch_build, play, symbols
+from z3dmods import app, config, glyphs, patch_build, play, shortcut, source_check, symbols
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -29,10 +32,17 @@ PYTHON = "3.12.16"
 PYTHON_UNUSED = ("include", "share", "lib/tcl*", "lib/tk*", "lib/itcl*", "lib/thread*", "lib/libtcl*", "lib/libtk*",
                  "lib/python*/test", "lib/python*/tkinter", "lib/python*/idlelib", "lib/python*/ensurepip",
                  "lib/python*/turtledemo", "lib/python*/lib2to3", "lib/python*/config-*", "lib/pkgconfig")
-# The app's libraries a desktop may not have; the rest are the desktop's own.
-BUNDLED_LIBRARIES = ("libazahar_core", "libSDL3", "libplutosvg", "libplutovg")
+# The libraries the app takes from the desktop: the C and C++ runtimes, which a package cannot
+# stand in for. Every other one it links comes along (the font, text and image libraries with
+# what they need). Vulkan is not linked: the core opens the desktop's loader.
+DESKTOP_LIBRARIES = ("linux-vdso", "ld-linux", "libc.", "libm.", "libgcc_s", "libstdc++")
+# The AppImage runtime (github.com/AppImage/type2-runtime, MIT): the program a squashfs image of
+# the package folder is appended to.
+RUNTIME_RELEASE = "20251108"
+RUNTIME_SHA256 = "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
+APPIMAGE = "z3d-x86_64.AppImage"
 LAUNCHER = """#!/bin/sh
-# z3d: opens the title picker. --roms <folder> and --mods <folder> name your files, once.
+# z3d: opens the title picker, which asks for your folders on its first run.
 here=$(dirname "$(readlink -f "$0")")
 exec "$here/python/bin/python3" -I -m z3dmods.packed play "$@"
 """
@@ -76,8 +86,41 @@ def _libraries(binary: Path, core: Path, out: Path) -> None:
     needed = _run("ldd", str(binary)).splitlines()
     for line in needed:
         name, _, rest = line.strip().partition(" => ")
-        if name.startswith(BUNDLED_LIBRARIES) and not name.startswith(core.stem) and rest.startswith("/"):
+        if not name.startswith((*DESKTOP_LIBRARIES, core.stem)) and rest.startswith("/"):
             shutil.copyfile(Path(rest.split()[0]).resolve(), out / name)
+
+
+def _runtime(cfg: Config) -> Path:
+    runtime = cfg.dependencies / "appimage-runtime" / RUNTIME_RELEASE / "runtime-x86_64"
+    if not runtime.exists():
+        raise RuntimeError(f"the AppImage runtime is missing: gh release download {RUNTIME_RELEASE} "
+                           f"-R AppImage/type2-runtime -p runtime-x86_64 -D {runtime.parent}")
+    if source_check.digest(runtime) != RUNTIME_SHA256:
+        raise RuntimeError(f"{runtime} is not release {RUNTIME_RELEASE}'s runtime")
+    return runtime
+
+
+def appimage(cfg: Config, built: Path) -> Path:
+    """The package folder `built` as one file beside it: the AppImage runtime with the folder
+    appended as a squashfs image, which the runtime mounts and whose AppRun it starts."""
+    if shutil.which("mksquashfs") is None:
+        raise RuntimeError("mksquashfs is missing: sudo dnf install squashfs-tools (Fedora), "
+                           "sudo apt install squashfs-tools (Debian/Ubuntu)")
+    image = built.with_name(APPIMAGE)
+    squashed = built.with_name(APPIMAGE + ".squashfs")
+    squashed.unlink(missing_ok=True)
+    _run("mksquashfs", str(built), str(squashed), "-root-owned", "-noappend", "-comp", "zstd", "-quiet", "-no-progress")
+    with image.open("wb") as out, squashed.open("rb") as body:
+        out.write(_runtime(cfg).read_bytes())
+        shutil.copyfileobj(body, out)
+    squashed.unlink()
+    image.chmod(0o755)
+    return image
+
+
+def folder(cfg: Config) -> Path:
+    """Where `z3dmods package` makes the package."""
+    return cfg.repo / "build" / "package" / "z3d"
 
 
 def build(cfg: Config, out: Path) -> Path:
@@ -96,9 +139,10 @@ def build(cfg: Config, out: Path) -> Path:
         (out / "patch" / name).mkdir(parents=True)
         for table in (cfg.repo / "patch" / name).glob("*.toml"):
             shutil.copyfile(table, out / "patch" / name / table.name)
-        built = out / patch_build.PREBUILT / name
+        built = out / config.PREBUILT / name
         patch_build.save(patch_build.build(cfg.repo, name, game.payload, cfg.repo / "build" / "patch" / name), built)
         symbols.save(symbols.load(cfg.repo, name), built / symbols.PACKAGED)
+    glyphs.save(cfg.glyph_set(), out / config.PREBUILT / glyphs.FOLDER)
     for part in ("sets", "fonts"):
         shutil.copytree(cfg.port_assets / part, out / "assets" / part)
     shutil.copyfile(cfg.port_assets / "LICENSE", out / "assets" / "LICENSE")
@@ -111,6 +155,9 @@ def build(cfg: Config, out: Path) -> Path:
     launcher = out / "z3d"
     launcher.write_text(LAUNCHER)
     launcher.chmod(0o755)
+    # What makes the folder an AppDir: its entry point, desktop entry and icon (z3d.svg above).
+    (out / "AppRun").symlink_to(launcher.name)
+    (out / f"{play.DESKTOP_ID}.desktop").write_text(shortcut.desktop_entry(launcher.name))
     interpreter = _python(out)
     # The mark comes last: a folder with it is a whole package.
     (out / config.PACKAGE_MARK).write_text(json.dumps({"revision": revision, "azahar": app.AZAHAR_REVISION}) + "\n")

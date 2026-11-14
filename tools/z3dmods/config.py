@@ -35,11 +35,14 @@ class Config:
     session_env: dict[str, str]
     # The shared port-assets checkout ($PORT_ASSETS_DIR, else shared/port-assets beside this repo's parent).
     port_assets: Path
-    # This program as another program starts it: the app's installer, the desktop entry.
+    # This program as another program starts it: the app (its --tools), the desktop entry.
     tool_command: tuple[str, ...]
     # The picker's font and the folder of the app's shared libraries, where a package brings them.
     bundled_font: Path | None = None
     libraries: Path | None = None
+    # A package (package.py), whose sets its picker keeps up with it; a checkout's are the
+    # maintainer's to install.
+    packaged: bool = False
 
     def rom(self, title_id: str) -> Path:
         if title_id not in self.roms:
@@ -93,6 +96,8 @@ class Config:
 UI_FONT = "Noto Sans:bold"
 # Moves the app's data (saves included) for a test run of the installed shortcut (input_test.py).
 APP_DATA_ENV = "Z3D_APP_DATA"
+# Names another folder of mod downloads for a test run.
+MOD_SOURCES_ENV = "Z3D_MOD_SOURCES"
 SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")
 
 
@@ -105,6 +110,8 @@ def _session_env() -> dict[str, str]:
     return {key: found[key] for key in SESSION_KEYS if key in found}
 
 
+# A package's folder of what a checkout builds from source: each game's patch and names, the glyphs.
+PREBUILT = "prebuilt"
 # What marks REPO as a package (package.py) and not a checkout.
 PACKAGE_MARK = "package.json"
 # The player's folders, in a package's app data: {"roms": <folder>, "mods": <folder>}.
@@ -119,7 +126,7 @@ def _packaged(data_home: Path) -> Config:
     folders = json.loads((app_data / FOLDERS).read_text()) if (app_data / FOLDERS).exists() else {}
     return Config(
         repo=REPO,
-        mod_sources=Path(folders.get("mods") or app_data / "mods"),
+        mod_sources=Path(os.environ.get(MOD_SOURCES_ENV) or folders.get("mods") or app_data / "mods"),
         azahar_data=app_data / "Azahar",
         azahar_config=app_data / "Azahar" / "config",
         azahar_appimage=None,
@@ -133,6 +140,7 @@ def _packaged(data_home: Path) -> Config:
         tool_command=(sys.executable, "-I", "-m", "z3dmods.packed"),
         bundled_font=next((REPO / "fonts").glob("*.ttf")),
         libraries=REPO / "lib",
+        packaged=True,
     )
 
 
@@ -150,7 +158,7 @@ def load() -> Config:
     installed = json.loads((data_home / "opensu/emulators/azahar/installed.json").read_text())
     return Config(
         repo=REPO,
-        mod_sources=env_assets / "downloads",
+        mod_sources=Path(os.environ.get(MOD_SOURCES_ENV) or env_assets / "downloads"),
         azahar_data=data_home / "azahar-emu",
         azahar_config=config_home / "azahar-emu",
         azahar_appimage=data_home / "opensu/emulators/azahar" / installed["file"],

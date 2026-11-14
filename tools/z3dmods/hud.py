@@ -16,14 +16,12 @@ from __future__ import annotations
 
 import io
 import json
-import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
-from z3dmods import ctr, ctxb, gar, pica_texture
+from z3dmods import ctr, ctxb, gar, glyphs, pica_texture
 from z3dmods.texture_pack import TexturePack
 
 # A premultiplied channel difference above this is an edit, not the mod's re-encoding.
@@ -149,16 +147,7 @@ DIMMED = 0.45
 
 def _glyph(size: tuple[int, int], svg: Path, dimmed: bool) -> Image.Image:
     """A port-assets glyph as large as fits `size`, centred."""
-    if not svg.exists():
-        raise ValueError(f"port-assets has no glyph {svg.stem}")
-    magick = shutil.which("magick")
-    if magick is None:
-        raise RuntimeError("magick is missing: sudo dnf install ImageMagick (Fedora), "
-                           "sudo apt install imagemagick (Debian/Ubuntu)")
-    side = min(size) * SUPERSAMPLE
-    png = subprocess.run([magick, "-background", "none", "-density", "1200", str(svg), "-resize", f"{side}x{side}",
-                          "png:-"], capture_output=True, check=True).stdout
-    glyph = Image.open(io.BytesIO(png)).convert("RGBA").resize((min(size), min(size)), Image.LANCZOS)
+    glyph = glyphs.image(svg).resize((min(size), min(size)), Image.LANCZOS)
     if dimmed:
         r, g, b, a = glyph.split()
         glyph = Image.merge("RGBA", (*(c.point(lambda v: int(v * DIMMED)) for c in (r, g, b)), a))
