@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -116,6 +117,20 @@ void GameWindow::boot(const std::string &title) {
   updateLayout();
 }
 
+Prompt GameWindow::menuPrompt() {
+  Prompt prompt;
+  prompt.pad = kMenuButton;
+  prompt.key = kMenuKey;
+  return prompt;
+}
+
+void GameWindow::listKeys(std::ostream &out) {
+  out << "window\tmenu\t" << SDL_GetScancodeName(kMenuKey) << '\n';
+  for (const ModKeyBinding &binding : kModKeys) {
+    out << "window\t" << binding.name << '\t' << SDL_GetScancodeName(binding.key) << '\n';
+  }
+}
+
 void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> &each) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
@@ -134,18 +149,15 @@ void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> 
       if (event.key.repeat) {
         break;
       }
-      if (event.key.scancode == SDL_SCANCODE_F10) {
+      if (event.key.scancode == kMenuKey) {
         menuRequested_ = true;
-      } else if (event.key.scancode == SDL_SCANCODE_F5) {
-        modKey_ = ModKey::ReloadPatch;
-      } else if (event.key.scancode == SDL_SCANCODE_F6) {
-        modKey_ = ModKey::TogglePatch;
-      } else if (event.key.scancode == SDL_SCANCODE_F7) {
-        modKey_ = ModKey::ToggleTextures;
+      } else if (const auto *mod = std::ranges::find(kModKeys, event.key.scancode, &ModKeyBinding::key);
+                 mod != kModKeys.end()) {
+        modKey_ = mod->does;
       }
       break;
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-      if (event.gbutton.button == SDL_GAMEPAD_BUTTON_GUIDE) {
+      if (event.gbutton.button == kMenuButton) {
         menuRequested_ = true;
       }
       break;

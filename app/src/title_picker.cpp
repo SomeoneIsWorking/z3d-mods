@@ -10,6 +10,8 @@
 #include <lucent/log.h>
 
 #include <algorithm>
+#include <array>
+#include <array>
 #include <stdexcept>
 #include <string>
 
@@ -27,12 +29,15 @@ constexpr Rgb kText = kMenuText;
 constexpr Rgb kDim = kMenuDim;
 
 constexpr const char *kHeading = "z3d";
-constexpr const char *kHint = "A  Play    X  Options    F10 or Guide  Back";
-constexpr const char *kSetUpHint = "A  Set up from your game    X  Options";
-constexpr const char *kUpdateHint = "A  Set up again for this version    X  Options";
+constexpr const char *kPlay = "Play";
+constexpr const char *kSetUp = "Set up from your game";
+constexpr const char *kUpdate = "Set up again for this version";
+constexpr const char *kOptions = "Options";
+constexpr const char *kReturn = "Back here from a game";
+constexpr const char *kBack = "Back";
 constexpr const char *kSetUpHeading = "Setting up ";
 constexpr const char *kSetUpStarting = "Reading your game";
-constexpr const char *kSetUpFailed = "Setup failed    A  Back";
+constexpr const char *kSetUpFailed = "Setup failed";
 // Text size as a share of the window's height.
 constexpr float kTitleShare = 1.0F / 26.0F;
 constexpr float kHeadingShare = 1.0F / 14.0F;
@@ -46,6 +51,8 @@ constexpr float kTextWidth = 0.9F;
 constexpr float kTextHeight = 0.9F;
 constexpr float kShrink = 0.9F;
 constexpr float kSmallestShare = 1.0F / 60.0F;
+// The share of the window's height above a line of hints.
+constexpr float kAboveHints = 0.86F;
 
 // What moves or chooses, as held now.
 struct Held {
@@ -87,7 +94,6 @@ TitlePicker::TitlePicker(const MenuCanvas &canvas, GameWindow &window, const Pad
     titles_.push_back(canvas_.text(game.title, kText));
   }
   heading_ = canvas_.text(kHeading, kText);
-  hint_ = canvas_.text(hint(), kDim);
 }
 
 TitlePicker::~TitlePicker() {
@@ -95,29 +101,35 @@ TitlePicker::~TitlePicker() {
     TTF_DestroyText(text);
   }
   TTF_DestroyText(heading_);
-  TTF_DestroyText(hint_);
   for (SDL_Texture *icon : icons_) {
     SDL_DestroyTexture(icon);
   }
   TTF_SetFontWrapAlignment(font_, TTF_HORIZONTAL_ALIGN_LEFT);
 }
 
-std::string TitlePicker::hint() const {
+std::vector<Hint> TitlePicker::hints() const {
+  const Hint options{{PadInput::menuPrompt(&MenuPad::x)}, kOptions};
+  const auto choose = [](const char *words) { return Hint{{PadInput::menuPrompt(&MenuPad::a)}, words}; };
   switch (install_.state(library_.games()[selected_].setup)) {
   case SetInstall::State::Missing:
-    return kSetUpHint;
+    return {choose(kSetUp), options};
   case SetInstall::State::Outdated:
-    return kUpdateHint;
+    return {choose(kUpdate), options};
   case SetInstall::State::Ready:
     break;
   }
-  return kHint;
+  return {choose(kPlay), options, Hint{{GameWindow::menuPrompt()}, kReturn}};
+}
+
+void TitlePicker::hintLine(const Layout &layout, std::span<const Hint> line) const {
+  const float size = layout.height * kTitleShare;
+  canvas_.hints(line, pad_.lastDevice(),
+                {layout.width / 2.0F, layout.height * 0.92F - size * MenuCanvas::kHintArtShare}, size,
+                layout.width * kTextWidth, true);
 }
 
 void TitlePicker::select(size_t index) {
   selected_ = index;
-  // The bottom line is the selected game's.
-  textHeight_ = 0.0F;
   lucent::info("menu", "picker: on {}", library_.games()[selected_].title);
 }
 
@@ -156,7 +168,7 @@ std::optional<TitlePicker::Picked> TitlePicker::run() {
       continue;
     }
     if (now.options && !before.options) {
-      OptionsMenu menu(renderer_, canvas_.engine(), font_, window_, pad_, options_[selected_],
+      OptionsMenu menu(canvas_, window_, pad_, options_[selected_],
                        library_.games()[selected_].title, folders_);
       if (menu.run() == OptionsMenu::Left::ForFolders) {
         return Picked{};
@@ -201,8 +213,6 @@ void TitlePicker::fitText(float height) {
   TTF_DestroyText(heading_);
   heading_ = canvas_.text(kHeading, kText);
   TTF_SetFontSize(font_, height * kTitleShare);
-  TTF_DestroyText(hint_);
-  hint_ = canvas_.text(hint(), kDim);
   for (size_t i = 0; i < titles_.size(); ++i) {
     TTF_DestroyText(titles_[i]);
     titles_[i] = canvas_.text(library_.games()[i].title, kText);
@@ -229,9 +239,7 @@ void TitlePicker::draw(const Layout &layout) {
     const SDL_FPoint title = textSize(titles_[i]);
     TTF_DrawRendererText(titles_[i], tile.x + (tile.w - title.x) / 2.0F, tile.y + tile.h + inset);
   }
-  TTF_SetTextWrapWidth(hint_, static_cast<int>(layout.width * kTextWidth));
-  const SDL_FPoint hint = textSize(hint_);
-  TTF_DrawRendererText(hint_, (layout.width - hint.x) / 2.0F, layout.height * 0.92F - hint.y);
+  hintLine(layout, hints());
   SDL_RenderPresent(renderer_);
 }
 
@@ -245,13 +253,14 @@ bool TitlePicker::setUp(size_t index) {
     if (window_.closeRequested()) {
       return false;
     }
-    drawSetUp(heading, install_.lastLine().empty() ? kSetUpStarting : install_.lastLine());
+    drawSetUp(heading, install_.lastLine().empty() ? kSetUpStarting : install_.lastLine(), {});
   }
   if (install_.succeeded()) {
     return true;
   }
   lucent::error("menu", "picker: setting up {} failed", game.title);
   Held before = Held::from(pad_.menu());
+  const std::array back{Hint{{PadInput::menuPrompt(&MenuPad::a)}, kBack}};
   while (!window_.closeRequested()) {
     (void)window_.pollMenu();
     const Held now = Held::from(pad_.menu());
@@ -259,12 +268,12 @@ bool TitlePicker::setUp(size_t index) {
       break;
     }
     before = now;
-    drawSetUp(kSetUpFailed, install_.failure());
+    drawSetUp(kSetUpFailed, install_.failure(), back);
   }
   return false;
 }
 
-void TitlePicker::drawSetUp(const std::string &heading, const std::string &line) {
+void TitlePicker::drawSetUp(const std::string &heading, const std::string &line, std::span<const Hint> below) {
   const Layout current = layout();
   fitText(current.height);
   SDL_SetRenderDrawColor(renderer_, kBackground.r, kBackground.g, kBackground.b, SDL_ALPHA_OPAQUE);
@@ -275,7 +284,8 @@ void TitlePicker::drawSetUp(const std::string &heading, const std::string &line)
   const SDL_FPoint topSize = textSize(top);
   // The two together sit in the middle; the lower one shrinks until its lines fit under the other.
   const float gap = current.height * 0.05F;
-  const float room = current.height * kTextHeight - topSize.y - gap;
+  const float area = current.height * (below.empty() ? 1.0F : kAboveHints);
+  const float room = area * kTextHeight - topSize.y - gap;
   float size = current.height * kTitleShare;
   TTF_Text *bottom = nullptr;
   SDL_FPoint bottomSize{};
@@ -289,11 +299,14 @@ void TitlePicker::drawSetUp(const std::string &heading, const std::string &line)
     TTF_SetTextWrapWidth(bottom, static_cast<int>(current.width * kTextWidth));
     bottomSize = textSize(bottom);
   } while (bottomSize.y > room && size > current.height * kSmallestShare);
-  const float y = (current.height - topSize.y - gap - bottomSize.y) / 2.0F;
+  const float y = (area - topSize.y - gap - bottomSize.y) / 2.0F;
   TTF_DrawRendererText(top, (current.width - topSize.x) / 2.0F, y);
   TTF_DestroyText(top);
   TTF_DrawRendererText(bottom, (current.width - bottomSize.x) / 2.0F, y + topSize.y + gap);
   TTF_DestroyText(bottom);
+  if (!below.empty()) {
+    hintLine(current, below);
+  }
   SDL_RenderPresent(renderer_);
 }
 

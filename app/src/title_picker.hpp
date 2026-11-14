@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -51,10 +52,12 @@ private:
   void draw(const Layout &layout);
   [[nodiscard]] std::optional<size_t> hit(const Layout &layout, float x, float y) const;
   // What the bottom line says about the game the picker is on.
-  [[nodiscard]] std::string hint() const;
+  [[nodiscard]] std::vector<Hint> hints() const;
+  // A line of hints at the bottom, for the device the player used last.
+  void hintLine(const Layout &layout, std::span<const Hint> line) const;
   // Sets the game up on a screen of its own; false when the set is still missing afterwards.
   [[nodiscard]] bool setUp(size_t index);
-  void drawSetUp(const std::string &heading, const std::string &line);
+  void drawSetUp(const std::string &heading, const std::string &line, std::span<const Hint> below);
 
   const MenuCanvas &canvas_;
   SDL_Renderer *renderer_;
@@ -68,7 +71,6 @@ private:
   std::vector<SDL_Texture *> icons_;
   std::vector<TTF_Text *> titles_;
   TTF_Text *heading_ = nullptr;
-  TTF_Text *hint_ = nullptr;
   float textHeight_ = 0.0F;
   size_t selected_ = 0;
 };

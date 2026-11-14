@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <ostream>
 #include <string>
 
 namespace z3d::app {
@@ -24,12 +25,14 @@ constexpr uint32_t bit(Button button) {
 
 constexpr int kNoSlot = -1;
 
-// What a pad button does in play: a verb or a slot, and the slot it is while the chord is held.
+// What a pad button does in play: a verb or a slot, and the slot or verb it is while the chord
+// is held.
 struct PlayButton {
   SDL_GamepadButton pad;
   std::optional<Verb> verb;
   int slot = kNoSlot;
   int chordSlot = kNoSlot;
+  std::optional<Verb> chordVerb = std::nullopt;
 };
 
 // The play layout (docs/plans/pc-controls-hud.md). The triggers are axes: LT targets, RT shields.
@@ -44,7 +47,8 @@ constexpr std::array kPlayButtons{
     PlayButton{SDL_GAMEPAD_BUTTON_DPAD_DOWN, std::nullopt, 5, 5},
     PlayButton{SDL_GAMEPAD_BUTTON_DPAD_LEFT, std::nullopt, 6, 6},
     PlayButton{SDL_GAMEPAD_BUTTON_RIGHT_STICK, Verb::FirstPerson},
-    PlayButton{SDL_GAMEPAD_BUTTON_START, Verb::Pause},
+    // The games keep their items off the pause screen, so Menu is the item screen.
+    PlayButton{SDL_GAMEPAD_BUTTON_START, Verb::ItemScreen, kNoSlot, kNoSlot, Verb::Pause},
     PlayButton{SDL_GAMEPAD_BUTTON_BACK, Verb::Map},
 };
 
@@ -128,10 +132,11 @@ struct MenuKey {
   bool MenuPad::*held;
 };
 
-// The picker's keys: confirm and back as in a game's menus, X for a game's options.
+// The picker's keys: confirm and back as in a game's menus, X for a game's options. A button's
+// first key is the one its hint shows.
 constexpr std::array kMenuKeys{
-    MenuKey{SDL_SCANCODE_E, &MenuPad::a},        MenuKey{SDL_SCANCODE_SPACE, &MenuPad::a},
-    MenuKey{SDL_SCANCODE_RETURN, &MenuPad::a},   MenuKey{SDL_SCANCODE_BACKSPACE, &MenuPad::b},
+    MenuKey{SDL_SCANCODE_E, &MenuPad::a},        MenuKey{SDL_SCANCODE_RETURN, &MenuPad::a},
+    MenuKey{SDL_SCANCODE_SPACE, &MenuPad::a},    MenuKey{SDL_SCANCODE_BACKSPACE, &MenuPad::b},
     MenuKey{SDL_SCANCODE_X, &MenuPad::x},        MenuKey{SDL_SCANCODE_Y, &MenuPad::y},
     MenuKey{SDL_SCANCODE_W, &MenuPad::up},       MenuKey{SDL_SCANCODE_S, &MenuPad::down},
     MenuKey{SDL_SCANCODE_A, &MenuPad::left},     MenuKey{SDL_SCANCODE_D, &MenuPad::right},
@@ -155,6 +160,32 @@ constexpr std::array kMenuButtons{
     MenuButton{SDL_GAMEPAD_BUTTON_DPAD_LEFT, &MenuPad::left},
     MenuButton{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, &MenuPad::right},
 };
+
+// MenuPad's buttons by name, for listKeys.
+constexpr std::array kMenuNames{
+    std::pair{"a", &MenuPad::a},       std::pair{"b", &MenuPad::b},       std::pair{"x", &MenuPad::x},
+    std::pair{"y", &MenuPad::y},       std::pair{"up", &MenuPad::up},     std::pair{"down", &MenuPad::down},
+    std::pair{"left", &MenuPad::left}, std::pair{"right", &MenuPad::right},
+};
+
+struct StickKey {
+  SDL_Scancode key;
+  const char *name;
+  // The circle pad's axis (0 x, 1 y) and the way the key pushes it.
+  size_t axis;
+  float push;
+};
+
+constexpr std::array kStickKeys{
+    StickKey{SDL_SCANCODE_W, "up", 1, 1.0F},
+    StickKey{SDL_SCANCODE_S, "down", 1, -1.0F},
+    StickKey{SDL_SCANCODE_A, "left", 0, -1.0F},
+    StickKey{SDL_SCANCODE_D, "right", 0, 1.0F},
+};
+
+constexpr std::array kChordKeys{SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT};
+// What the core's names of the 3DS buttons (Settings::NativeButton::mapping) all start with.
+constexpr std::string_view kButtonPrefix = "button_";
 
 constexpr int16_t kTriggerPressed = 16384;
 constexpr float kAxisFull = 32767.0F;
@@ -312,12 +343,12 @@ void PadInput::readHost() {
   uint32_t held = 0;
   uint16_t slots = 0;
   const auto press = [&](Verb verb) {
-    // A screen that assigns slots closes on its own key as on Pause.
-    const Verb does = mode_ == PadMode::Assign && verb == Verb::ItemScreen ? Verb::Pause : verb;
-    held |= game_->buttons[static_cast<size_t>(does)];
+    // A screen that assigns slots closes on the input that opened it.
+    const bool leaves = mode_ == PadMode::Assign && verb == Verb::ItemScreen;
+    held |= leaves ? game_->leave : game_->buttons[static_cast<size_t>(verb)];
   };
   const bool *keys = SDL_GetKeyboardState(nullptr);
-  const bool shift = keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
+  const bool shift = std::ranges::any_of(kChordKeys, [keys](SDL_Scancode key) { return keys[key]; });
   bool keyHeld = false;
   if (play) {
     for (const PlayKey &binding : kPlayKeys) {
@@ -350,11 +381,15 @@ void PadInput::readHost() {
   MenuPad menu;
   for (const MenuKey &binding : kMenuKeys) {
     menu.*binding.held = menu.*binding.held || keys[binding.key];
+    keyHeld = keyHeld || keys[binding.key];
   }
   auto &circle = state.sticks[Settings::NativeAnalog::CirclePad];
-  circle[0] = (keys[SDL_SCANCODE_D] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_A] ? 1.0F : 0.0F);
-  circle[1] = (keys[SDL_SCANCODE_W] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_S] ? 1.0F : 0.0F);
-  keyHeld = keyHeld || circle[0] != 0.0F || circle[1] != 0.0F;
+  for (const StickKey &binding : kStickKeys) {
+    if (keys[binding.key]) {
+      keyHeld = true;
+      circle[binding.axis] += binding.push;
+    }
+  }
   bool padHeld = false;
   bool chord = play && shift;
   auto &cStick = state.sticks[Settings::NativeAnalog::CStick];
@@ -371,6 +406,8 @@ void PadInput::readHost() {
         const int slot = padChord ? binding.chordSlot : binding.slot;
         if (slot != kNoSlot) {
           slots |= static_cast<uint16_t>(1U << slot);
+        } else if (padChord && binding.chordVerb) {
+          press(*binding.chordVerb);
         } else if (binding.verb) {
           press(*binding.verb);
         }
@@ -460,6 +497,53 @@ Prompt PadInput::verbPrompt(Verb verb) {
   return prompt;
 }
 
+Prompt PadInput::menuPrompt(bool MenuPad::*held) {
+  Prompt prompt;
+  if (const auto *pad = std::ranges::find(kMenuButtons, held, &MenuButton::held); pad != kMenuButtons.end()) {
+    prompt.pad = pad->pad;
+  }
+  if (const auto *key = std::ranges::find(kMenuKeys, held, &MenuKey::held); key != kMenuKeys.end()) {
+    prompt.key = key->key;
+  }
+  return prompt;
+}
+
+void PadInput::listKeys(std::ostream &out) {
+  const auto line = [&out](std::string_view table, std::string_view name, std::string_view key) {
+    out << table << '\t' << name << '\t' << key << '\n';
+  };
+  for (const MenuKey &binding : kMenuKeys) {
+    line("menu", std::ranges::find(kMenuNames, binding.held, &std::pair<const char *, bool MenuPad::*>::second)->first,
+         SDL_GetScancodeName(binding.key));
+  }
+  for (const KeyBinding &binding : kNameKeys) {
+    line("name", std::string_view(Settings::NativeButton::mapping[binding.button]).substr(kButtonPrefix.size()),
+         SDL_GetScancodeName(binding.key));
+  }
+  const auto verbName = [](Verb verb) {
+    return std::ranges::find(kVerbNames, verb, &std::pair<std::string_view, Verb>::second)->first;
+  };
+  for (const PlayKey &binding : kPlayKeys) {
+    line("play", verbName(binding.verb), SDL_GetScancodeName(binding.key));
+  }
+  for (const PlayMouse &binding : kPlayMouse) {
+    line("mouse", verbName(binding.verb), std::to_string(binding.button));
+  }
+  for (size_t slot = 0; slot < kSlotCount; ++slot) {
+    // A slot behind the chord is "<chord key>+<key>".
+    const Prompt by = slotPrompt(slot);
+    line("slot", std::to_string(slot),
+         (by.shift ? std::string(SDL_GetScancodeName(kChordKeys.front())) + "+" : std::string()) +
+             SDL_GetScancodeName(*by.key));
+  }
+  for (const StickKey &binding : kStickKeys) {
+    line("stick", binding.name, SDL_GetScancodeName(binding.key));
+  }
+  for (const SDL_Scancode key : kChordKeys) {
+    line("chord", "chord", SDL_GetScancodeName(key));
+  }
+}
+
 // The 3DS buttons each game's mod set reads for a verb, in Verb's order: Action, Sword, Shield,
 // Target, FirstPerson, Pause, Map, ItemScreen, Ocarina.
 const std::array<PadInput::GameVerbs, 2> PadInput::kGames{
@@ -469,12 +553,14 @@ const std::array<PadInput::GameVerbs, 2> PadInput::kGames{
               {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B), bit(Settings::NativeButton::R),
                bit(Settings::NativeButton::L), bit(Settings::NativeButton::Left), bit(Settings::NativeButton::Start),
                bit(Settings::NativeButton::Select), bit(Settings::NativeButton::Up),
-               bit(Settings::NativeButton::Right)}},
+               bit(Settings::NativeButton::Right)},
+              bit(Settings::NativeButton::Start)},
     // Majora's Mask 3D, Project Restoration: ZL is View, Select the Items screen.
     GameVerbs{"0004000000125500",
               {bit(Settings::NativeButton::A), bit(Settings::NativeButton::B), bit(Settings::NativeButton::R),
                bit(Settings::NativeButton::L), bit(Settings::NativeButton::ZL), bit(Settings::NativeButton::Start),
-               0, bit(Settings::NativeButton::Select), 0}},
+               0, bit(Settings::NativeButton::Select), 0},
+              bit(Settings::NativeButton::Select)},
 };
 
 void PadInput::bindGame(std::string_view titleId) {

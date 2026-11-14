@@ -8,9 +8,13 @@
 
 #include "core/frontend/emu_window.h"
 
+#include <SDL3/SDL_gamepad.h>
 #include <SDL3/SDL_rect.h>
+#include <SDL3/SDL_scancode.h>
 
+#include <array>
 #include <cstdint>
+#include <iosfwd>
 #include <functional>
 #include <optional>
 #include <string>
@@ -23,10 +27,26 @@ union SDL_Event;
 namespace z3d::app {
 
 class PadInput;
+struct Prompt;
 
 // Keys the player's loop acts on while a game runs (mod_swap.hpp): F5 reads the patch again from
 // disk, F6 takes it out or puts it back, F7 turns the texture pack off or on.
 enum class ModKey : uint8_t { ReloadPatch, TogglePatch, ToggleTextures };
+
+struct ModKeyBinding {
+  SDL_Scancode key;
+  ModKey does;
+  // Its name in listKeys.
+  const char *name;
+};
+inline constexpr std::array kModKeys{
+    ModKeyBinding{SDL_SCANCODE_F5, ModKey::ReloadPatch, "reload_patch"},
+    ModKeyBinding{SDL_SCANCODE_F6, ModKey::TogglePatch, "toggle_patch"},
+    ModKeyBinding{SDL_SCANCODE_F7, ModKey::ToggleTextures, "toggle_textures"},
+};
+// What asks for the menu: the picker from a game, the way out of a screen of the picker's.
+inline constexpr SDL_Scancode kMenuKey = SDL_SCANCODE_F10;
+inline constexpr SDL_GamepadButton kMenuButton = SDL_GAMEPAD_BUTTON_GUIDE;
 
 class GameWindow final : public Frontend::EmuWindow {
 public:
@@ -66,7 +86,11 @@ public:
   [[nodiscard]] SDL_Window *sdlWindow() const {
     return window_;
   }
-  // F10 or the gamepad's guide button since the last call.
+  // The window's own keys as PadInput::listKeys lists the pad's, in the table "window".
+  static void listKeys(std::ostream &out);
+  // What asks for the menu, for a hint.
+  [[nodiscard]] static Prompt menuPrompt();
+  // kMenuKey or kMenuButton since the last call.
   [[nodiscard]] bool takeMenuRequest() {
     return std::exchange(menuRequested_, false);
   }

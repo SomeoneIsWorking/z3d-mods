@@ -1,27 +1,25 @@
-// The options screen of one game, drawn with the title picker's renderer: up and down pick an
+// The options screen of one game, drawn on the title picker's canvas: up and down pick an
 // option, left, right or A change it, B, X, F10 or Guide go back. Changes are saved as they are made.
 // With `folders`, a last row leaves to change the games and mods folders (folder_setup.hpp).
 #pragma once
 
+#include "menu_canvas.hpp"
+
 #include <cstddef>
 #include <string>
-
-struct SDL_Renderer;
-struct TTF_Font;
-struct TTF_TextEngine;
+#include <utility>
 
 namespace z3d::app {
 
 class GameOptions;
 class GameWindow;
-class PadInput;
 
 class OptionsMenu {
 public:
-  OptionsMenu(SDL_Renderer *renderer, TTF_TextEngine *engine, TTF_Font *font, GameWindow &window,
-              const PadInput &pad, GameOptions &options, std::string title, bool folders)
-      : renderer_(renderer), engine_(engine), font_(font), window_(window), pad_(pad),
-        options_(options), title_(std::move(title)), folders_(folders) {
+  OptionsMenu(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad, GameOptions &options,
+              std::string title, bool folders)
+      : canvas_(canvas), renderer_(canvas.renderer()), engine_(canvas.engine()), font_(canvas.font()),
+        window_(window), pad_(pad), options_(options), title_(std::move(title)), folders_(folders) {
   }
 
   enum class Left { Back, ForFolders };
@@ -37,6 +35,7 @@ private:
   void draw();
   void text(const std::string &line, float x, float y, bool selected, bool rightAligned);
 
+  const MenuCanvas &canvas_;
   SDL_Renderer *renderer_;
   TTF_TextEngine *engine_;
   TTF_Font *font_;

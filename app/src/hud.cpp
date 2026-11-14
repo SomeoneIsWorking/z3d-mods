@@ -2,6 +2,7 @@
 
 #include "emulator.hpp"
 #include "game_window.hpp"
+#include "prompt_art.hpp"
 
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_mouse.h>
@@ -20,8 +21,6 @@ namespace z3d::app {
 namespace {
 
 constexpr const char *kHudSet = "hud";
-constexpr const char *kPadSet = "gamepad-xbox360";
-constexpr const char *kKeySet = "keyboard";
 // A key's capital against its cap.
 constexpr float kKeyLabelShare = 0.45F;
 // A word on a cap against a single capital there.
@@ -59,53 +58,13 @@ std::string text(const lucent::json::Value &object, std::string_view key) {
   return value != nullptr && value->string() != nullptr ? *value->string() : std::string();
 }
 
-// The port-assets glyph of each pad button a prompt can name.
-constexpr std::array kGlyphs{std::pair{SDL_GAMEPAD_BUTTON_SOUTH, std::string_view("face_a")},
-                             std::pair{SDL_GAMEPAD_BUTTON_EAST, std::string_view("face_b")},
-                             std::pair{SDL_GAMEPAD_BUTTON_WEST, std::string_view("face_x")},
-                             std::pair{SDL_GAMEPAD_BUTTON_NORTH, std::string_view("face_y")},
-                             std::pair{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, std::string_view("lb")},
-                             std::pair{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, std::string_view("rb")},
-                             std::pair{SDL_GAMEPAD_BUTTON_RIGHT_STICK, std::string_view("rs")},
-                             std::pair{SDL_GAMEPAD_BUTTON_DPAD_UP, std::string_view("dpad_up")},
-                             std::pair{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, std::string_view("dpad_right")},
-                             std::pair{SDL_GAMEPAD_BUTTON_DPAD_DOWN, std::string_view("dpad_down")},
-                             std::pair{SDL_GAMEPAD_BUTTON_DPAD_LEFT, std::string_view("dpad_left")},
-                             std::pair{SDL_GAMEPAD_BUTTON_START, std::string_view("start")},
-                             std::pair{SDL_GAMEPAD_BUTTON_BACK, std::string_view("back")}};
-
-std::string_view glyphOf(SDL_GamepadButton button) {
-  for (const auto &[pad, glyph] : kGlyphs) {
-    if (pad == button) {
-      return glyph;
-    }
-  }
-  return {};
-}
-
-// The port-assets cap of each mouse button a prompt can name (keyboard set).
-constexpr std::array kMouseCaps{std::pair{uint8_t{SDL_BUTTON_LEFT}, std::string_view("mouse_left")},
-                                std::pair{uint8_t{SDL_BUTTON_RIGHT}, std::string_view("mouse_right")},
-                                std::pair{uint8_t{SDL_BUTTON_MIDDLE}, std::string_view("mouse_middle")}};
 // What stands for the chord on the keyboard.
 constexpr const char *kChordKey = "Shift";
-constexpr const char *kWideCap = "cap_wide";
-// A wide cap is this many times as wide as it is tall (port-assets keyboard/cap_wide).
-constexpr float kWideCapAspect = 1.5F;
 // A song's note (hud set), white for the song's colour to tint.
 constexpr const char *kNote = "note";
 
 std::optional<Verb> verbNamed(const std::string &name) {
-  constexpr std::array kNames{std::pair{std::string_view("action"), Verb::Action},
-                              std::pair{std::string_view("sword"), Verb::Sword},
-                              std::pair{std::string_view("shield"), Verb::Shield},
-                              std::pair{std::string_view("target"), Verb::Target},
-                              std::pair{std::string_view("first_person"), Verb::FirstPerson},
-                              std::pair{std::string_view("pause"), Verb::Pause},
-                              std::pair{std::string_view("map"), Verb::Map},
-                              std::pair{std::string_view("item_screen"), Verb::ItemScreen},
-                              std::pair{std::string_view("ocarina"), Verb::Ocarina}};
-  for (const auto &[text, verb] : kNames) {
+  for (const auto &[text, verb] : kVerbNames) {
     if (text == name) {
       return verb;
     }
@@ -306,9 +265,9 @@ void Hud::requireArt() {
   }
   if (buttons) {
     atlas_->requireSvg(kHudSet, kNote);
-    atlas_->requireSvg(kKeySet, "cap");
+    atlas_->requireSvg(kKeySet, kKeyCap);
     atlas_->requireSvg(kKeySet, kWideCap);
-    for (const auto &[pad, glyph] : kGlyphs) {
+    for (const auto &[pad, glyph] : kPadGlyphs) {
       atlas_->requireSvg(kPadSet, std::string(glyph));
     }
     for (const auto &[mouse, cap] : kMouseCaps) {
@@ -556,7 +515,7 @@ void Hud::prompt(const Prompt &by, float x, float y, float size) {
   if (!by.key) {
     return;
   }
-  quad(sized(kKeySet, "cap"), at);
+  quad(sized(kKeySet, kKeyCap), at);
   const float capital = std::round(size * kKeyLabelShare);
   const HudSprite label = atlas_->text(SDL_GetScancodeName(*by.key), static_cast<int>(capital), HudInk::Dark);
   quad(label, {at.x + std::round((size - label.w) / 2.0F), at.y + std::round((size + capital) / 2.0F) - label.base, label.w,

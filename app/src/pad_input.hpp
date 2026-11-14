@@ -11,9 +11,11 @@
 
 #include <array>
 #include <cstdint>
+#include <iosfwd>
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 union SDL_Event;
@@ -60,6 +62,17 @@ enum class PadMode : uint8_t { ByName, Play, Assign };
 // What a host input does in play, the same in every game.
 enum class Verb : uint8_t { Action, Sword, Shield, Target, FirstPerson, Pause, Map, ItemScreen, Ocarina };
 inline constexpr size_t kVerbCount = 9;
+// The verbs' names in a HUD's description and in listKeys.
+inline constexpr std::array kVerbNames{
+    std::pair{std::string_view("action"), Verb::Action},
+    std::pair{std::string_view("sword"), Verb::Sword},
+    std::pair{std::string_view("shield"), Verb::Shield},
+    std::pair{std::string_view("target"), Verb::Target},
+    std::pair{std::string_view("first_person"), Verb::FirstPerson},
+    std::pair{std::string_view("pause"), Verb::Pause},
+    std::pair{std::string_view("map"), Verb::Map},
+    std::pair{std::string_view("item_screen"), Verb::ItemScreen},
+    std::pair{std::string_view("ocarina"), Verb::Ocarina}};
 
 // What the picker and menus read: the host's buttons by their names on an Xbox pad, and the
 // keys that stand for them, before any game's layout.
@@ -150,6 +163,12 @@ public:
   // What presses a slot and a verb in play.
   [[nodiscard]] static Prompt slotPrompt(size_t slot);
   [[nodiscard]] static Prompt verbPrompt(Verb verb);
+  // What presses a button of the menus: a MenuPad member.
+  [[nodiscard]] static Prompt menuPrompt(bool MenuPad::*held);
+  // Every key and mouse binding, a "<table>\t<name>\t<key>" line each, for the tools
+  // (tools/z3dmods/app_keys.py): menu, name (a 3DS button outside play), play (a verb), mouse
+  // (a verb's mouse button), slot, stick and chord.
+  static void listKeys(std::ostream &out);
   // A game option (game_options.hpp).
   void invertCStick(bool x, bool y) {
     state_->cStickInverted = {x, y};
@@ -168,6 +187,8 @@ private:
   struct GameVerbs {
     std::string_view titleId;
     std::array<uint32_t, kVerbCount> buttons;
+    // What leaves a screen that assigns slots.
+    uint32_t leave;
   };
   static const std::array<GameVerbs, 2> kGames;
 

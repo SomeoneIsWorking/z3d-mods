@@ -71,7 +71,7 @@ std::string kept(const Ask &what, const AppConfig &config) {
 // False when the window closes before the question is answered.
 bool ask(const Ask &what, FolderSetup::Asking asking, GameWindow &window, const PadInput &pad,
          const AppConfig &config) {
-  const MenuCanvas canvas(window, config.font);
+  const MenuCanvas canvas(window, config.font, config.assets);
   setup_ui::Config screen;
   screen.title = kTitle;
   screen.message = what.message;

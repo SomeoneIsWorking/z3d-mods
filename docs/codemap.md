@@ -27,6 +27,7 @@
 - `tools/z3dmods/app.py`: the z3d app's build: the pinned Azahar fork's core into a per-revision prefix, then the app against it; its user folders (copies of the player's data, a link to `load/`) and its flags for a set.
 - `tools/z3dmods/harness.py`: the app headless as the run backend: frame-exact input, savestates, watchpoints.
 - `tools/z3dmods/input_test.py`: `z3dmods inputtest`: the windowed app in a headless Gamescope driven by XTest keys and mouse and a uinput pad; the picker scenario runs the installed shortcut.
+- `tools/z3dmods/app_keys.py`: the app's key and mouse bindings read from `z3d --keys`, as X keysyms for the input tests.
 - `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.
 - `tools/z3dmods/shortcut.py`: the per-machine desktop shortcut that runs `z3dmods play`.
 - `tools/z3dmods/setup.py`: `z3dmods setup --user <folder> <dump>`: the set of a dump's game installed into an app user folder; the app's picker runs it. How a refusal is printed for the app.
@@ -64,9 +65,10 @@
   - `screen_overlay`: the overlay layout: pieces of the touch screen drawn on the top screen from the game's table of layouts (`patch/<game>/overlay.toml`) by which touch screen is up, and the mouse mapped back through them.
   - `hud`: the play HUD for every game: element kinds (hearts, meter, counter, button, prompt, panel) read from guest memory and the item slots by the game's table (`patch/<game>/hud.toml`) and drawn as quads of the atlas.
   - `hud_atlas`: port-assets SVGs, lettering and item icons rasterized at the window's size into the image the core draws.
+  - `prompt_art`: the port-assets set and file of each pad glyph, key cap and mouse button a prompt draws, and their loader.
   - `tool_process`: one run of the tools as a child process: its printed lines and its refusal.
   - `set_install`: whether a game's set in the user folder is the one the tools make now (missing, or made from other inputs), and the tools' setup run on the player's dump when it is not.
-  - `menu_canvas`: the SDL renderer and outline font the picker and its screens draw with between games.
+  - `menu_canvas`: the SDL renderer and outline font the picker and its screens draw with between games, and their hint lines (pad glyphs or key caps by the last device).
   - `folder_setup`: the first run's questions (dump folder, mods folder) on the shared setup screen (`shared/setup-ui`), answered in the folder browser and taken by the tools.
   - `folder_browser`: the in-window folder chooser, by pad, keys or mouse.
   - `mod_swap`: the running game's patch put in, taken out or read again from disk, and its texture pack turned on and off.

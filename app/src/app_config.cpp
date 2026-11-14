@@ -8,9 +8,9 @@ namespace z3d::app {
 namespace {
 
 constexpr std::string_view kUsage =
-    "usage: z3d --user <dir> (--rom <3ds> [--layout default|single_screen|large_screen|"
+    "usage: z3d --keys | z3d --user <dir> (--rom <3ds> [--layout default|single_screen|large_screen|"
     "side_by_side|overlay] [--textures] [--options <json>] [--option <id>=<value>]... | "
-    "--library <json> --font <ttf>) [--title <text>] "
+    "--library <json> --font <ttf> --assets <dir>) [--assets <dir>] [--title <text>] "
     "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures] "
     "[--tools <program> [<argument>]...]";
 
@@ -56,6 +56,10 @@ AppConfig AppConfig::parse(int argc, char **argv) {
   GameSetup game;
   for (int i = 1; i < argc; ++i) {
     const std::string_view flag = argv[i];
+    if (flag == "--keys") {
+      config.listKeys = true;
+      return config;
+    }
     if (flag == "--hidden") {
       config.hidden = true;
       continue;
@@ -108,7 +112,7 @@ AppConfig AppConfig::parse(int argc, char **argv) {
   if (!game.rom.empty()) {
     config.game = game;
   }
-  const bool picker = !config.library.empty() && !config.font.empty() && !config.hidden;
+  const bool picker = !config.library.empty() && !config.font.empty() && !config.assets.empty() && !config.hidden;
   if (config.userDir.empty() || config.game.has_value() == picker) {
     throw std::invalid_argument(std::string(kUsage));
   }

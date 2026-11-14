@@ -97,7 +97,7 @@ int picker(const AppConfig &config, PadInput &pad) {
   while (true) {
     std::optional<TitlePicker::Picked> picked;
     {
-      const MenuCanvas canvas(window, config.font);
+      const MenuCanvas canvas(window, config.font, config.assets);
       TitlePicker picker(canvas, window, pad, library, options, install, !config.tools.empty());
       picked = picker.run();
     }
@@ -149,6 +149,11 @@ int picker(const AppConfig &config, PadInput &pad) {
 int main(int argc, char **argv) {
   try {
     const z3d::app::AppConfig config = z3d::app::AppConfig::parse(argc, argv);
+    if (config.listKeys) {
+      z3d::app::PadInput::listKeys(std::cout);
+      z3d::app::GameWindow::listKeys(std::cout);
+      return 0;
+    }
     z3d::app::applyCoreSettings(config);
     const z3d::app::CoreLog log;
     z3d::app::PadInput pad;

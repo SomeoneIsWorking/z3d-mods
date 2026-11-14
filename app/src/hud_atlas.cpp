@@ -1,5 +1,7 @@
 #include "hud_atlas.hpp"
 
+#include "prompt_art.hpp"
+
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -148,12 +150,7 @@ HudSprite HudAtlas::svg(const std::string &set, const std::string &name, int wid
   if (const auto found = sprites_.find(key); found != sprites_.end()) {
     return found->second;
   }
-  const std::filesystem::path file = assets_ / "sets" / set / (name + ".svg");
-  SDL_IOStream *stream = SDL_IOFromFile(file.c_str(), "rb");
-  SDL_Surface *surface = stream != nullptr ? IMG_LoadSizedSVG_IO(stream, width, height) : nullptr;
-  if (stream != nullptr) {
-    SDL_CloseIO(stream);
-  }
+  SDL_Surface *surface = loadSetArt(assets_, set, name, width, height);
   if (surface == nullptr || tint == kNoTint) {
     return place(key, surface);
   }
@@ -246,14 +243,10 @@ HudSprite HudAtlas::image(const std::filesystem::path &file, int width, int heig
 
 void HudAtlas::requireSvg(const std::string &set, const std::string &name) const {
   constexpr int kProbe = 16;
-  const std::filesystem::path file = assets_ / "sets" / set / (name + ".svg");
-  SDL_IOStream *stream = SDL_IOFromFile(file.c_str(), "rb");
-  SDL_Surface *surface = stream != nullptr ? IMG_LoadSizedSVG_IO(stream, kProbe, kProbe) : nullptr;
-  if (stream != nullptr) {
-    SDL_CloseIO(stream);
-  }
+  SDL_Surface *surface = loadSetArt(assets_, set, name, kProbe, kProbe);
   if (surface == nullptr) {
-    throw std::runtime_error("HUD art is missing or unreadable: " + file.string() + " (" + SDL_GetError() + ")");
+    throw std::runtime_error("HUD art is missing or unreadable: " + setArtFile(assets_, set, name).string() + " (" +
+                             SDL_GetError() + ")");
   }
   SDL_DestroySurface(surface);
 }

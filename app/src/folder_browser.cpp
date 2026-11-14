@@ -8,6 +8,7 @@
 #include <lucent/log.h>
 
 #include <algorithm>
+#include <array>
 #include <string_view>
 #include <system_error>
 #include <vector>
@@ -20,7 +21,10 @@ constexpr const char *kParent = "..";
 // Stands for what is left out of a path or a name too long for its line.
 constexpr std::string_view kElided = "...";
 constexpr const char *kUnreadable = "This folder cannot be read";
-constexpr const char *kHint = "A  Open    B  Up    X  Use this folder    F10  Cancel";
+constexpr const char *kOpen = "Open";
+constexpr const char *kUp = "Up";
+constexpr const char *kUse = "Use this folder";
+constexpr const char *kCancel = "Cancel";
 // Text heights as shares of the window's height, capped by its width.
 constexpr float kHeadingShare = 1.0F / 16.0F;
 constexpr float kRowShare = 1.0F / 26.0F;
@@ -283,7 +287,10 @@ void FolderBrowser::draw(const Layout &layout) {
               : shortened(files_[file], wide),
          layout.left, y, kMenuDim);
   }
-  line(kHint, layout.left, layout.height * 0.9F, kMenuDim);
+  const std::array hints{Hint{{PadInput::menuPrompt(&MenuPad::a)}, kOpen}, Hint{{PadInput::menuPrompt(&MenuPad::b)}, kUp},
+                         Hint{{PadInput::menuPrompt(&MenuPad::x)}, kUse},
+                         Hint{{GameWindow::menuPrompt()}, kCancel}};
+  canvas_.hints(hints, pad_.lastDevice(), {layout.left, layout.height * 0.9F}, layout.rowSize, wide, false);
   SDL_RenderPresent(canvas_.renderer());
 }
 

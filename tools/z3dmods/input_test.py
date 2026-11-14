@@ -20,19 +20,28 @@ from pathlib import Path
 from evdev import AbsInfo, UInput, ecodes
 
 from z3dmods import app, config, ctr, desktop_container, games, harness, package, play, shortcut, source_check, steps, symbols
+from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
 WIDTH, HEIGHT = 1280, 720
-# The player's Azahar keys (pad_input.cpp kKeys), as X keysyms.
-KEYS = {
-    "a": "a", "b": "s", "x": "z", "y": "x", "start": "m", "select": "n", "l": "q", "r": "w",
-    "zl": "e", "dpad_left": "f", "confirm": "Return",
-    "menu": "Escape", "reload_patch": "F5", "toggle_patch": "F6", "toggle_textures": "F7", "stick_up": "Up", "stick_down": "Down", "stick_left": "Left", "stick_right": "Right",
-}
+# The scenarios run in a smaller window than WIDTH by HEIGHT.
+SMALL = (854, 480)
+# The key the shared setup screen (setup-ui) takes a folder question's answer on: its own, not
+# one of the app's tables.
+SETUP_UI_CONFIRM = "Return"
+# The top screen, which the single-screen layouts fit into the window.
+TOP_SCREEN = (400, 240)
+# Every button of an Xbox 360 pad in the kernel's codes, so SDL numbers them as its mapping does.
 PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
                "lb": ecodes.BTN_TL, "rb": ecodes.BTN_TR,
-               "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE}
+               "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE,
+               "ls": ecodes.BTN_THUMBL, "rs": ecodes.BTN_THUMBR}
+# The D-pad is a hat: its axis and the way each direction pushes it.
+PAD_DPAD = {"up": (ecodes.ABS_HAT0Y, -1), "down": (ecodes.ABS_HAT0Y, 1),
+            "left": (ecodes.ABS_HAT0X, -1), "right": (ecodes.ABS_HAT0X, 1)}
+HAT = AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)
+TRIGGER = AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)
 # File select's second slot on MM3D's touch screen, which the overlay layout puts beside the top
 # screen there: the right two fifths of the window, half its height, centred.
 MM3D_SLOT_2 = (0.6 + 0.4 * 0.51, 0.25 + 0.5 * 0.54)
@@ -45,7 +54,9 @@ class Gamepad:
     def __init__(self) -> None:
         self._device = UInput(
             {ecodes.EV_KEY: list(PAD_BUTTONS.values()),
-             ecodes.EV_ABS: [(ecodes.ABS_X, AXIS), (ecodes.ABS_Y, AXIS), (ecodes.ABS_RX, AXIS), (ecodes.ABS_RY, AXIS)]},
+             ecodes.EV_ABS: [(ecodes.ABS_X, AXIS), (ecodes.ABS_Y, AXIS), (ecodes.ABS_Z, TRIGGER),
+                             (ecodes.ABS_RX, AXIS), (ecodes.ABS_RY, AXIS), (ecodes.ABS_RZ, TRIGGER),
+                             (ecodes.ABS_HAT0X, HAT), (ecodes.ABS_HAT0Y, HAT)]},
             name="z3d input test pad", vendor=0x045E, product=0x028E, version=0x0110, bustype=ecodes.BUS_USB)
 
     def close(self) -> None:
@@ -60,6 +71,14 @@ class Gamepad:
         time.sleep(seconds)
         self.hold(name, False)
 
+    def dpad(self, direction: str, seconds: float = 0.15) -> None:
+        axis, push = PAD_DPAD[direction]
+        for value in (push, 0):
+            self._device.write(ecodes.EV_ABS, axis, value)
+            self._device.syn()
+            if value:
+                time.sleep(seconds)
+
     def stick(self, x: int, y: int, seconds: float) -> None:
         """Left stick, evdev's range (y grows downward), held for `seconds`, then centred."""
         for value in ((x, y), (0, 0)):
@@ -71,10 +90,13 @@ class Gamepad:
 
 
 class Session:
-    def __init__(self, out: Path, args: list[str], env: dict[str, str] | None = None, program: str = "z3d") -> None:
+    def __init__(self, out: Path, args: list[str], keys: AppKeys, env: dict[str, str] | None = None,
+                 program: str = "z3d", size: tuple[int, int] = (WIDTH, HEIGHT)) -> None:
         """`program` is the one Gamescope starts whose environment names the display: the app,
-        or what stands between Gamescope and it."""
+        or what stands between Gamescope and it. `keys` are the app's bindings."""
         self.out = out
+        self._keys = keys
+        self._size = size
         self._args = args
         self._program = program
         self._extra_env = env or {}
@@ -90,7 +112,7 @@ class Session:
         self.out.mkdir(parents=True, exist_ok=True)
         log = (self.out / "gamescope.log").open("wb")
         self._gamescope = subprocess.Popen(
-            ["gamescope", "--backend", "headless", "-W", str(WIDTH), "-H", str(HEIGHT), "--", *args],
+            ["gamescope", "--backend", "headless", "-W", str(self._size[0]), "-H", str(self._size[1]), "--", *args],
             env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         self._env = self._wait_for_app()
         return self
@@ -165,25 +187,51 @@ class Session:
             time.sleep(0.2)
         return path
 
-    def key(self, button: str, seconds: float = 0.15) -> None:
-        keysym = KEYS[button]
-        subprocess.run(["xdotool", "keydown", keysym], env=self._env, check=True)
+    def press(self, keysyms: list[str], seconds: float = 0.15) -> None:
+        """X keys held together for `seconds`, pressed in order."""
+        for keysym in keysyms:
+            subprocess.run(["xdotool", "keydown", keysym], env=self._env, check=True)
         time.sleep(seconds)
-        subprocess.run(["xdotool", "keyup", keysym], env=self._env, check=True)
+        for keysym in reversed(keysyms):
+            subprocess.run(["xdotool", "keyup", keysym], env=self._env, check=True)
+
+    def key(self, table: str, name: str, seconds: float = 0.15) -> None:
+        """The key the app binds to `name` of `table` (app_keys.py): menu, name, play, slot, stick
+        or window."""
+        self.press(self._keys.keysyms(table, name), seconds)
+
+    def mouse_button(self, verb: str, seconds: float = 0.15) -> None:
+        """The mouse button the app binds to the play verb `verb`."""
+        button = str(self._keys.mouse_button(verb))
+        subprocess.run(["xdotool", "mousedown", button], env=self._env, check=True)
+        time.sleep(seconds)
+        subprocess.run(["xdotool", "mouseup", button], env=self._env, check=True)
 
     def mouse(self, dx: int, dy: int) -> None:
         """The mouse moved by (dx, dy) counts, x right and y down."""
         subprocess.run(["xdotool", "mousemove_relative", "--", str(dx), str(dy)], env=self._env, check=True)
 
-    def click(self, fx: float, fy: float) -> None:
-        """A left click at fraction (fx, fy) of the app window."""
+    def _window(self) -> tuple[str, int, int]:
         window = subprocess.run(["xdotool", "getactivewindow"], env=self._env, check=True,
                                 capture_output=True, text=True).stdout.strip()
         shell = subprocess.run(["xdotool", "getwindowgeometry", "--shell", window], env=self._env,
                                check=True, capture_output=True, text=True).stdout
         geometry = dict(line.split("=", 1) for line in shell.split())
-        x = round(int(geometry["WIDTH"]) * fx)
-        y = round(int(geometry["HEIGHT"]) * fy)
+        return window, int(geometry["WIDTH"]), int(geometry["HEIGHT"])
+
+    def click_top(self, x: float, y: float) -> None:
+        """A left click at a point of the top screen's 400x240, which a single-screen layout
+        fits into the window's middle."""
+        _, width, height = self._window()
+        scale = min(width / TOP_SCREEN[0], height / TOP_SCREEN[1])
+        self.click(((width - TOP_SCREEN[0] * scale) / 2 + x * scale) / width,
+                   ((height - TOP_SCREEN[1] * scale) / 2 + y * scale) / height)
+
+    def click(self, fx: float, fy: float) -> None:
+        """A left click at fraction (fx, fy) of the app window."""
+        window, width, height = self._window()
+        x = round(width * fx)
+        y = round(height * fy)
         # SDL reads root coordinates under Gamescope's X server, so the window sits at the origin.
         subprocess.run(["xdotool", "windowmove", window, "0", "0"], env=self._env, check=True)
         subprocess.run(["xdotool", "mousemove", str(x), str(y)], env=self._env, check=True)
@@ -197,15 +245,15 @@ def _oot3d(session: Session, pad: Gamepad) -> None:
     """Single screen: keys reach the file select and the player's File 1; keys, then the pad, move Link."""
     session.wait(20)
     session.shot("title")
-    session.key("start")
+    session.key("name", "start")
     session.wait(3)
     session.shot("files")
-    session.key("a")
+    session.key("name", "a")
     session.wait(2)
-    session.key("a")
+    session.key("name", "a")
     session.wait(10)
     session.shot("house")
-    session.key("stick_left", 1.2)
+    session.key("stick", "left", 1.2)
     session.wait(1)
     session.shot("keys-moved-link")
     pad.stick(32767, 0, 1.2)
@@ -214,12 +262,15 @@ def _oot3d(session: Session, pad: Gamepad) -> None:
 
 
 OOT3D_BOOT = ["wait:20", "start", "wait:3", "a", "wait:2", "a", "wait:8"]
-# chord_items.cpp's Store in the save's unused bytes: the marker, then the child's away page,
-# a slot for each of the game's Y, X, I and II and the grid node each waits in.
-OOT3D_STORE = "c4ff{x:02x}ff{ii:02x}00000000"
-OOT3D_AMMO = 30
+OOT3D_AMMO = 20
+# Inventory.upgrades with a Bomb Bag and a Bullet Bag and room for the sticks and nuts: using ammo
+# clamps its count to the bag (decomp/oot3d/docs/item_buttons.md).
+OOT3D_BAGS = 0x8 | 0x4000 | 0x40000 | 0x100000
 # Inside the Deku Tree: a file saved in a dungeon loads there, and the Slingshot is usable.
 OOT3D_DEKU_TREE = 0x0
+# What the slots file holds beside the ocarina, and the songs a child learns.
+OOT3D_ITEMS = ("STICK", "NUT", "BOMB", "SLINGSHOT")
+OOT3D_SONGS = ("LULLABY", "EPONA", "SARIA", "SUN", "TIME", "STORMS")
 
 
 def _harness_file(cfg: Config, name: str, script: list[str], out: Path) -> Path:
@@ -238,21 +289,23 @@ def _copy_file(made: Path, user: Path) -> None:
     shutil.copytree(made, target, dirs_exist_ok=True)
 
 
-def _oot3d_chord_file(cfg: Config, user: Path, out: Path) -> None:
-    """File 1 with a Slingshot on X and a Deku Stick on II of the child's second page, written
-    by the game's own save: the items go into the inventory, the game puts them in the item
-    screen's grid, the page's bytes name them, and autosave writes the file on a scene change."""
+def _oot3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
+    """File 1 inside the Deku Tree with sticks, nuts, bombs, a Slingshot, the ocarina and a
+    child's six songs, written by the game's own save: the items and songs go into the
+    inventory and autosave writes the file on a scene change."""
     d = symbols.load(cfg.repo, "oot3d")
-    save = symbols.global_(d, "gSaveContext")
-    inventory = save + symbols.offset(d, "SaveContext.inventory")
-    items = {name: (d.define(f"SLOT_{name}"), d.define(f"ITEM_{name}")) for name in ("SLINGSHOT", "STICK")}
+    inventory = symbols.global_(d, "gSaveContext") + symbols.offset(d, "SaveContext.inventory")
+    items = inventory + symbols.offset(d, "Inventory.items")
     script = list(OOT3D_BOOT)
-    for slot, item in items.values():
-        script += [f"poke:{inventory + symbols.offset(d, 'Inventory.items') + slot:#x},{item:02x}",
+    for name in OOT3D_ITEMS:
+        slot = d.define(f"SLOT_{name}")
+        script += [f"poke:{items + slot:#x},{d.define(f'ITEM_{name}'):02x}",
                    f"poke:{inventory + symbols.offset(d, 'Inventory.ammo') + slot:#x},{OOT3D_AMMO:02x}"]
-    store = OOT3D_STORE.format(x=items["SLINGSHOT"][0], ii=items["STICK"][0])
-    script += ["wait:1", f"poke:{save + symbols.offset(d, 'SaveContext.unused_6C'):#x},{store}",
-               "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
+    songs = sum(1 << d.define(f"QUEST_SONG_{name}") for name in OOT3D_SONGS)
+    script += [f"poke:{items + d.define('SLOT_OCARINA'):#x},{d.define('ITEM_OCARINA_FAIRY'):02x}",
+               f"poke:{inventory + symbols.offset(d, 'Inventory.questItems'):#x},{songs.to_bytes(4, 'little').hex()}",
+               f"poke:{inventory + symbols.offset(d, 'Inventory.upgrades'):#x},{OOT3D_BAGS.to_bytes(4, 'little').hex()}",
+               "wait:1", "option:autosave,1", f"warp:{OOT3D_DEKU_TREE:#x}", "wait:12"]
     _copy_file(_harness_file(cfg, "oot3d", script, out), user)
 
 
@@ -262,113 +315,225 @@ MM3D_BOOT = ["wait:20", "start", "wait:4", "a", "wait:2", "a", "wait:2", "a", "w
              "wait:10", "waitcs:60,a", "wait:3"]
 # Up to the statue, "Check", then "Yes" to its save prompt.
 MM3D_SAVE = ["stick:0,-32767,0.5", "wait:1", "a", "wait:3", "a", "wait:4"]
-MM3D_AMMO = 30
-# The equipment row whose slot bytes hold the page that is away (patch/mm3d/chord_items.cpp).
-MM3D_AWAY_ROW = 1
+MM3D_AMMO = 20
+# SaveData.upgrades of a new file with a Quiver and a Bomb Bag: using ammo clamps its count to the bag.
+MM3D_BAGS = 0x00120000 | 0x1 | 0x8
+# What the slots file holds beside the ocarina and an empty bottle.
+MM3D_ITEMS = ("BOW", "BOMB")
 
 
-def _mm3d_chord_file(cfg: Config, user: Path, out: Path) -> None:
-    """File 1 at South Clock Town's owl statue with bombs on X and a bow on II of the second
-    page, written by the game's own save there."""
+def _mm3d_slots_file(cfg: Config, user: Path, out: Path) -> None:
+    """File 1 at South Clock Town's owl statue with the ocarina, a bow, bombs, an empty bottle
+    and every song, written by the game's own save there."""
     d = symbols.load(cfg.repo, "mm3d")
     save = symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.save")
-    away = (save + symbols.offset(d, "SaveData.equipment") + symbols.offset(d, "EquipmentData.buttonSlots")
-            + MM3D_AWAY_ROW * (d.define("EQUIP_BUTTON_II") + 1))
+    items = save + symbols.offset(d, "SaveData.items")
     script = list(MM3D_BOOT)
-    for name, button in (("BOMB", "X"), ("BOW", "II")):
+    for name in MM3D_ITEMS:
         slot, item = d.define(f"SLOT_{name}"), d.define(f"ITEM_{name}")
-        script += [f"poke:{save + symbols.offset(d, 'SaveData.items') + slot:#x},{item:02x}",
-                   f"poke:{save + symbols.offset(d, 'SaveData.ammo') + item:#x},{MM3D_AMMO:02x}",
-                   f"poke:{away + d.define(f'EQUIP_BUTTON_{button}'):#x},{slot:02x}"]
-    _copy_file(_harness_file(cfg, "mm3d", script + ["wait:1"] + MM3D_SAVE, out), user)
+        script += [f"poke:{items + slot:#x},{item:02x}",
+                   f"poke:{save + symbols.offset(d, 'SaveData.ammo') + item:#x},{MM3D_AMMO:02x}"]
+    first = d.define("QUEST_SONG_FIRST")
+    songs = sum(1 << bit for bit in range(first, first + d.define("QUEST_SONG_COUNT"))) | 1 << d.define("QUEST_SONG_LULLABY_INTRO")
+    script += [f"poke:{items + d.define('SLOT_OCARINA'):#x},{d.define('ITEM_OCARINA'):02x}",
+               f"poke:{items + d.define('BOTTLE_SLOTS_FIRST'):#x},{d.define('ITEM_BOTTLE'):02x}",
+               f"poke:{save + symbols.offset(d, 'SaveData.questItems'):#x},{songs.to_bytes(4, 'little').hex()}",
+               f"poke:{save + symbols.offset(d, 'SaveData.upgrades'):#x},{MM3D_BAGS.to_bytes(4, 'little').hex()}",
+               "wait:1"]
+    _copy_file(_harness_file(cfg, "mm3d", script + MM3D_SAVE, out), user)
 
 
-def _chord(session: Session, pad: Gamepad) -> None:
-    """The second item page from a real pad, in a file with a Slingshot on its X and a Deku
-    Stick on its II: with LB held the HUD shows the page, the pad's X, held, aims the Slingshot
-    and the pad's B takes the stick in hand; released, the first page is back."""
+def _oot3d_file_1(session: Session) -> None:
+    """From the boot to File 1 in play, on the keyboard."""
     session.wait(20)
-    session.key("start")
+    session.key("name", "start")
     session.wait(3)
-    session.key("a")
+    session.key("name", "a")
     session.wait(2)
-    session.key("a")
+    session.key("name", "a")
     session.wait(10)
-    session.shot("page-1")
+
+
+def _mm3d_file_1(session: Session) -> None:
+    """From the boot to File 1 in play, on the keyboard."""
+    session.wait(30)
+    session.key("name", "start")
+    session.wait(12)
+    session.key("name", "a")
+    session.wait(5)
+    session.key("name", "a")
+    session.wait(4)
+    session.key("name", "a")
+    session.wait(15)
+
+
+def _chorded(pad: Gamepad, button: str, seconds: float = 0.15) -> None:
+    """A pad button pressed with the chord held."""
     pad.hold("lb", True)
-    session.wait(1)
-    session.shot("chord-page")
-    pad.hold("x", True)
-    session.wait(2)
-    session.shot("chord-x-aims")
-    pad.hold("x", False)
+    time.sleep(0.3)
+    pad.button(button, seconds)
+    time.sleep(0.1)
     pad.hold("lb", False)
-    session.wait(1)
-    pad.button("b")
+
+
+def _slots(session: Session, pad: Gamepad) -> None:
+    """OoT3D's item slots from a real pad and keyboard, in a file with items, the ocarina and
+    songs and no slot set but the ocarina's: Menu opens the item screen, where Y, RB, the
+    D-pad's Right and LB with A each take the item under the cursor; in play each uses its
+    item, and 1 on the keyboard uses Y's with the HUD on key caps. The D-pad's Down brings
+    the ocarina out, RB its song list, where the D-pad's Up takes Epona's Song, and Up in play
+    plays it."""
+    _oot3d_file_1(session)
+    session.shot("play")
+    pad.button("start")
     session.wait(2)
-    session.shot("released")
+    session.shot("item-screen")
+    for take in (lambda: pad.button("y"), lambda: pad.button("rb"), lambda: pad.dpad("right"),
+                 lambda: _chorded(pad, "a")):
+        take()
+        session.wait(0.5)
+        pad.stick(32767, 0, 0.2)
+        session.wait(0.5)
+    session.shot("assigned")
+    # A key that assigns nothing: the panel turns to key caps.
+    session.key("stick", "up")
+    session.wait(0.5)
+    session.shot("assigned-keys")
+    pad.button("start")
+    session.wait(2)
+    session.shot("play-slots")
+    for name, use in (("y", lambda: pad.button("y")), ("rb", lambda: pad.button("rb")),
+                      ("d-right", lambda: pad.dpad("right")), ("chord-a", lambda: _chorded(pad, "a"))):
+        use()
+        session.wait(1.5)
+        session.shot(f"used-{name}")
+        # The sword's button puts the item away.
+        pad.button("x")
+        session.wait(2.5)
     pad.hold("lb", True)
-    session.wait(1)
-    pad.button("b")
-    session.wait(2)
-    session.shot("chord-b-stick")
+    session.wait(0.5)
+    session.shot("chord-held")
     pad.hold("lb", False)
-    session.wait(1)
+    session.key("slot", "0")
+    session.wait(1.5)
+    session.shot("used-key-1")
+    session.mouse_button("sword")
+    session.wait(2.5)
+    pad.dpad("down")
+    session.wait(3)
+    session.shot("ocarina")
+    pad.button("rb")
+    session.wait(1.5)
+    pad.stick(32767, 0, 0.2)
+    session.wait(0.5)
+    pad.dpad("up")
+    session.wait(0.5)
+    session.shot("song-list")
+    pad.button("a")
+    session.wait(2)
+    pad.button("b")
+    session.wait(2.5)
+    session.shot("play-song-slot")
+    pad.dpad("up")
+    for shot in range(4):
+        session.wait(2.5)
+        session.shot(f"song-{shot}")
 
 
 def _mm3d(session: Session, pad: Gamepad) -> None:
     """The overlay layout: keys reach file select, a tap on slot 2 makes a file, Start skips the opening."""
     session.wait(30)
-    session.key("start")
+    session.key("name", "start")
     session.wait(12)
     session.shot("title")
-    session.key("a")
+    session.key("name", "a")
     session.wait(5)
     session.shot("files")
     session.click(*MM3D_SLOT_2)
     session.wait(4)
     session.shot("tapped-slot-2")
-    session.key("a")
+    session.key("name", "a")
     session.wait(6)
     session.shot("narration")
-    session.key("start")
+    session.key("name", "start")
     session.wait(5)
     session.shot("skipped-to-woods")
 
 
-def _chord_mm3d(session: Session, pad: Gamepad) -> None:
-    """The second item page from a real pad in MM3D, in a file with bombs on its X and a bow on
-    its II: with LB held the HUD shows the page, the pad's B, held, aims the bow and the pad's X
-    takes out a bomb; released, the first page is back."""
-    session.wait(30)
-    session.key("start")
-    session.wait(12)
-    session.key("a")
-    session.wait(5)
-    session.key("a")
-    session.wait(4)
-    session.key("a")
-    session.wait(15)
-    session.shot("page-1")
-    pad.hold("lb", True)
-    session.wait(1)
-    session.shot("chord-page")
-    pad.hold("b", True)
+# The ocarina screen's song list button on the touch screen, and where the overlay layout draws
+# that screen on the top one (patch/mm3d/overlay.toml, layouts.ocarina).
+MM3D_SONG_LIST = (290, 215)
+MM3D_OCARINA_PIECE = (4, 4, 128, 96)
+TOUCH_SCREEN = (320, 240)
+
+
+def _slots_mm3d(session: Session, pad: Gamepad) -> None:
+    """MM3D's item slots from a real pad and keyboard, in a file with the ocarina, a bow, bombs,
+    a bottle and songs and no slot set but the ocarina's: Menu opens the Items screen, where
+    Y takes the bow, RB and the D-pad's Right the bombs and LB with A the bottle; in play each
+    uses its item, and 1 on the keyboard the bow with the HUD on key caps. The D-pad's Down
+    brings the ocarina out, a click its song list, where the D-pad's Up takes the Song of Time,
+    and Up in play plays it."""
+    _mm3d_file_1(session)
+    session.shot("play")
+    pad.button("start")
     session.wait(2)
-    session.shot("chord-b-aims")
-    pad.hold("b", False)
+    session.shot("items-screen")
+    pad.button("y")
+    session.wait(0.5)
+    for _ in range(4):
+        pad.stick(32767, 0, 0.2)
+        session.wait(0.5)
+    pad.button("rb")
+    session.wait(0.5)
+    pad.dpad("right")
+    session.wait(0.5)
+    for x, y in ((0, 32767), (0, 32767), (-32767, 0)):
+        pad.stick(x, y, 0.2)
+        session.wait(0.5)
+    _chorded(pad, "a")
+    session.wait(0.5)
+    session.shot("assigned")
+    session.key("stick", "up")
+    session.wait(0.5)
+    session.shot("assigned-keys")
+    pad.button("start")
+    session.wait(2)
+    session.shot("play-slots")
+    for name, use in (("y", lambda: pad.button("y", 1.0)), ("rb", lambda: pad.button("rb")),
+                      ("d-right", lambda: pad.dpad("right")), ("chord-a", lambda: _chorded(pad, "a"))):
+        use()
+        session.wait(1.5)
+        session.shot(f"used-{name}")
+        pad.button("x")
+        session.wait(2.5)
+    pad.hold("lb", True)
+    session.wait(0.5)
+    session.shot("chord-held")
     pad.hold("lb", False)
-    session.wait(1)
-    pad.button("b")
-    session.wait(2)
-    session.shot("released")
-    pad.hold("lb", True)
-    session.wait(1)
-    pad.button("x")
+    session.key("slot", "0", 1.0)
     session.wait(1.5)
-    session.shot("chord-x-bomb")
-    pad.hold("lb", False)
-    session.wait(1)
+    session.shot("used-key-1")
+    session.mouse_button("sword")
+    session.wait(2.5)
+    pad.dpad("down")
+    session.wait(3)
+    session.shot("ocarina")
+    piece = MM3D_OCARINA_PIECE
+    session.click_top(piece[0] + MM3D_SONG_LIST[0] * piece[2] / TOUCH_SCREEN[0],
+                      piece[1] + MM3D_SONG_LIST[1] * piece[3] / TOUCH_SCREEN[1])
+    session.wait(1.5)
+    pad.dpad("up")
+    session.wait(0.5)
+    session.shot("song-list")
+    # The sword's button is the game's B there: it puts the ocarina away.
+    pad.button("x")
+    session.wait(2.5)
+    session.shot("play-song-slot")
+    pad.dpad("up")
+    for shot in range(8):
+        session.wait(5)
+        session.shot(f"song-{shot}")
 
 
 SETUP_GAME = "mm3d"
@@ -405,7 +570,7 @@ def _setup(session: Session, pad: Gamepad) -> None:
     session.expect("the set is in place", 1200)
     session.expect("booting")
     session.wait(40)
-    session.key("start")
+    session.key("name", "start")
     session.wait(12)
     session.shot("booted")
 
@@ -439,18 +604,18 @@ def _aim(session: Session, pad: Gamepad) -> None:
     """OoT3D: a file saved inside the Deku Tree (Link's house has no first person), D-pad Left
     for first person, the mouse turns the view, and B gives the mouse back."""
     session.wait(20)
-    session.key("start")
+    session.key("name", "start")
     session.wait(3)
-    session.key("a")
+    session.key("name", "a")
     session.wait(2)
-    session.key("a")
+    session.key("name", "a")
     session.wait(10)
     session.shot("deku-tree")
-    session.key("dpad_left")
+    session.key("play", "first_person")
     session.wait(1)
     session.shot("d-pad-left")
     _aim_turns(session)
-    session.key("b")
+    session.mouse_button("sword")
     _aim_released(session)
 
 
@@ -458,20 +623,20 @@ def _aim_mm3d(session: Session, pad: Gamepad) -> None:
     """MM3D: the file at South Clock Town's owl statue, ZL for first person, the mouse turns the
     view, and ZL again gives the mouse back."""
     session.wait(30)
-    session.key("start")
+    session.key("name", "start")
     session.wait(12)
-    session.key("a")
+    session.key("name", "a")
     session.wait(5)
-    session.key("a")
+    session.key("name", "a")
     session.wait(4)
-    session.key("a")
+    session.key("name", "a")
     session.wait(15)
     session.shot("statue")
-    session.key("zl")
+    session.key("play", "first_person")
     session.wait(1)
     session.shot("zl")
     _aim_turns(session)
-    session.key("zl")
+    session.key("play", "first_person")
     _aim_released(session)
 
 
@@ -559,7 +724,7 @@ def _setup_archive(session: Session, pad: Gamepad) -> None:
     session.expect("the set is in place", 1200)
     session.expect("booting")
     session.wait(30)
-    session.key("start")
+    session.key("name", "start")
     session.wait(10)
     session.shot("booted")
 
@@ -622,7 +787,7 @@ def _first_run(session: Session, pad: Gamepad) -> None:
     session.expect("folders: asking --mods")
     session.wait(2)
     session.shot("ask-mods")
-    session.key("confirm")
+    session.press([SETUP_UI_CONFIRM])
     session.expect("folders: in")
     _browse_to(session, pad, "Mods")
     session.wait(1)
@@ -670,7 +835,7 @@ def _older_desktop(session: Session, pad: Gamepad) -> None:
     session.expect("picker: on Ocarina", 180)
     session.wait(2)
     session.shot("picker")
-    session.key("stick_right")
+    session.key("menu", "right")
     session.expect("picker: on Majora")
     session.wait(1)
     session.shot("picker-second")
@@ -709,7 +874,7 @@ def _hotswap(session: Session, pad: Gamepad) -> None:
     session.wait(25)
     session.shot("woods")
     for key in ("toggle_textures", "toggle_textures", "toggle_patch", "toggle_patch", "reload_patch"):
-        session.key(key)
+        session.key("window", key)
         session.wait(3)
         session.shot(key)
 
@@ -719,10 +884,10 @@ def _picker(session: Session, pad: Gamepad) -> None:
     returns; a click boots OoT3D again."""
     session.wait(8)
     session.shot("picker")
-    session.key("a")
+    session.key("menu", "a")
     session.wait(20)
     session.shot("oot3d")
-    session.key("menu")
+    session.key("window", "menu")
     session.wait(4)
     session.shot("picker-after-oot3d")
     pad.stick(32767, 0, 0.3)
@@ -744,32 +909,32 @@ def _options(session: Session, pad: Gamepad) -> None:
     leaves the opening narration running."""
     game = session.expect("picker: on ")
     while "Majora" not in game:
-        session.key("stick_right")
+        session.key("menu", "right")
         game = session.expect("picker: on ")
-    session.key("x")
+    session.key("menu", "x")
     row = session.expect("options: row ")
     session.shot("options")
     while not row.endswith("options: row cutscene_skip"):
-        session.key("stick_down")
+        session.key("menu", "down")
         row = session.expect("options: row ")
-    session.key("a")
+    session.key("menu", "a")
     session.expect("options: cutscene_skip = Off")
     session.shot("skip-off")
-    session.key("b")
+    session.key("menu", "b")
     session.expect("picker: on ")
     session.shot("picker")
-    session.key("a")
+    session.key("menu", "a")
     session.wait(30)
-    session.key("start")
+    session.key("name", "start")
     session.wait(12)
-    session.key("a")
+    session.key("name", "a")
     session.wait(5)
     session.click(*MM3D_SLOT_2)
     session.wait(4)
-    session.key("a")
+    session.key("name", "a")
     session.wait(6)
     session.shot("narration")
-    session.key("start")
+    session.key("name", "start")
     session.wait(5)
     session.shot("narration-after-start")
 
@@ -779,38 +944,41 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
     then boots with the option written. Each step waits on the menu's own log line."""
     game = session.expect("picker: on ")
     while "Ocarina" not in game:
-        session.key("stick_right")
+        session.key("menu", "right")
         game = session.expect("picker: on ")
-    session.key("x")
+    session.key("menu", "x")
     row = session.expect("options: row ")
     session.shot("options")
     while not row.endswith("options: row quick_text"):
-        session.key("stick_down")
+        session.key("menu", "down")
         row = session.expect("options: row ")
-    session.key("a")
+    session.key("menu", "a")
     session.expect("options: quick_text = Off")
     session.shot("quick-text-off")
-    session.key("b")
+    session.key("menu", "b")
     session.expect("picker: on ")
-    session.key("a")
+    session.key("menu", "a")
     session.wait(20)
-    session.key("start")
+    session.key("name", "start")
     session.wait(3)
-    session.key("a")
+    session.key("name", "a")
     session.wait(2)
-    session.key("a")
+    session.key("name", "a")
     session.wait(10)
     session.shot("house")
 
 
 # Direct launches of one game, and the installed shortcut's picker.
-DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "chord": _chord, "chord-mm3d": _chord_mm3d,
-          "aim": _aim, "aim-mm3d": _aim_mm3d}
+DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
+          "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d}
 # The game a direct scenario launches, when it is not the scenario's name.
-DIRECT_GAME = {"hotswap": "mm3d", "chord": "oot3d", "chord-mm3d": "mm3d", "aim": "oot3d", "aim-mm3d": "mm3d"}
+DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
+               "aim": "oot3d", "aim-mm3d": "mm3d"}
+# The window of a scenario that is not WIDTH by HEIGHT.
+SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
-PREPARE = {"chord": _oot3d_chord_file, "chord-mm3d": _mm3d_chord_file, "aim": _oot3d_chord_file,
-           "aim-mm3d": _mm3d_chord_file, "setup": _without_set,
+PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-mm3d": _mm3d_slots_file,
+           "slots-mm3d-small": _mm3d_slots_file, "aim": _oot3d_slots_file, "aim-mm3d": _mm3d_slots_file, "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}
 # Scenarios on the picker as `z3dmods play` starts it, on the test's own user folder.
@@ -832,6 +1000,7 @@ SCENARIOS = {**DIRECT, **PICKER, **PACKAGE, "picker": _picker, "options": _optio
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:
     user = out / "user"
+    keys = AppKeys(cfg)
     if scenario in PACKAGE:
         launcher = PACKAGE_PROGRAM[scenario](cfg)
         if not launcher.exists():
@@ -843,22 +1012,23 @@ def _session(cfg: Config, scenario: str, out: Path) -> Session:
             dumps = sorted({rom.parent for rom in cfg.roms.values()})
             program = [str(launcher), "--roms", str(home / "ROM" / "3DS"), "--mods", str(home / "Empty")]
             return Session(out, desktop_container.command(cfg, out, [launcher, *dumps],
-                                                          {config.APP_DATA_ENV: str(user)}, program),
+                                                          {config.APP_DATA_ENV: str(user)}, program), keys,
                            program=desktop_container.PROGRAM)
-        return Session(out, [str(launcher)], {config.APP_DATA_ENV: str(user), "HOME": str(home)})
+        return Session(out, [str(launcher)], keys, {config.APP_DATA_ENV: str(user), "HOME": str(home)})
     app.seed_user(cfg, user, fresh=True)
     if scenario in PREPARE:
         PREPARE[scenario](cfg, user, out)
     if scenario in DIRECT:
-        return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user))
+        return Session(out, play.launch_args(cfg, DIRECT_GAME.get(scenario, scenario), user), keys,
+                       size=SIZES.get(scenario, (WIDTH, HEIGHT)))
     if scenario in PICKER:
         files = FILES[scenario](cfg, out) if scenario in FILES else cfg
         # The picker's tools are a program of their own: they are told the test's downloads.
-        return Session(out, play.launch_args(files, None, user), {config.MOD_SOURCES_ENV: str(files.mod_sources)})
+        return Session(out, play.launch_args(files, None, user), keys, {config.MOD_SOURCES_ENV: str(files.mod_sources)})
     entry = Path.home() / ".local/share/applications" / f"{play.DESKTOP_ID}.desktop"
     if not entry.exists():
         raise RuntimeError(f"{entry} is missing; run z3dmods shortcut")
-    return Session(out, shlex.split(shortcut.desktop_exec(entry)), {config.APP_DATA_ENV: str(user)})
+    return Session(out, shlex.split(shortcut.desktop_exec(entry)), keys, {config.APP_DATA_ENV: str(user)})
 
 
 def run(cfg: Config, scenario: str) -> Path:

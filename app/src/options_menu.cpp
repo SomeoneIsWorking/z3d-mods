@@ -9,11 +9,14 @@
 #include <lucent/log.h>
 
 #include <algorithm>
+#include <array>
 
 namespace z3d::app {
 namespace {
 
-constexpr const char *kHint = "Up/Down  Select    A  Change    B  Back";
+constexpr const char *kSelect = "Select";
+constexpr const char *kChange = "Change";
+constexpr const char *kBack = "Back";
 constexpr const char *kFolders = "Games and mods folders";
 constexpr const char *kFoldersChange = "Change";
 constexpr const char *kFoldersRow = "folders";
@@ -145,7 +148,10 @@ void OptionsMenu::draw() {
     text(kFolders, left, y, onFolders(), false);
     text(kFoldersChange, right, y, onFolders(), true);
   }
-  text(kHint, left, height * 0.9F, false, false);
+  const std::array hints{Hint{{PadInput::menuPrompt(&MenuPad::up), PadInput::menuPrompt(&MenuPad::down)}, kSelect},
+                         Hint{{PadInput::menuPrompt(&MenuPad::a)}, kChange},
+                         Hint{{PadInput::menuPrompt(&MenuPad::b)}, kBack}};
+  canvas_.hints(hints, pad_.lastDevice(), {left, height * 0.9F}, row, right - left, false);
   SDL_RenderPresent(renderer_);
 }
 

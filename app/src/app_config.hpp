@@ -42,7 +42,8 @@ struct AppConfig {
   // whose set is missing (set_install.hpp) and to take the player's folders (folder_setup.hpp).
   // Everything after --tools on the command line.
   std::vector<std::string> tools;
-  // A port-assets copy (sets/, fonts/), which the play HUD draws from; none draws no HUD.
+  // A port-assets copy (sets/, fonts/), which the play HUD and the picker's hints draw from; a
+  // direct launch without one draws no HUD.
   std::filesystem::path assets;
   // Holds Azahar/ in the core's user layout (nand, sdmc, sysdata, load).
   std::filesystem::path userDir;
@@ -55,8 +56,11 @@ struct AppConfig {
   uint32_t resolution = 1;
   // Every texture the game uploads, as PNG under <user>/Azahar/dump/textures/.
   bool dumpTextures = false;
+  // --keys alone: print every key binding (PadInput::listKeys) and leave.
+  bool listKeys = false;
 
-  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... | --library <json> --font <ttf>)
+  // z3d --keys
+  // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... [--assets <dir>] | --library <json> --font <ttf> --assets <dir>)
   //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
   //     [--tools <program> [<argument>]...]
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
