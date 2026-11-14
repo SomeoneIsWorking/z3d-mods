@@ -13,8 +13,8 @@ TABLE = 0x10
 DATA = 0x14
 
 
-def image(data: bytes) -> tuple[Image.Image, int]:
-    """The bundle's one texture, decoded, and its GL format."""
+def image(data: bytes) -> tuple[Image.Image, int, bytes]:
+    """The bundle's one texture, decoded, its GL format and its own bytes."""
     if data[:4] != MAGIC:
         raise ValueError("not a CTXB bundle")
     table, base = struct.unpack_from("<II", data, TABLE)
@@ -23,5 +23,5 @@ def image(data: bytes) -> tuple[Image.Image, int]:
         raise ValueError(f"CTXB with {len(textures)} textures")
     texture = textures[0]
     start = base + texture.offset
-    return (pica_texture.decode(data[start:start + texture.size], texture.width, texture.height,
-                                texture.format), texture.format)
+    pixels = data[start:start + texture.size]
+    return pica_texture.decode(pixels, texture.width, texture.height, texture.format), texture.format, pixels

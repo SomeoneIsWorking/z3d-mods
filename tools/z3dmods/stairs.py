@@ -338,9 +338,9 @@ def _flat(triangles, extras: list[str]) -> tuple[dict[str, list[tuple[float, ...
 
 def texture_image(model: cmb.Cmb, texture: cmb.Texture, pack: TexturePack | None) -> Image.Image:
     """The texture as the player sees it: the pack's replacement when it has one."""
-    image = pica_texture.decode(model.texture_data(texture), texture.width, texture.height,
-                                texture.format)
-    found = pack.replacement(image, texture.format) if pack else None
+    data = model.texture_data(texture)
+    image = pica_texture.decode(data, texture.width, texture.height, texture.format)
+    found = pack.replacement(image, data, texture.format) if pack else None
     return found or image
 
 

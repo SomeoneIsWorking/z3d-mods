@@ -33,10 +33,12 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
   circle pad with each direction, the X and Y item buttons, ZL, ZR), the A and B letters and the
   X and Y slot labels on the HUD sheet, the circled B on Return, Cancel and No, the circled A and X
   on the map, world map and Bombers' Notebook buttons, and the note letters on the Ocarina screen.
-- `sets/hud/mm3d-usa-rev1.json` lists those cells; `"hud"` in `sets/mm3d.json` builds them at 4x
-  from the game's own art (no texture pack covers MM3D yet) into
-  `load/textures/<title>/z3dmods-hud/`. A prompt on a button face is an `inlay`: the face is
-  carried across under the glyph.
+- `sets/hud/mm3d-usa-rev1.json` lists those cells; `"hud"` in `sets/mm3d.json` builds them on
+  Henriko's 4K pack's copies (8x, 16x for the Return button) into
+  `load/textures/<title>/z3dmods-hud/`. Where the pack draws its own button on a face (Return,
+  Cancel, No, Confirm, the notebook's Set, Remove and Skip) the glyph is a `badge` placed to cover
+  it, so some boxes sit on fractions of a game pixel; the HUD's A and B, which sit on the ring,
+  are `inlay`s: the art is carried across under the glyph.
 - The Omni pack left the set; with it went the app's X/Y trade, since ours name X and Y as the pad
   does.
 - Shown in game (`mm-gl2`, South Clock Town): the green A on the action button, the blue X and
@@ -51,6 +53,10 @@ User, on the CC BY-NC-ND glyph packs: "I'd rather make MIT versions of those the
   on View and RB hints on I and II (`mm-gl4`, `mm-pad2`), the Ocarina screen's LT, RT, X, Y, A and
   the B on Cancel (`mm-oc3`), the Bombers' Notebook's B on Return (`mm-pad2`). ZR with X and ZR
   with Y play the ocarina from I and from II, ZL looks around (`mm-pad1`, `mm-pad2`).
+
+- On the pack (2026-11-14, `mm-hires`): the HUD, the Ocarina screen, Items and the map draw the
+  pack's art with our glyphs; `textures:off` in the same run shows the game's I, II, X, Y and
+  yellow A again.
 
 ## Still open
 - MM3D, not seen in game yet: the world map's zoom prompts, a notebook entry's A and X buttons

@@ -74,9 +74,10 @@ def _write_record(folder: Path, sources: dict[str, str]) -> None:
     (folder / RECORD).write_text(json.dumps({"sources": sources, "files": files}, indent=2) + "\n")
 
 
-def _copy_tree(source: Path, dest: Path) -> None:
+def _copy_tree(source: Path, dest: Path, replaced: frozenset[str] = frozenset()) -> None:
+    """Copies a folder; files named in `replaced` stay out."""
     for path in source.rglob("*"):
-        if path.is_file():
+        if path.is_file() and path.name not in replaced:
             target = dest / path.relative_to(source)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path, target)
@@ -147,6 +148,8 @@ def install(cfg: Config, game: GameSet) -> Path:
 
     base_romfs = root / game.base["romfs"] if "romfs" in game.base else None
     pack = TexturePack(cfg.env_assets / game.textures["root"]) if game.textures else None
+    if game.hud and not pack:
+        raise RuntimeError(f"{game.title_id}: the menu textures are built on a texture pack, and the set has none")
     if game.stairs and not game.patch:
         raise RuntimeError(f"{game.title_id}: stairs want the patch whose options.toml switches them")
     stairs_layer = options.layer(cfg.repo, game.patch, STAIRS_OPTION) if game.stairs else None
@@ -178,7 +181,8 @@ def install(cfg: Config, game: GameSet) -> Path:
         _remove_recorded(textures)
         textures.mkdir(parents=True, exist_ok=True)
         if game.textures:
-            _copy_tree(cfg.env_assets / game.textures["root"], textures)
+            # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
+            _copy_tree(cfg.env_assets / game.textures["root"], textures, frozenset(menus))
         for name, png in menus.items():
             target = textures / HUD_FOLDER / name
             target.parent.mkdir(parents=True, exist_ok=True)

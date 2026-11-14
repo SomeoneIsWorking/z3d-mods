@@ -1,8 +1,10 @@
 """PICA200 textures: decoding to images, and the hash Azahar names custom textures by.
 
-Azahar's hash (`use_new_hash: false`, as the 4K packs use) is CityHash64 over the texture decoded
-into its own pixel format, rows bottom-up: RGBA4444 keeps its 16-bit words, ETC1 and ETC1A4 become
-RGBA8 (rasterizer_cache.h ComputeHash, texture_codec.h MortonCopyTile).
+Azahar's hash is CityHash64 (rasterizer_cache.h ComputeHash). A pack whose `pack.json` sets
+`use_new_hash` (Henriko's MM3D pack) is named by the hash of the texture's bytes as the game holds
+them. Otherwise (his OoT3D pack, or no `pack.json`) it is the hash of the texture decoded into its
+own pixel format, rows bottom-up: RGBA4444 keeps its 16-bit words, ETC1 and ETC1A4 become RGBA8
+(texture_codec.h MortonCopyTile).
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ def decode(data: bytes, width: int, height: int, gl_format: int) -> Image.Image:
     return image
 
 
-def azahar_hash(image: Image.Image, gl_format: int) -> int:
+def decoded_hash(image: Image.Image, gl_format: int) -> int:
     rows = [image.crop((0, y, image.width, y + 1)).tobytes() for y in range(image.height - 1, -1, -1)]
     if gl_format in (ETC1, ETC1A4):
         return cityhash.hash64(b"".join(rows))
@@ -58,7 +60,7 @@ def azahar_hash(image: Image.Image, gl_format: int) -> int:
     return cityhash.hash64(bytes(raw))
 
 
-def pack_name(image: Image.Image, gl_format: int) -> str:
-    """The file name a texture pack gives this texture's replacement."""
-    hash_ = azahar_hash(image, gl_format)
+def pack_name(image: Image.Image, data: bytes, gl_format: int, new_hash: bool) -> str:
+    """The file name a texture pack gives the replacement of a texture: `data`, decoded as `image`."""
+    hash_ = cityhash.hash64(data) if new_hash else decoded_hash(image, gl_format)
     return f"tex1_{image.width}x{image.height}_{hash_:016X}_{PACK_FORMATS[gl_format]}_mip0.png"

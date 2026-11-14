@@ -7,8 +7,8 @@ the pack's vanilla art, moved art is copied, new lettering is drawn in port-asse
 the 3DS button prompts the mod leaves become port-assets' Xbox pad glyphs. The result is named after
 the mod's texture, so the pack covers the mod's version too.
 
-A set with no pack or base mod behind a texture (MM3D) gets the game's own art enlarged by the
-table's `scale`, with the same glyph edits. A texture inside a GAR archive is named
+With no base mod behind a texture (MM3D) only the prompts change, and the replacement carries the
+name of the pack's own copy, which the install then leaves out. A texture inside a GAR archive is named
 `<archive>.gar/<file>.ctxb`.
 """
 
@@ -39,6 +39,8 @@ class Texture:
 
     vanilla: Image.Image
     modded: Image.Image
+    # The mod's texture as the game holds it, which Azahar may name the replacement by.
+    modded_data: bytes
     gl_format: int
     hires: Image.Image
 
@@ -63,8 +65,8 @@ def _edited(texture: Texture) -> Image.Image:
     return mask
 
 
-def _scaled(box: list[int], scale: int) -> tuple[int, int, int, int]:
-    return tuple(v * scale for v in box)
+def _scaled(box: list[float], scale: int) -> tuple[int, int, int, int]:
+    return tuple(round(v * scale) for v in box)
 
 
 def _fill(image: Image.Image, unknown: Image.Image) -> Image.Image:
@@ -192,10 +194,6 @@ def _inlay_ground(image: Image.Image, box: tuple[int, int, int, int], scale: int
     return edges.resize((x1 - x0, height), Image.BILINEAR).convert("RGBA")
 
 
-def _enlarged(image: Image.Image, scale: int) -> Image.Image:
-    return image.convert("RGBa").resize((image.width * scale, image.height * scale), Image.LANCZOS).convert("RGBA")
-
-
 def _container(path: str) -> str:
     """The game file a texture path is in: itself, or its GAR archive."""
     archive, inside, _ = path.partition(".gar/")
@@ -282,30 +280,27 @@ def compose(texture: Texture, edits: list[dict], others: dict[str, Texture], fon
     return out
 
 
-def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack | None, table: Path, font: Path,
+def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack, table: Path, font: Path,
           glyphs: Path) -> dict[str, bytes]:
     """Pack file name -> PNG for every texture in the edit table."""
     document = json.loads(table.read_text())
-    scale = document.get("scale")
-    edits = {k: v for k, v in document.items() if k not in ("about", "scale")}
+    edits = {k: v for k, v in document.items() if k != "about"}
 
     def base(path: str) -> bytes:
         return (base_romfs / path).read_bytes()
 
     textures = {}
     for path in edits:
-        vanilla, gl_format = ctxb.image(_bundle(romfs.read, path))
-        modded, modded_format = vanilla, gl_format
+        vanilla, gl_format, data = ctxb.image(_bundle(romfs.read, path))
+        modded, modded_format, modded_data = vanilla, gl_format, data
         if base_romfs and (base_romfs / _container(path)).exists():
-            modded, modded_format = ctxb.image(_bundle(base, path))
+            modded, modded_format, modded_data = ctxb.image(_bundle(base, path))
         if modded_format != gl_format or modded.size != vanilla.size:
             raise ValueError(f"{path}: the base mod changed the texture's format or size")
-        hires = pack.replacement(vanilla, gl_format) if pack else None
-        if hires is None and scale:
-            hires = _enlarged(vanilla, scale)
+        hires = pack.replacement(vanilla, data, gl_format)
         if hires is None:
             raise ValueError(f"{path}: the texture pack has no copy of the vanilla texture")
-        textures[path] = Texture(vanilla, modded, gl_format, hires)
+        textures[path] = Texture(vanilla, modded, modded_data, gl_format, hires)
     out = {}
     for path, texture in textures.items():
         try:
@@ -314,5 +309,5 @@ def build(romfs: ctr.Romfs, base_romfs: Path | None, pack: TexturePack | None, t
             raise ValueError(f"{path}: {error}") from error
         buffer = io.BytesIO()
         image.save(buffer, "PNG")
-        out[pica_texture.pack_name(texture.modded, texture.gl_format)] = buffer.getvalue()
+        out[pack.name(texture.modded, texture.modded_data, texture.gl_format)] = buffer.getvalue()
     return out

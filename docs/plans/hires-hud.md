@@ -48,6 +48,20 @@ The rest are scene textures the pack leaves alone (water, sky, glows).
 - Shown in game (`hud-hires`, on the Ally): file select, the Kakariko HUD and the item menu draw
   the 4K art with the labels crisp, where the One Screen's own textures were 3DS resolution.
 
+## Built (MM3D, 2026-11-14)
+- Henriko's MM3D pack (3.0b-1, 1080p variant, docs/mods.md) is in the set (`"textures"` in
+  `sets/mm3d.json`). Its `pack.json` sets `use_new_hash`: Azahar then names a texture by
+  CityHash64 over its bytes as the game holds them, which `pica_texture.pack_name` and
+  `TexturePack` follow from the pack's own `pack.json`.
+- The pack covers 29 of the 65 English layout textures, among them all eight that carry button
+  prompts. Project Restoration edits none, so `hud.py` only draws our glyphs on the pack's copies
+  and the install leaves the pack's own eight out. The enlargement of the game's art that stood in
+  for a pack is gone.
+- Shown in game (`mm-hires`, on the Ally, 3x): South Clock Town's HUD, the Ocarina screen, Items
+  and the map with the pack's art and our glyphs; with `textures:off` the same HUD and Items are
+  the game's 3DS-resolution art.
+
 ## Still open
-- MM3D: the same for Project Restoration's and DekUI's edits.
+- MM3D: the 36 layout textures the pack leaves alone stay at 3DS resolution (French and Spanish
+  sheets among them).
 - The HUD's own labels are lettering; the text prompts' drawn Xbox glyphs are in [xbox-glyphs.md](xbox-glyphs.md).

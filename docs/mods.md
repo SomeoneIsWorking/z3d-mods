@@ -90,9 +90,22 @@ completed.". In the tools' headless session that dialog waits for `type:<text>`.
 | Gives | Zora fast swim, Deku hops, D-pad transformations, instant Bomber's Notebook, Song of Time saving option, boss rebalances, Inverted Song of Time at 1/3 speed, fewer song replays, Bombers no longer interrupting, softlock fixes |
 | Layout | `v110/citra/code.bps` and `v110/citra/exheader.bin` for the player's Rev 1 (1.1) dump; the BPS source and target CRCs check against it. The patched code it outputs is laid out like 1.0 (PR rebuilds 1.1 into its 1.0-based code), so our MM3D hooks use 1.0/mm3d-decomp addresses; the installer checks each hook's original word against this bake (0x174374 `bl 0x1846B4` there, not in vanilla 1.1). |
 
-The button prompts are our own: `sets/hud/mm3d-usa-rev1.json` draws port-assets' Xbox glyphs
-over the game's 3DS prompts (plans/xbox-glyphs.md), installed under
-`load/textures/0004000000125500/z3dmods-hud/` with Azahar's custom textures on.
+### MM3D: Henriko's 4K pack
+
+| | |
+|---|---|
+| Textures | Henriko Magnifico MM3D 4K 3.0b-1, 1080p variant: henrikomagnifico.com/zelda-majoras-mask-3d-4k, Google Drive, `MM 3D 4K 3.0b-1 (1080p).zip`, sha256 `ceaee06385ab09231dd9fde7813d055492dda942e95ca3b4486aa05c5b7e59d4` (1.7 GB). The 4K variant (Drive file `1dvDvcKDXuW2pBQI7r1ZX5n3B8_QmqInZ`, 3.7 GB) is not used |
+| Licence | Free; none stated |
+| Layout | `MM3D 4K 3.0b (1080p)/user/load/textures/0004000000125500/` (1625 files; `pack.json`: `use_new_hash: true`, `flip_png_files: true`) into `load/textures/0004000000125500/`. Only that folder is extracted; the zip's ReShade installer and shaders are never run or installed |
+
+Its `use_new_hash` names each file by the hash of the texture's bytes as the game holds them, not
+of the decoded texture as the OoT3D pack does (`tools/z3dmods/pica_texture.py`); `pack.json` goes in
+with the pack, so every texture in the folder, ours included, is named that way.
+
+The button prompts are our own: `sets/hud/mm3d-usa-rev1.json` draws port-assets' Xbox glyphs over
+the 3DS prompts on the pack's copies of eight menu textures (plans/xbox-glyphs.md), installed under
+`load/textures/0004000000125500/z3dmods-hud/`. Project Restoration edits no texture, so each of ours
+has the name of the pack's copy, which the install leaves out: Azahar keeps one texture per hash.
 
 MM3D single screen is not installed yet. DekUI and Majora ReMasked are GPL-2 forks of Azahar, not
 mods for the player's Azahar 2126.2; DekUI draws its single-screen menus in the emulator and builds
@@ -105,7 +118,6 @@ only with Qt, which the player declined. Our MIT patch is planned in
 |---|---|---|---|---|---|
 | Ocarina ReFramed | OoT3D | github.com/OTPR26/OOT3DHud v2.5.1 (2026-10-29), Single and Dual | GPL-3.0-or-later; free-cam base from Roberto-Nessy with no licence | `code.ips` + `exheader.bin` + `romfs/`, or an xdelta ROM patch | Fallback for OoT3D single screen; controller-neutral prompts |
 | OoT3D: Single Screen Experience | OoT3D | GameBanana 695893 v3.2.2 | CC BY-NC-ND 4.0, no source | `exheader.bin` + `romfs/` (+ code) | Not used |
-| Henriko MM3D 4K | MM3D | 3.0b-1, 1080p and 4K, henrikomagnifico.com/zelda-majoras-mask-3d-4k (Drive `1I_QuBQX-_TTKCkS0MHho73ApKFfyckh6`) | None stated | textures, `pack.json` | To install: Drive's download quota was exceeded on 2026-11-12 and the MediaFire mirror reset the connection. It remakes buttons and prompts, so our glyph sheets must be rebuilt on its copies (plans/hires-hud.md); if its `pack.json` sets `use_new_hash`, our legacy-hash names would stop matching, so check before installing |
 | SSE Controller UI Packs | OoT3D | GameBanana 701929 v3.2 | CC BY-NC-ND | textures | Not used: our own glyphs cover what The One Screen leaves (plans/xbox-glyphs.md) |
 | Touchless Layout UI | OoT3D | GameBanana 567711 v3.1 | CC BY-NC-ND | textures | Fallback glyph pack (Vanilla build) |
 | OoT3D Autosave | OoT3D | GameBanana 686090 | CC BY-NC-ND | `code.ips` only | Not used: our own autosave is in the patch (plans/oot3d-qol.md) |

@@ -11,6 +11,10 @@
   "screen_layout": "overlay",
   "stairs": "kaidan|step",
   "hud": "hud/mm3d-usa-rev1.json",
+  "textures": {
+    "name": "Henriko Magnifico MM3D 4K 3.0b-1, 1080p variant (free, no licence stated)",
+    "root": "downloads/henriko-mm3d-4k-3.0b-1/x/MM3D 4K 3.0b (1080p)/user/load/textures/0004000000125500"
+  },
   "azahar_global": {
     "Utility": {
       "custom_textures": true
