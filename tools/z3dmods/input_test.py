@@ -535,11 +535,13 @@ def _archived_mod(cfg: Config, out: Path) -> Config:
     game = GameSet.named(cfg.repo, ARCHIVE_GAME)
     mods = out / "mods"
     mods.mkdir(parents=True)
-    unpacked = next(p for p in cfg.mod_sources.rglob(game.base["code_patch"]) if p.is_file())
+    unpacked = source_check.find_files(cfg.mod_sources, game.base["name"], game.base["from"],
+                                       game.base["code_patch"], game.base["sha256"])
     download = next(p for p in cfg.mod_sources.iterdir() if unpacked.is_relative_to(p))
     (archive,) = (p for p in download.iterdir() if p.is_file() and p.name.endswith(source_check.UNPACKED))
     os.link(archive, mods / archive.name)
-    pack = next(p for p in sorted(cfg.mod_sources.rglob(game.textures["folder"])) if p.is_dir())
+    pack = source_check.find_folder(cfg.mod_sources, game.textures["name"], game.textures["from"],
+                                    game.textures["folder"], game.textures["sha256"])
     shutil.copytree(pack, mods / "textures" / pack.name, copy_function=os.link)
     return replace(cfg, mod_sources=mods)
 
