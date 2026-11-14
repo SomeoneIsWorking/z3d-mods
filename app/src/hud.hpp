@@ -121,6 +121,8 @@ private:
   void requireArt();
 
   [[nodiscard]] std::optional<uint32_t> read(const GuestValue &value) const;
+  // Whether `count` of `item` is as many as the game holds of it now.
+  [[nodiscard]] bool full(uint32_t item, uint32_t count) const;
   [[nodiscard]] Face face(const Element &element, std::optional<size_t> slot) const;
   // Moves the chord's flip on by the frames shown since the last update.
   void turn();
@@ -155,6 +157,20 @@ private:
   std::vector<std::pair<uint32_t, uint32_t>> ammoIndex_;
   GuestValue status_;
   uint32_t disabled_ = 0;
+  // An item's count is full at its upgrade's capacity at the level the save holds (the game's
+  // tables: the save's upgrades word, each upgrade's mask and shift, and its capacity by level),
+  // or at a fixed `most`.
+  struct FullAt {
+    uint32_t item = 0;
+    std::optional<uint32_t> upgrade;
+    uint32_t most = 0;
+  };
+  std::vector<FullAt> ammoFull_;
+  GuestValue upgrades_;
+  GuestValue upgradeMasks_;
+  GuestValue upgradeShifts_;
+  GuestValue upgradeCapacities_;
+  uint32_t upgradeLevels_ = 0;
   // A song's colour by its number, 0xRRGGBB.
   std::vector<uint32_t> songColours_;
   // <icons>/<name>.png: the game's or the pack's art, an item's icon by its id; `art_` names

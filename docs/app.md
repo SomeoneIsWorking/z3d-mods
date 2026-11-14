@@ -293,7 +293,9 @@ Lettering is port-assets' outline typeface sized by its capitals' height, with a
 cut to its ink and placed by its baseline. A number is one piece of lettering. An item's count
 sits on a solid dark plate that hangs off the ring's bottom, centred: it starts where the icon
 ends, so it covers none of the icon, and the ring's rim never shows between its digits
-(`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100). `hearts` picks one of the game's five hearts (empty,
+(`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100), green once it is as many as the game holds of
+the item (`ammo_full`: the capacity of its upgrade at the save's level, read from the game's
+`gUpgradeMasks`, `gUpgradeShifts` and `gUpgradeCapacities`, or a fixed `most`). `hearts` picks one of the game's five hearts (empty,
 a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can read one entry
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
 a `limit` (the game's table by tier, `gUpgradeCapacities` in both games).

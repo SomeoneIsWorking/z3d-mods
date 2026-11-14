@@ -15,6 +15,24 @@ show = [
 # index]), and an item on one of the game's own buttons is dim while that button's status says so.
 ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
 ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
+# A count is green at the game's capacity for it, CUR_CAPACITY of its upgrade at the save's level;
+# the arrows show the quiver's count. The bombchus at 50 (the N64's Interface_DrawAmmoCount).
+upgrades = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.upgrades"], bytes = 4 }
+upgrade_masks = { at = ["gUpgradeMasks"], bytes = 4 }
+upgrade_shifts = { at = ["gUpgradeShifts"], bytes = 1 }
+upgrade_capacities = { at = ["gUpgradeCapacities"], bytes = 2 }
+upgrade_levels = "UPGRADE_LEVELS"
+ammo_full = [
+  { item = "ITEM_STICK", upgrade = "UPG_STICKS" },
+  { item = "ITEM_NUT", upgrade = "UPG_NUTS" },
+  { item = "ITEM_BOMB", upgrade = "UPG_BOMB_BAG" },
+  { item = "ITEM_BOW", upgrade = "UPG_QUIVER" },
+  { item = "ITEM_ARROW_FIRE", upgrade = "UPG_QUIVER" },
+  { item = "ITEM_ARROW_ICE", upgrade = "UPG_QUIVER" },
+  { item = "ITEM_ARROW_LIGHT", upgrade = "UPG_QUIVER" },
+  { item = "ITEM_SLINGSHOT", upgrade = "UPG_BULLET_BAG" },
+  { item = "ITEM_BOMBCHU", most = 50 },
+]
 status = { at = ["gSaveContext", "SaveContext.buttonStatus"], bytes = 1 }
 disabled = 0xFF
 # A song's note by its place among the quest items' songs: the warp songs in their own colours

@@ -226,7 +226,7 @@ SDL_Surface *HudAtlas::lettering(const std::string &text, int height, HudInk ink
   const int baseline = TTF_GetFontAscent(font_) + around;
   SDL_Surface *fill = TTF_RenderText_Blended(font_, text.c_str(), text.size(),
                                              ink == HudInk::Dark   ? kDark
-                                             : ink == HudInk::Full ? kFull
+                                             : ink == HudInk::Full || ink == HudInk::FullPlate ? kFull
                                                                    : kLight);
   SDL_Surface *drawn = fill;
   if (fill != nullptr && around > 0) {
@@ -249,7 +249,7 @@ SDL_Surface *HudAtlas::lettering(const std::string &text, int height, HudInk ink
   SDL_Surface *cut =
       bounds.w > 0 ? SDL_CreateSurface(bounds.w, bounds.h, SDL_PIXELFORMAT_RGBA32) : nullptr;
   if (cut != nullptr) {
-    if (ink == HudInk::Plate) {
+    if (ink == HudInk::Plate || ink == HudInk::FullPlate) {
       plate(cut, around);
     } else {
       SDL_SetSurfaceBlendMode(rgba, SDL_BLENDMODE_NONE);
@@ -262,7 +262,7 @@ SDL_Surface *HudAtlas::lettering(const std::string &text, int height, HudInk ink
 }
 
 HudSprite HudAtlas::text(const std::string &text, int height, HudInk ink) {
-  constexpr std::array kNames{"text/", "full/", "dark/", "plate/"};
+  constexpr std::array kNames{"text/", "full/", "dark/", "plate/", "fullplate/"};
   const std::string key = kNames[static_cast<size_t>(ink)] + text + "@" + std::to_string(height);
   if (const auto found = sprites_.find(key); found != sprites_.end()) {
     return found->second;

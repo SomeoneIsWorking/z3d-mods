@@ -110,12 +110,13 @@ def _guest_address(d: symbols.Decomp, terms: list[str | int]) -> int:
 
 def _resolved(d: symbols.Decomp, value: object) -> object:
     """hud.toml's `{ at = [...], through = "global" }` as `{ address, pointer }`, wherever it sits;
-    a `mask`, `shift` or the `equals` of a condition may be one of the decomp's defines."""
+    a `mask`, `shift`, the `equals` of a condition, or an `item` and `upgrade` may be one of the
+    decomp's defines."""
     if isinstance(value, list):
         return [_resolved(d, entry) for entry in value]
     if not isinstance(value, dict):
         return value
-    out = {key: d.define(entry) if key in ("mask", "shift", "equals") and isinstance(entry, str) else _resolved(d, entry)
+    out = {key: d.define(entry) if key in DEFINED and isinstance(entry, str) else _resolved(d, entry)
            for key, entry in value.items() if key not in ("at", "through")}
     if "at" in value:
         out["address"] = _guest_address(d, value["at"])
@@ -131,7 +132,8 @@ def _hud(repo: Path, game: str, d: symbols.Decomp) -> dict[str, object] | None:
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
-    shared = {key: _resolved(d, table[key]) for key in HUD_SHARED if key in table}
+    shared = {key: d.define(table[key]) if isinstance(table[key], str) else _resolved(d, table[key])
+              for key in HUD_SHARED if key in table}
     words = [system_config.LANGUAGES[language] for language in table["words"]["languages"]] if "words" in table else []
     return {"icons": HUD_ICONS, "words": words, "show": _resolved(d, table.get("show", [])),
             "elements": _resolved(d, table["element"])} | shared
@@ -144,8 +146,13 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
         "play": symbols.global_(d, "gPlayState"), "player": _player_list_head(d)}
 
 
-# hud.toml's tables every button shares: the counts, the statuses and the songs' colours.
-HUD_SHARED = ("ammo", "ammo_index", "status", "disabled", "song_colours")
+# hud.toml's tables every button shares: the counts and when each is full, the statuses and the
+# songs' colours.
+HUD_SHARED = ("ammo", "ammo_index", "ammo_full", "upgrades", "upgrade_masks", "upgrade_shifts",
+              "upgrade_capacities", "upgrade_levels", "status", "disabled", "song_colours")
+
+# The keys whose string value is one of the decomp's defines.
+DEFINED = ("mask", "shift", "equals", "item", "upgrade")
 
 # The folder of item icons beside the installed patch: <item id>.png.
 HUD_ICONS = "z3d-hud-icons"

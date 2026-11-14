@@ -6,7 +6,27 @@
 # index], for the items seen drawing a count; the fire arrow draws the bow's), and an item on one
 # of the game's own buttons is dim while that button's status says so.
 ammo = { at = ["gCommonData", "CommonData.save", "SaveData.ammo"], bytes = 1 }
-ammo_index = [[1, 1], [2, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+ammo_index = [[1, 1], [2, 1], [3, 1], [4, 1], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10], [12, 12]]
+# A count is green at the game's capacity for it, its upgrade's at the save's level (the arrows
+# show the quiver's; the bombchus fill the bomb bag), the powder keg at 1 and the beans at 20 (the
+# N64's Interface_DrawAmmoCount).
+upgrades = { at = ["gCommonData", "CommonData.save", "SaveData.upgrades"], bytes = 4 }
+upgrade_masks = { at = ["gUpgradeMasks"], bytes = 4 }
+upgrade_shifts = { at = ["gUpgradeShifts"], bytes = 1 }
+upgrade_capacities = { at = ["gUpgradeCapacities"], bytes = 2 }
+upgrade_levels = "UPGRADE_LEVELS"
+ammo_full = [
+  { item = "ITEM_BOW", upgrade = "UPGRADE_QUIVER" },
+  { item = "ITEM_ARROW_FIRE", upgrade = "UPGRADE_QUIVER" },
+  { item = "ITEM_ARROW_ICE", upgrade = "UPGRADE_QUIVER" },
+  { item = "ITEM_ARROW_LIGHT", upgrade = "UPGRADE_QUIVER" },
+  { item = "ITEM_BOMB", upgrade = "UPGRADE_BOMB_BAG" },
+  { item = "ITEM_BOMBCHU", upgrade = "UPGRADE_BOMB_BAG" },
+  { item = "ITEM_DEKU_STICK", upgrade = "UPGRADE_STICKS" },
+  { item = "ITEM_DEKU_NUT", upgrade = "UPGRADE_NUTS" },
+  { item = "ITEM_POWDER_KEG", most = 1 },
+  { item = "ITEM_MAGIC_BEANS", most = 20 },
+]
 status = { at = ["gCommonData", "CommonData.buttonStatus"], bytes = 1 }
 disabled = 0xFF
 # A song's note by its entry in the ocarina's song list: Time, Healing, Epona's, Soaring, Storms,

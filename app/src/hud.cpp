@@ -182,6 +182,26 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
                               static_cast<uint32_t>(*(*pair.array())[1].integer()));
     }
   }
+  upgrades_ = guest(*hud, "upgrades");
+  upgradeMasks_ = guest(*hud, "upgrade_masks");
+  upgradeShifts_ = guest(*hud, "upgrade_shifts");
+  upgradeCapacities_ = guest(*hud, "upgrade_capacities");
+  upgradeLevels_ = integer(*hud, "upgrade_levels", 0);
+  if (const lucent::json::Value *list = hud->find("ammo_full");
+      list != nullptr && list->array() != nullptr) {
+    for (const lucent::json::Value &entry : *list->array()) {
+      FullAt at{integer(entry, "item", 0), std::nullopt, integer(entry, "most", 0)};
+      if (entry.find("upgrade") != nullptr) {
+        at.upgrade = integer(entry, "upgrade", 0);
+      }
+      if (entry.find("item") == nullptr || (at.upgrade.has_value() == (at.most != 0)) ||
+          (at.upgrade && upgradeLevels_ == 0)) {
+        throw std::runtime_error(manifest.string() +
+                                 ": hud ammo_full holds an item with an upgrade or a most");
+      }
+      ammoFull_.push_back(at);
+    }
+  }
   if (const lucent::json::Value *colours = hud->find("song_colours");
       colours != nullptr && colours->array() != nullptr) {
     for (const lucent::json::Value &colour : *colours->array()) {
@@ -603,11 +623,39 @@ void Hud::content(const OverlayRect &box, std::optional<uint32_t> item, std::opt
   if (count) {
     // A plate hanging off the ring's bottom, centred: it starts where the icon ends and hides the
     // rim.
-    const HudSprite plate = atlas_->text(
-        std::to_string(*count), static_cast<int>(std::round(box.w * kCountShare)), HudInk::Plate);
+    const HudSprite plate =
+        atlas_->text(std::to_string(*count), static_cast<int>(std::round(box.w * kCountShare)),
+                     full(*item, *count) ? HudInk::FullPlate : HudInk::Plate);
     quad(plate,
          {box.x + std::round((box.w - plate.w) / 2.0F), box.y + inset + size, plate.w, plate.h});
   }
+}
+
+bool Hud::full(uint32_t item, uint32_t count) const {
+  const auto at = std::ranges::find(ammoFull_, item, &FullAt::item);
+  if (at == ammoFull_.end()) {
+    return false;
+  }
+  if (!at->upgrade) {
+    return count >= at->most;
+  }
+  const std::optional<uint32_t> held = read(upgrades_);
+  const std::optional<uint32_t> mask =
+      read({upgradeMasks_.address + *at->upgrade * upgradeMasks_.bytes, upgradeMasks_.bytes});
+  const std::optional<uint32_t> shift =
+      read({upgradeShifts_.address + *at->upgrade * upgradeShifts_.bytes, upgradeShifts_.bytes});
+  if (!held || !mask || !shift) {
+    return false;
+  }
+  const uint32_t level = (*held & *mask) >> *shift;
+  if (level >= upgradeLevels_) {
+    return false;
+  }
+  const std::optional<uint32_t> capacity =
+      read({upgradeCapacities_.address +
+                (*at->upgrade * upgradeLevels_ + level) * upgradeCapacities_.bytes,
+            upgradeCapacities_.bytes});
+  return capacity && *capacity != 0 && count >= *capacity;
 }
 
 void Hud::prompt(const Prompt &by, float x, float y, float size) {

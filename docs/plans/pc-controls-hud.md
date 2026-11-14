@@ -356,7 +356,11 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   mirrored Deku Tree): right turns the view right as in `camera`. At 2x sensitivity half the
   travel gives `camera`'s and `aim`'s frames (`camera-fast`, `aim-fast`; the log counts 800 by
   300 for `aim`'s 1600 by 600).
-- Not done: item counts are not coloured at capacity.
+- An item's count is green at the game's capacity for it (`ammo_full` in `hud.toml`: its upgrade's
+  capacity at the save's level, the N64's fixed ones for OoT3D's bombchus, MM3D's keg and beans).
+  Seen: OoT3D's sticks 20 green at their 20, the slingshot's 20 white in a 30 bag (`inputtest
+  slots`); MM3D's bombs 20 green in a 20 bag, the bow's 20 white in a 30 quiver (`slots-mm3d`), the
+  keg's 1, 30 ice arrows and 20 beans green, 5 light arrows white (`hudfull1`).
 - Small keys in both games: above the rupees in a dungeon, nothing before the first key (the game
   keeps -1 there, a counter's `none`). MM3D's are by dungeon, each dungeon's scenes an element;
   seen in Woodfall Temple (3) and Inverted Stone Tower (2), none in Snowhead, and OoT3D's Forest
@@ -367,8 +371,7 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   scene, shown, like the game's, once the scene's map is owned
   (Tingle's). Seen in South Clock Town, Termina Field and Woodfall Temple (`mmmap7`, `mmmap3`)
   and in the window (`map-zoom-mm3d`, `play-minimap`), the Map screen's own map unchanged.
-- Missing from MM3D's HUD: View, the ice and light
-  arrows' and the powder keg's counts; the third wallet's red gem and 500 were not run. The
+- Missing from MM3D's HUD: View; the third wallet's red gem and 500 were not run. The
   game's own clock still draws and is not ours yet.
 - Missing from OoT3D's HUD: the carrots and View; the bow's, bombchus' and beans' counts follow
   the N64's slots and were not seen.

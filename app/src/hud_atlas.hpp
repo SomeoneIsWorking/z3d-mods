@@ -27,8 +27,9 @@ struct HudSprite {
 };
 
 // Lettering's colour: white or the game's green for a full count, both with a dark outline, or
-// dark for a key cap. Plate is Light on a solid dark plate, which hides what is behind it.
-enum class HudInk : uint8_t { Light, Full, Dark, Plate };
+// dark for a key cap. Plate and FullPlate are Light and Full on a solid dark plate, which hides
+// what is behind it.
+enum class HudInk : uint8_t { Light, Full, Dark, Plate, FullPlate };
 
 class HudAtlas {
 public:
