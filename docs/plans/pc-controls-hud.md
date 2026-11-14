@@ -264,7 +264,7 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   the pad. The keyboard has no chord, so that cell and the chord's (0x1036) are `pad_only`: its
   sheet keeps the pad's glyphs there. The Backspace cap is its keyboard legend, a tag; four
   one-letter keys are two rows. Seen at 1x and 4x (`gap-cap1`, `gap-cap1b`, `gap-cap4`): the
-  arrow and tag read at 1x, a cell of four keys reads at 4x only.
+  tag reads at 1x, a cell of four keys reads at 4x only.
 - Saving names Pause in one cell, OoT3D's unused 0x0E: LB held over Menu on the pad, Esc on the
   keyboard (0x103B, 0x010F; `gap-pause4`), where "hold the chord and press Menu" read Shift
   and Tab on the keyboard, which do not pause. MM3D's Gear (0x0270) is Pause in the +Control
