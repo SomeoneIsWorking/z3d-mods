@@ -155,6 +155,10 @@ class HarnessSession:
         """Holds the New 3DS C-stick at (x, y), as `stick` holds the circle pad."""
         return self._hold_analog("cstick", x, y, seconds)
 
+    def device(self, name: str) -> str:
+        """The device the held input stands for from now on: `pad` or `keyboard` (the HUD's prompts follow it)."""
+        return self._send(f"device {name}")
+
     def gyro(self, x: str, y: str, z: str, seconds: str) -> str:
         """Turns the 3DS at (x, y, z) degrees a second for `seconds` (app/src/pad_input.hpp, PadState::gyro)."""
         self._send(f"gyro {float(x)} {float(y)} {float(z)}")

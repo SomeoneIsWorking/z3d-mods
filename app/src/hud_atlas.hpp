@@ -36,8 +36,8 @@ public:
 
   // Each draws its art once per size and returns it again after that.
   [[nodiscard]] HudSprite svg(const std::string &set, const std::string &name, int width, int height);
-  // White lettering `height` pixels tall, in port-assets' key typeface.
-  [[nodiscard]] HudSprite text(const std::string &text, int height);
+  // Lettering `height` pixels tall in port-assets' key typeface: white, or `dark` for a key cap.
+  [[nodiscard]] HudSprite text(const std::string &text, int height, bool dark);
   // A raster image (an item icon) scaled to the size.
   [[nodiscard]] HudSprite image(const std::filesystem::path &file, int width, int height);
 

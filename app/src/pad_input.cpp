@@ -31,14 +31,19 @@ constexpr std::array kKeys{
     KeyBinding{SDL_SCANCODE_N, Settings::NativeButton::Select},
     KeyBinding{SDL_SCANCODE_Q, Settings::NativeButton::L},
     KeyBinding{SDL_SCANCODE_W, Settings::NativeButton::R},
-    KeyBinding{SDL_SCANCODE_1, Settings::NativeButton::ZL},
-    KeyBinding{SDL_SCANCODE_2, Settings::NativeButton::ZR},
-    KeyBinding{SDL_SCANCODE_3, Settings::NativeButton::Debug},
+    KeyBinding{SDL_SCANCODE_E, Settings::NativeButton::ZL},
+    KeyBinding{SDL_SCANCODE_R, Settings::NativeButton::ZR},
+    KeyBinding{SDL_SCANCODE_TAB, Settings::NativeButton::Debug},
     KeyBinding{SDL_SCANCODE_T, Settings::NativeButton::Up},
     KeyBinding{SDL_SCANCODE_G, Settings::NativeButton::Down},
     KeyBinding{SDL_SCANCODE_F, Settings::NativeButton::Left},
     KeyBinding{SDL_SCANCODE_H, Settings::NativeButton::Right},
 };
+
+// The eight item slots: a chord layout's four slots on the first page, then on the second.
+constexpr std::array kItemKeys{SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
+                               SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7, SDL_SCANCODE_8};
+constexpr size_t kPageSlots = 4;
 
 struct PadBinding {
   SDL_GamepadButton pad;
@@ -92,6 +97,8 @@ constexpr std::array kChords{
 
 constexpr int16_t kTriggerPressed = 16384;
 constexpr float kAxisFull = 32767.0F;
+// A stick this far out counts as the pad being used.
+constexpr float kStickMoved = 0.5F;
 
 float axis(SDL_Gamepad *pad, SDL_GamepadAxis which) {
   return std::clamp(static_cast<float>(SDL_GetGamepadAxis(pad, which)) / kAxisFull, -1.0F, 1.0F);
@@ -229,10 +236,24 @@ void PadInput::handle(const SDL_Event &event) {
 void PadInput::readHost() {
   PadState state;
   state.cStickInverted = state_->cStickInverted;
+  state.gyro = state_->gyro;
   const bool *keys = SDL_GetKeyboardState(nullptr);
+  bool keyHeld = keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_LEFT] || keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_DOWN];
   for (const KeyBinding &binding : kKeys) {
     state.buttons[binding.button] = keys[binding.key];
+    keyHeld = keyHeld || keys[binding.key];
   }
+  for (size_t i = 0; chord_ != nullptr && i < kItemKeys.size(); ++i) {
+    if (!keys[kItemKeys[i]]) {
+      continue;
+    }
+    keyHeld = true;
+    const uint32_t held = chord_->slots[i % kPageSlots].buttons | (i >= kPageSlots ? bit(Settings::NativeButton::Debug) : 0);
+    for (size_t button = 0; button < state.buttons.size(); ++button) {
+      state.buttons[button] = state.buttons[button] || ((held >> button) & 1U) != 0;
+    }
+  }
+  bool padHeld = false;
   auto &circle = state.sticks[Settings::NativeAnalog::CirclePad];
   circle[0] = (keys[SDL_SCANCODE_RIGHT] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_LEFT] ? 1.0F : 0.0F);
   circle[1] = (keys[SDL_SCANCODE_UP] ? 1.0F : 0.0F) - (keys[SDL_SCANCODE_DOWN] ? 1.0F : 0.0F);
@@ -240,10 +261,12 @@ void PadInput::readHost() {
   for (SDL_Gamepad *pad : pads_) {
     const bool chord = chord_ != nullptr && SDL_GetGamepadButton(pad, chord_->chord);
     uint32_t held = chord ? bit(Settings::NativeButton::Debug) : 0;
+    padHeld = padHeld || chord;
     for (const PadBinding &binding : kPadButtons) {
       if (!SDL_GetGamepadButton(pad, binding.pad)) {
         continue;
       }
+      padHeld = true;
       const auto *slot = chord ? std::ranges::find(chord_->slots, binding.pad, &ChordSlot::face) : nullptr;
       held |= slot != nullptr && slot != chord_->slots.end() ? slot->buttons : bit(binding.button);
     }
@@ -261,8 +284,39 @@ void PadInput::readHost() {
     circle[1] = stronger(circle[1], -axis(pad, SDL_GAMEPAD_AXIS_LEFTY));
     cStick[0] = stronger(cStick[0], axis(pad, SDL_GAMEPAD_AXIS_RIGHTX));
     cStick[1] = stronger(cStick[1], -axis(pad, SDL_GAMEPAD_AXIS_RIGHTY));
+    padHeld = padHeld || std::abs(axis(pad, SDL_GAMEPAD_AXIS_LEFTX)) > kStickMoved ||
+              std::abs(axis(pad, SDL_GAMEPAD_AXIS_LEFTY)) > kStickMoved;
+  }
+  // The keyboard wins a frame both are held in: it is the one in the player's hands last.
+  if (keyHeld) {
+    lastDevice_ = HostDevice::Keyboard;
+  } else if (padHeld) {
+    lastDevice_ = HostDevice::Pad;
   }
   *state_ = state;
+}
+
+Prompt PadInput::prompt(Button button) {
+  Prompt prompt;
+  if (const auto *pad = std::ranges::find(kPadButtons, button, &PadBinding::button); pad != kPadButtons.end()) {
+    prompt.pad = pad->pad;
+  }
+  if (const auto *key = std::ranges::find(kKeys, button, &KeyBinding::button); key != kKeys.end()) {
+    prompt.key = key->key;
+  }
+  return prompt;
+}
+
+Prompt PadInput::itemPrompt(ItemButton item, bool secondPage) const {
+  if (chord_ == nullptr) {
+    return {};
+  }
+  const auto *slot = std::ranges::find(chord_->slots, item, &ChordSlot::item);
+  if (slot == chord_->slots.end()) {
+    return {};
+  }
+  const auto index = static_cast<size_t>(slot - chord_->slots.begin());
+  return {slot->face, kItemKeys[index + (secondPage ? kPageSlots : 0)]};
 }
 
 void PadInput::bindGame(std::string_view titleId) {

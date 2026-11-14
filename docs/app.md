@@ -21,6 +21,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 |---|---|
 | `run <frames>` | runs frames with the held pad and keeps the last one for `shot` |
 | `input <hex>` / `stick <x> <y>` / `cstick <x> <y>` | held buttons (bits in `Settings::NativeButton` order), circle pad and C-stick (signed 16-bit, y down) |
+| `device <pad\|keyboard>` | which device the held input stands for; the HUD's prompts follow it |
 | `gyro <x> <y> <z>` | the 3DS turning from now on, degrees a second on the core's axes (x left along the D-pad, y out of the touch screen, z up along the D-pad) |
 | `r <va> <size>` / `w <va> <hex>` | guest memory of the running process: code, `.data`, `.bss`, heap |
 | `savestate <file>` / `loadstate <file>` | the core's own states |
@@ -41,12 +42,15 @@ pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
 fontconfig (`Noto Sans:bold`).
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
-q L, w R, 1 ZL, 2 ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
+q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
 (A south, B east, X west, Y north, LT and RT are L and R, RB is ZR, the right stick's click ZL),
 right stick the C-stick; the left mouse button on the bottom screen is the stylus. LB is the
-chord: it and the 3 key hold pad bit 12 (the core's Debug button), which no 3DS button sets and
+chord: it and the Tab key hold pad bit 12 (the core's Debug button), which no 3DS button sets and
 our patches read as "second item page"; while LB is held, A, B, X and Y press that page's four
-item buttons and nothing else (`kChords` in `pad_input.cpp`, plans/pc-controls-hud.md).
+item buttons and nothing else (`kChords` in `pad_input.cpp`, plans/pc-controls-hud.md). The keys
+1 to 8 are the eight item slots: 1 to 4 press the chord layout's four item buttons, 5 to 8 press
+them with bit 12 held (`kItemKeys`). `PadInput::lastDevice()` is the device a button or key was
+last held on, the keyboard when both are; the HUD's prompts follow it.
 
 ## Options
 Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick

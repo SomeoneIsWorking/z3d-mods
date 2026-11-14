@@ -85,6 +85,15 @@ std::string Repl::execute(const std::string &line) {
     pad_.setStick(analog, static_cast<float>(x) / kStickFull, -static_cast<float>(y) / kStickFull);
     return "ok";
   }
+  if (command == "device") {
+    std::string device;
+    args >> device;
+    if (device != "pad" && device != "keyboard") {
+      return "err device <pad|keyboard>";
+    }
+    pad_.setDevice(device == "pad" ? HostDevice::Pad : HostDevice::Keyboard);
+    return "ok";
+  }
   if (command == "gyro") {
     float x = 0.0F;
     float y = 0.0F;

@@ -100,13 +100,13 @@ HudSprite HudAtlas::svg(const std::string &set, const std::string &name, int wid
   return place(key, surface);
 }
 
-HudSprite HudAtlas::text(const std::string &text, int height) {
-  const std::string key = "text/" + text + "@" + std::to_string(height);
+HudSprite HudAtlas::text(const std::string &text, int height, bool dark) {
+  const std::string key = (dark ? "dark/" : "text/") + text + "@" + std::to_string(height);
   if (const auto found = sprites_.find(key); found != sprites_.end()) {
     return found->second;
   }
   TTF_SetFontSize(font_, static_cast<float>(height));
-  return place(key, TTF_RenderText_Blended(font_, text.c_str(), text.size(), SDL_Color{255, 255, 255, 255}));
+  return place(key, TTF_RenderText_Blended(font_, text.c_str(), text.size(), dark ? SDL_Color{32, 32, 36, 255} : SDL_Color{255, 255, 255, 255}));
 }
 
 HudSprite HudAtlas::image(const std::filesystem::path &file, int width, int height) {

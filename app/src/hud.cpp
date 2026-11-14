@@ -3,6 +3,7 @@
 #include "emulator.hpp"
 #include "game_window.hpp"
 
+#include <SDL3/SDL_keyboard.h>
 #include <lucent/json.h>
 
 #include <algorithm>
@@ -19,6 +20,9 @@ namespace {
 
 constexpr const char *kHudSet = "hud";
 constexpr const char *kPadSet = "gamepad-xbox360";
+constexpr const char *kKeySet = "keyboard";
+// A key's letters against its cap.
+constexpr float kKeyLabelShare = 0.6F;
 // Shares of a button's size: the item icon in its middle and the glyph on its top left corner.
 constexpr float kIconShare = 0.68F;
 constexpr float kGlyphShare = 0.46F;
@@ -49,7 +53,12 @@ std::string_view glyphOf(SDL_GamepadButton button) {
   constexpr std::array kGlyphs{std::pair{SDL_GAMEPAD_BUTTON_SOUTH, std::string_view("face_a")},
                                std::pair{SDL_GAMEPAD_BUTTON_EAST, std::string_view("face_b")},
                                std::pair{SDL_GAMEPAD_BUTTON_WEST, std::string_view("face_x")},
-                               std::pair{SDL_GAMEPAD_BUTTON_NORTH, std::string_view("face_y")}};
+                               std::pair{SDL_GAMEPAD_BUTTON_NORTH, std::string_view("face_y")},
+                               std::pair{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, std::string_view("lb")},
+                               std::pair{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, std::string_view("rb")},
+                               std::pair{SDL_GAMEPAD_BUTTON_RIGHT_STICK, std::string_view("rs")},
+                               std::pair{SDL_GAMEPAD_BUTTON_START, std::string_view("start")},
+                               std::pair{SDL_GAMEPAD_BUTTON_BACK, std::string_view("back")}};
   for (const auto &[pad, glyph] : kGlyphs) {
     if (pad == button) {
       return glyph;
@@ -63,6 +72,25 @@ std::optional<ItemButton> itemButton(const std::string &name) {
                               std::pair{std::string_view("Y"), ItemButton::Y},
                               std::pair{std::string_view("I"), ItemButton::I},
                               std::pair{std::string_view("II"), ItemButton::II}};
+  for (const auto &[text, button] : kNames) {
+    if (text == name) {
+      return button;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<Settings::NativeButton::Values> nativeButton(const std::string &name) {
+  constexpr std::array kNames{std::pair{std::string_view("A"), Settings::NativeButton::A},
+                              std::pair{std::string_view("B"), Settings::NativeButton::B},
+                              std::pair{std::string_view("X"), Settings::NativeButton::X},
+                              std::pair{std::string_view("Y"), Settings::NativeButton::Y},
+                              std::pair{std::string_view("L"), Settings::NativeButton::L},
+                              std::pair{std::string_view("R"), Settings::NativeButton::R},
+                              std::pair{std::string_view("ZL"), Settings::NativeButton::ZL},
+                              std::pair{std::string_view("ZR"), Settings::NativeButton::ZR},
+                              std::pair{std::string_view("Start"), Settings::NativeButton::Start},
+                              std::pair{std::string_view("Select"), Settings::NativeButton::Select}};
   for (const auto &[text, button] : kNames) {
     if (text == name) {
       return button;
@@ -121,8 +149,8 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Scre
     element.full = integer(entry, "full", 0);
     element.icon = text(entry, "icon");
     element.frame = text(entry, "frame");
-    element.glyph = text(entry, "glyph");
-    element.chordItem = itemButton(text(entry, "chord"));
+    element.button = nativeButton(text(entry, "button"));
+    element.itemButton = itemButton(text(entry, "item_button"));
     element.none = integer(entry, "none", 0xFF);
     elements_.push_back(std::move(element));
   }
@@ -225,7 +253,7 @@ void Hud::draw(const Element &element) {
     const float digit = std::round(box.h * kDigitShare);
     float x = box.x + box.h + std::round(box.h * kCounterGap);
     for (const char character : std::to_string(*value)) {
-      const HudSprite sprite = atlas_->text(std::string(1, character), static_cast<int>(digit));
+      const HudSprite sprite = atlas_->text(std::string(1, character), static_cast<int>(digit), false);
       quad(sprite, {x, box.y + std::round((box.h - sprite.h) / 2.0F), sprite.w, sprite.h});
       x += sprite.w;
     }
@@ -240,19 +268,35 @@ void Hud::draw(const Element &element) {
       quad(atlas_->image(icons_ / (std::to_string(*item) + ".png"), static_cast<int>(size), static_cast<int>(size)),
            {box.x + inset, box.y + inset, size, size});
     }
-    std::string glyph = element.glyph;
-    const ChordLayout *chord = pad_.chord();
-    if (chord != nullptr && pad_.state().buttons[Settings::NativeButton::Debug] && element.chordItem) {
-      const auto *slot = std::ranges::find(chord->slots, *element.chordItem, &ChordSlot::item);
-      glyph = slot != chord->slots.end() ? std::string(glyphOf(slot->face)) : std::string();
-    }
-    if (!glyph.empty()) {
-      const float size = std::round(box.w * kGlyphShare);
-      quad(sized(kPadSet, glyph, size, size), {box.x - std::round(size / 4.0F), box.y - std::round(size / 4.0F), size, size});
-    }
+    prompt(element, box);
     return;
   }
   }
+}
+
+void Hud::prompt(const Element &element, const OverlayRect &box) {
+  const bool secondPage = pad_.state().buttons[Settings::NativeButton::Debug];
+  const bool keyboard = pad_.lastDevice() == HostDevice::Keyboard;
+  Prompt by;
+  if (element.itemButton && (keyboard || secondPage)) {
+    by = pad_.itemPrompt(*element.itemButton, secondPage);
+  } else if (element.button) {
+    by = PadInput::prompt(*element.button);
+  }
+  const float size = std::round(box.w * kGlyphShare);
+  const OverlayRect at{box.x - std::round(size / 4.0F), box.y - std::round(size / 4.0F), size, size};
+  if (!keyboard) {
+    if (by.pad && !glyphOf(*by.pad).empty()) {
+      quad(atlas_->svg(kPadSet, std::string(glyphOf(*by.pad)), static_cast<int>(size), static_cast<int>(size)), at);
+    }
+    return;
+  }
+  if (!by.key) {
+    return;
+  }
+  quad(atlas_->svg(kKeySet, "cap", static_cast<int>(size), static_cast<int>(size)), at);
+  const HudSprite label = atlas_->text(SDL_GetScancodeName(*by.key), static_cast<int>(std::round(size * kKeyLabelShare)), true);
+  quad(label, {at.x + std::round((size - label.w) / 2.0F), at.y + std::round((size - label.h) / 2.0F), label.w, label.h});
 }
 
 } // namespace z3d::app

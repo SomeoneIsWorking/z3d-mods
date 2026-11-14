@@ -51,11 +51,11 @@ private:
     uint32_t full = 0;
     // Counter: the port-assets hud glyph before the number.
     std::string icon;
-    // Button: its frame (hud set), the pad glyph it always shows, the item button it is while
-    // the chord is held, and the item value that means empty.
+    // Button: its frame (hud set), the 3DS button that presses it (if one does), the item
+    // button it is (if it is one), and the item value that means empty.
     std::string frame;
-    std::string glyph;
-    std::optional<ItemButton> chordItem;
+    std::optional<Settings::NativeButton::Values> button;
+    std::optional<ItemButton> itemButton;
     uint32_t none = 0;
   };
 
@@ -63,6 +63,8 @@ private:
   void update();
   void draw(const Element &element);
   void quad(const HudSprite &sprite, const OverlayRect &at, float share = 1.0F);
+  // The pad glyph or key cap of what presses a button element, on its top left corner.
+  void prompt(const Element &element, const OverlayRect &box);
 
   GameWindow &window_;
   Emulator &emulator_;

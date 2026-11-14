@@ -5,10 +5,12 @@
 #include "common/settings.h"
 
 #include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_scancode.h>
 
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -47,6 +49,15 @@ struct ChordLayout {
   std::array<ChordSlot, 4> slots;
 };
 
+// What the player last pressed something on.
+enum class HostDevice : uint8_t { Pad, Keyboard };
+
+// The host button and key that press something, for whoever draws a prompt.
+struct Prompt {
+  std::optional<SDL_GamepadButton> pad;
+  std::optional<SDL_Scancode> key;
+};
+
 class PadInput {
 public:
   // Registers the engine; the core's devices made from profile() read this pad until destruction.
@@ -76,6 +87,18 @@ public:
   [[nodiscard]] const ChordLayout *chord() const {
     return chord_;
   }
+  [[nodiscard]] HostDevice lastDevice() const {
+    return lastDevice_;
+  }
+  // The tools say which device their input stands for.
+  void setDevice(HostDevice device) {
+    lastDevice_ = device;
+  }
+  // What presses a 3DS button (a Settings::NativeButton).
+  [[nodiscard]] static Prompt prompt(Settings::NativeButton::Values button);
+  // What presses an item button of the bound game: on a pad its face button under the chord, on
+  // the keyboard 1 to 4 for the first page and 5 to 8 for the second.
+  [[nodiscard]] Prompt itemPrompt(ItemButton item, bool secondPage) const;
   // A game option (game_options.hpp); the picker and menus read the stick as held.
   void invertCStick(bool x, bool y) {
     state_->cStickInverted = {x, y};
@@ -89,6 +112,7 @@ private:
   std::shared_ptr<PadState> state_;
   std::vector<SDL_Gamepad *> pads_;
   const ChordLayout *chord_ = nullptr;
+  HostDevice lastDevice_ = HostDevice::Pad;
 };
 
 } // namespace z3d::app
