@@ -107,6 +107,9 @@ COLLISION_VERTICES = 0x18
 COLLISION_POLYGONS = 0x1C
 VERTEX_SIZE = 6
 POLYGON_SIZE = 20
+# A triangle is its type, three corners, the normal and the plane distance, with one more word:
+# before the normal in OoT3D, after it (always zero) in MM3D.
+POLYGON_WORD_FIRST = {MAGICS[0]: True, MAGICS[1]: False}
 VERTEX_INDEX = 0x1FFF
 MAX_VERTICES = VERTEX_INDEX + 1
 NORMAL_ONE = 32767
@@ -120,6 +123,8 @@ class Polygon:
     corners: tuple[int, int, int]
     normal: tuple[int, int, int]
     distance: float
+    # The format's remaining word, kept as read.
+    word: int = 0
 
     def vertices(self) -> tuple[int, int, int]:
         return tuple(corner & VERTEX_INDEX for corner in self.corners)
@@ -134,7 +139,7 @@ class Polygon:
         unit = tuple(x / length for x in n)
         corners = tuple(i | (f & ~VERTEX_INDEX) for i, f in zip(self.vertices(), flags.corners))
         return Polygon(self.surface, corners, tuple(round(x * NORMAL_ONE) for x in unit),
-                       -sum(x * y for x, y in zip(unit, a)))
+                       -sum(x * y for x, y in zip(unit, a)), flags.word)
 
 
 @dataclass(frozen=True)
@@ -164,8 +169,9 @@ class Scene:
         vertices = [struct.unpack_from("<3h", data, vertices_at + i * VERTEX_SIZE) for i in range(vertex_count)]
         polygons = []
         for i in range(polygon_count):
-            surface, a, b, c, _, nx, ny, nz, distance = struct.unpack_from("<5H3hf", data, polygons_at + i * POLYGON_SIZE)
-            polygons.append(Polygon(surface, (a, b, c), (nx, ny, nz), distance))
+            surface, a, b, c, *words, distance = struct.unpack_from("<4H4hf", data, polygons_at + i * POLYGON_SIZE)
+            word = words.pop(0 if POLYGON_WORD_FIRST[data[0:4]] else 3)
+            polygons.append(Polygon(surface, (a, b, c), tuple(words), distance, word))
         return cls(data, header, vertices, polygons)
 
     def with_collision(self, vertices: list[tuple[int, int, int]], polygons: list[Polygon]) -> bytes:
@@ -180,8 +186,9 @@ class Scene:
         out.extend(bytes(-len(out) % 4))
         polygons_at = len(out)
         for polygon in polygons:
-            out.extend(struct.pack("<5H3hf", polygon.surface, *polygon.corners, 0, *polygon.normal,
-                                   polygon.distance))
+            words = [*polygon.normal]
+            words.insert(0 if POLYGON_WORD_FIRST[self.data[0:4]] else 3, polygon.word)
+            out.extend(struct.pack("<4H4hf", polygon.surface, *polygon.corners, *words, polygon.distance))
         struct.pack_into("<HH", out, self.header + COLLISION_COUNTS[self.data[0:4]], len(vertices), len(polygons))
         struct.pack_into("<II", out, self.header + COLLISION_VERTICES, vertices_at - BASE, polygons_at - BASE)
         return bytes(out)
