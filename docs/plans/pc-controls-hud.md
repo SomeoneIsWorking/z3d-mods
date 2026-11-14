@@ -359,7 +359,8 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   Temple with none, then 2 (`mmkeys6`, `ootkeys8`).
 - The minimap at the top screen's bottom right in both games, each game's own: OoT3D's where The One
   Screen puts it, MM3D's moved there by the patch from the touch screen's draw queue to the top
-  screen's (`patch/mm3d/minimap.cpp`), shown, like the game's, once the scene's map is owned
+  screen's (`patch/mm3d/minimap.cpp`), the map's drawn extent fitted to one 76x64 box in every
+  scene, shown, like the game's, once the scene's map is owned
   (Tingle's). Seen in South Clock Town, Termina Field and Woodfall Temple (`mmmap7`, `mmmap3`)
   and in the window (`map-zoom-mm3d`, `play-minimap`), the Map screen's own map unchanged.
 - Missing from MM3D's HUD: View, the ice and light
