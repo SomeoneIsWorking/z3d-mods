@@ -59,7 +59,9 @@ printed lines it reads (`src/tool_process`); a tool's refusal is its lines that 
   click opens a row, F10 or Guide gives up. A name too long for its line loses its middle. A folder
   the tools refuse (no dump of either game in it) stays on the screen with the reason.
 - The options' last row, "Games and mods folders", runs `FolderSetup` again: B or Escape on a
-  question keeps that folder, and the picker reopens on the library the tools wrote.
+  question keeps that folder, and the picker reopens on the library the tools wrote. Each
+  question shows the folder set now ("Now: ..."), which `<tools> folders --user <user> --kept
+  roms|mods` prints.
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
@@ -371,8 +373,8 @@ run the package's launcher. Re-run it after a change.
   ..." in red; ROM/3DS shows the two dumps under its rows and is taken; the mods question
   follows, answered with Return, the stick and a click on "Use this folder"; the picker then
   shows both games, each "A  Set up from your game". `folders.json` holds both folders. Then
-  X and the options' last row ask again: B keeps the dump folder, another mods folder is taken,
-  and `folders.json` names it.
+  X and the options' last row ask again, each question under "Now:" and its folder: B keeps
+  the dump folder, another mods folder is taken, and `folders.json` names it.
 
 - Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the

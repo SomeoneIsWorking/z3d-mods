@@ -19,8 +19,9 @@ namespace z3d::app {
 namespace {
 
 struct Ask {
-  // The tools' flag that takes the folder (tools/z3dmods/packed.py `folders`).
+  // The tools' flag that takes the folder (tools/z3dmods/packed.py `folders`), and its name.
   const char *flag;
+  const char *name;
   const char *message;
   const char *label;
   const char *hint;
@@ -28,16 +29,18 @@ struct Ask {
 };
 
 constexpr const char *kTitle = "z3d";
+constexpr const char *kNow = "Now: ";
 constexpr const char *kBrowse = "Choose the folder";
 constexpr const char *kAgain = "Choose another folder";
 constexpr const char *kFooter = "A or Enter: choose the folder";
 constexpr const char *kFooterAgain =
     "A or Enter: choose the folder. B or Esc: keep the one you have.";
 constexpr std::array kAsks{
-    Ask{"--roms", "Where are your 3DS games?", "The folder with your game dumps (.3ds or .cci)",
+    Ask{"--roms", "roms", "Where are your 3DS games?",
+        "The folder with your game dumps (.3ds or .cci)",
         "z3d plays Ocarina of Time 3D and Majora's Mask 3D from your own dumps.",
         "Your games folder"},
-    Ask{"--mods", "Where are your mod downloads?", "The folder with your mod downloads",
+    Ask{"--mods", "mods", "Where are your mod downloads?", "The folder with your mod downloads",
         "Setting a game up reads its mods from here and names any that is missing. "
         "A .zip or .tar left there is unpacked for you.",
         "Your mods folder"},
@@ -54,6 +57,17 @@ std::filesystem::path home() {
   return path.has_filename() ? path : path.parent_path();
 }
 
+// The folder the tools hold for `what`; empty when none is set.
+std::string kept(const Ask &what, const AppConfig &config) {
+  std::vector<std::string> command = config.tools;
+  command.insert(command.end(),
+                 {"folders", "--user", config.userDir.string(), "--kept", what.name});
+  ToolProcess tool;
+  tool.start(command);
+  tool.wait();
+  return tool.exitCode() == 0 ? tool.lastLine() : std::string();
+}
+
 // False when the window closes before the question is answered.
 bool ask(const Ask &what, FolderSetup::Asking asking, GameWindow &window, const PadInput &pad,
          const AppConfig &config) {
@@ -61,7 +75,9 @@ bool ask(const Ask &what, FolderSetup::Asking asking, GameWindow &window, const 
   setup_ui::Config screen;
   screen.title = kTitle;
   screen.message = what.message;
-  screen.hint = what.hint;
+  const std::string now = kept(what, config);
+  screen.hint = now.empty() ? std::string(what.hint) : kNow + now + "\n" + what.hint;
+  lucent::info("menu", "folders: {} is {}", what.flag, now.empty() ? "not set" : now);
   screen.footer = asking == FolderSetup::Asking::Again ? kFooterAgain : kFooter;
   screen.files = {setup_ui::FileSpec{what.flag, "", what.label}};
   screen.placement = setup_ui::Placement::Adopt;

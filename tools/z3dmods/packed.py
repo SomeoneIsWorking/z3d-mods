@@ -1,6 +1,7 @@
 """The packaged app's commands (package.py), `python -m z3dmods.packed <command>`: `play`, which
 opens the title picker over the player's dumps, and the two the picker runs: `folders`, which
-takes a folder the player chose on the first run, and `setup`, which makes a game's set.
+takes a folder the player chose (or, with `--kept`, prints the one set now), and `setup`, which
+makes a game's set.
 """
 
 from __future__ import annotations
@@ -46,6 +47,10 @@ def _play(args: argparse.Namespace) -> None:
 def _folders(args: argparse.Namespace) -> None:
     cfg = config.load()
     kept = _kept(args.user)
+    if args.kept:
+        # One line: the folder, or an empty one when none is set.
+        print(kept.get(args.kept, ""))
+        return
     if args.roms:
         found = _with_dumps(cfg, {"roms": str(args.roms)})
         if not found.roms:
@@ -74,6 +79,7 @@ def main() -> None:
     taken.add_argument("--user", type=Path, required=True)
     taken.add_argument("--roms", type=Path)
     taken.add_argument("--mods", type=Path)
+    taken.add_argument("--kept", choices=("roms", "mods"), help="print that folder as it is set now")
     taken.set_defaults(run=_folders)
     made = commands.add_parser("setup", help="what the picker runs to set a game up")
     made.add_argument("--user", type=Path, required=True)
