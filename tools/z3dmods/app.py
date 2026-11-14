@@ -101,10 +101,11 @@ def _configured_prefix(tree: Path) -> str | None:
 def _build(cfg: Config, builder: Builder) -> Path:
     tree = builder.tree(cfg)
     prefix = core(cfg, builder)
-    # A tree made for another core revision is configured again against this one.
+    # A tree made for another core revision is configured from scratch: its cache keeps the old
+    # core's package directory.
     if _configured_prefix(tree) != str(prefix):
         tree.mkdir(parents=True, exist_ok=True)
-        builder.run(cfg, ["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
+        builder.run(cfg, ["cmake", "--fresh", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
                           "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={prefix}",
                           *builder.flags(cfg)])
     builder.run(cfg, ["ninja", "-C", str(tree)])
