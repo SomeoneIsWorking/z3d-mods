@@ -3,7 +3,8 @@ but the desktop's own libraries (docs/plans/packed-app.md).
 
     z3d                 the launcher: `python/bin/python3 -I -m z3dmods.packed play`
     AppRun, z3d.desktop what makes the folder an AppDir; `appimage` packs it into one file
-    bin/z3d, lib/       the app and every library it links but the C and C++ runtimes
+    bin/z3d, lib/       the app and every library it links but the C and C++ runtimes, built
+                        in a container of an older distribution (build_container.py)
     python/             a relocatable CPython (uv's), with the locked wheels in its site-packages
     tools/z3dmods/      these tools; the app runs `z3dmods.packed folders` and `setup`
     sets/, patch/       the sets and each patch's tables (options, HUD, overlay)
@@ -19,11 +20,22 @@ is read-only, so it always uses the data folder.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
-from z3dmods import app, config, glyphs, patch_build, play, shortcut, source_check, symbols
+from z3dmods import (
+    app,
+    build_container,
+    config,
+    glyphs,
+    patch_build,
+    play,
+    shortcut,
+    source_check,
+    symbols,
+)
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -80,14 +92,38 @@ def _python(out: Path) -> Path:
     return interpreter
 
 
-def _libraries(binary: Path, core: Path, out: Path) -> None:
+def _libraries(cfg: Config, binary: Path, core: Path, out: Path) -> None:
+    """The libraries `binary` links in the build container, copied out of it."""
     out.mkdir()
     shutil.copyfile(core, out / core.name)
-    needed = _run("ldd", str(binary)).splitlines()
-    for line in needed:
+    linked = []
+    for line in build_container.output(cfg, ["ldd", str(binary)]).splitlines():
         name, _, rest = line.strip().partition(" => ")
         if not name.startswith((*DESKTOP_LIBRARIES, core.stem)) and rest.startswith("/"):
-            shutil.copyfile(Path(rest.split()[0]).resolve(), out / name)
+            linked.append(rest.split()[0])
+    build_container.run(cfg, ["cp", "-L", *linked, str(out)])
+
+
+def _glibc(binary: Path) -> tuple[int, ...]:
+    """The newest glibc version whose symbols the ELF file `binary` needs."""
+    versions = set(re.findall(r"GLIBC_(\d+(?:\.\d+)+)", _run("objdump", "-T", str(binary))))
+    return max((tuple(map(int, version.split("."))) for version in versions), default=(0,))
+
+
+def _check_floor(out: Path) -> None:
+    """Refuses a package holding a program or library that needs a newer glibc than the build
+    container's, which is the oldest desktop the package says it runs on."""
+    newer = []
+    for path in sorted(p for p in out.rglob("*") if p.is_file() and not p.is_symlink()):
+        with path.open("rb") as file:
+            if file.read(4) != b"\x7fELF":
+                continue
+        needs = _glibc(path)
+        if needs > build_container.GLIBC_FLOOR:
+            newer.append(f"{path.relative_to(out)} (glibc {'.'.join(map(str, needs))})")
+    if newer:
+        floor = ".".join(map(str, build_container.GLIBC_FLOOR))
+        raise RuntimeError(f"these need a glibc newer than {floor}: {', '.join(newer)}")
 
 
 def _runtime(cfg: Config) -> Path:
@@ -128,9 +164,10 @@ def build(cfg: Config, out: Path) -> Path:
     if out.exists():
         shutil.rmtree(out)
     (out / "bin").mkdir(parents=True)
-    binary = app.current_binary(cfg)
+    binary = app.current_binary(cfg, build_container.BUILDER)
     shutil.copy2(binary, out / "bin" / binary.name)
-    _libraries(binary, next(app.core_prefix(cfg).glob("lib*/libazahar_core.so")), out / "lib")
+    core = next(app.core_prefix(cfg, build_container.BUILDER).glob("lib*/libazahar_core.so"))
+    _libraries(cfg, binary, core, out / "lib")
     shutil.copytree(cfg.repo / "tools" / "z3dmods", out / "tools" / "z3dmods",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(cfg.repo / "sets", out / "sets")
@@ -159,6 +196,7 @@ def build(cfg: Config, out: Path) -> Path:
     (out / "AppRun").symlink_to(launcher.name)
     (out / f"{play.DESKTOP_ID}.desktop").write_text(shortcut.desktop_entry(launcher.name))
     interpreter = _python(out)
+    _check_floor(out)
     # The mark comes last: a folder with it is a whole package.
     (out / config.PACKAGE_MARK).write_text(json.dumps({"revision": revision, "azahar": app.AZAHAR_REVISION}) + "\n")
     _run(str(interpreter), "-I", "-c", "import z3dmods.packed")

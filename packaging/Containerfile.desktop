@@ -1,0 +1,12 @@
+# A desktop of the oldest distribution the package says it runs on, for the input test that
+# starts the AppImage there (tools/z3dmods/desktop_container.py): the build container's base
+# with what a desktop has and the package leaves to it (a Vulkan driver, the X11 and Wayland
+# client libraries, the C++ runtime) and nothing of ours.
+FROM docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libstdc++6 libvulkan1 mesa-vulkan-drivers libgl1 libegl1 \
+        libx11-6 libxext6 libxcursor1 libxi6 libxrandr2 libxfixes3 libxss1 libxkbcommon0 \
+        libwayland-client0 libwayland-cursor0 libwayland-egl1 \
+    && rm -rf /var/lib/apt/lists/*

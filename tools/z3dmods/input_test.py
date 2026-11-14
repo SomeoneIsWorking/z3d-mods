@@ -19,7 +19,7 @@ from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, config, ctr, games, harness, package, play, shortcut, source_check, steps, symbols
+from z3dmods import app, config, ctr, desktop_container, games, harness, package, play, shortcut, source_check, steps, symbols
 from z3dmods.config import Config
 from z3dmods.install import GameSet
 
@@ -71,9 +71,12 @@ class Gamepad:
 
 
 class Session:
-    def __init__(self, out: Path, args: list[str], env: dict[str, str] | None = None) -> None:
+    def __init__(self, out: Path, args: list[str], env: dict[str, str] | None = None, program: str = "z3d") -> None:
+        """`program` is the one Gamescope starts whose environment names the display: the app,
+        or what stands between Gamescope and it."""
         self.out = out
         self._args = args
+        self._program = program
         self._extra_env = env or {}
         self._gamescope: subprocess.Popen | None = None
         self._env: dict[str, str] = {}
@@ -111,7 +114,7 @@ class Session:
                 if not entry.name.isdigit():
                     continue
                 try:
-                    if os.getpgid(int(entry.name)) != self._gamescope.pid or (entry / "exe").resolve().name != "z3d":
+                    if os.getpgid(int(entry.name)) != self._gamescope.pid or (entry / "exe").resolve().name != self._program:
                         continue
                     items = (entry / "environ").read_bytes().split(b"\0")
                 except (ProcessLookupError, FileNotFoundError, PermissionError):
@@ -120,7 +123,7 @@ class Session:
                 return {**os.environ, "DISPLAY": found["DISPLAY"],
                         "GAMESCOPE_WAYLAND_DISPLAY": found["GAMESCOPE_WAYLAND_DISPLAY"]}
             time.sleep(0.5)
-        raise RuntimeError("z3d did not start inside gamescope")
+        raise RuntimeError(f"{self._program} did not start inside gamescope")
 
     def wait(self, seconds: float) -> None:
         assert self._gamescope
@@ -661,6 +664,18 @@ def _first_run(session: Session, pad: Gamepad) -> None:
     session.shot("picker-after-folders")
 
 
+def _older_desktop(session: Session, pad: Gamepad) -> None:
+    """The AppImage on a desktop of the oldest distribution it runs on (desktop_container.py),
+    told the dump folder: it unpacks, starts and opens the picker over the dumps."""
+    session.expect("picker: on Ocarina", 180)
+    session.wait(2)
+    session.shot("picker")
+    session.key("stick_right")
+    session.expect("picker: on Majora")
+    session.wait(1)
+    session.shot("picker-second")
+
+
 def _menu_pad(session: Session, pad: Gamepad) -> None:
     """The menus read the pad by its own button names whatever game was played last: after
     OoT3D, whose set trades X and Y on their way to the game, X still opens the options and
@@ -806,9 +821,12 @@ FILES = {"setup-wrong-dump": _wrong_dump, "setup-missing-mod": _missing_mod, "se
          "setup-archive": _archived_mod}
 # Scenarios on the package `z3dmods package` built, started with nothing known: by the folder's
 # launcher, and as the AppImage.
-PACKAGE = {"first-run": _first_run, "first-run-appimage": _first_run}
+PACKAGE = {"first-run": _first_run, "first-run-appimage": _first_run, "appimage-older-desktop": _older_desktop}
 PACKAGE_PROGRAM = {"first-run": lambda cfg: package.folder(cfg) / "z3d",
-                   "first-run-appimage": lambda cfg: package.folder(cfg).with_name(package.APPIMAGE)}
+                   "first-run-appimage": lambda cfg: package.folder(cfg).with_name(package.APPIMAGE),
+                   "appimage-older-desktop": lambda cfg: package.folder(cfg).with_name(package.APPIMAGE)}
+# The package scenarios that run in the older desktop's container.
+OLDER_DESKTOP = ("appimage-older-desktop",)
 SCENARIOS = {**DIRECT, **PICKER, **PACKAGE, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
 
 
@@ -819,7 +837,15 @@ def _session(cfg: Config, scenario: str, out: Path) -> Session:
         if not launcher.exists():
             raise RuntimeError(f"{launcher} is missing; run z3dmods package")
         user.mkdir(parents=True)
-        return Session(out, [str(launcher)], {config.APP_DATA_ENV: str(user), "HOME": str(_first_run_home(cfg, out))})
+        home = _first_run_home(cfg, out)
+        if scenario in OLDER_DESKTOP:
+            # The dumps are links: the container sees their folders too.
+            dumps = sorted({rom.parent for rom in cfg.roms.values()})
+            program = [str(launcher), "--roms", str(home / "ROM" / "3DS"), "--mods", str(home / "Empty")]
+            return Session(out, desktop_container.command(cfg, out, [launcher, *dumps],
+                                                          {config.APP_DATA_ENV: str(user)}, program),
+                           program=desktop_container.PROGRAM)
+        return Session(out, [str(launcher)], {config.APP_DATA_ENV: str(user), "HOME": str(home)})
     app.seed_user(cfg, user, fresh=True)
     if scenario in PREPARE:
         PREPARE[scenario](cfg, user, out)

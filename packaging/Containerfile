@@ -1,0 +1,65 @@
+# Where the package's app and core are built (tools/z3dmods/build_container.py). Ubuntu 24.04
+# sets the floor a desktop must meet: glibc 2.39 and GCC 14's libstdc++.
+FROM docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+
+ENV DEBIAN_FRONTEND=noninteractive
+# Clang 22 from apt.llvm.org, the release the checkout builds with; its key is pinned by sha256.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+    && curl -fsSL --retry 5 --retry-all-errors -o /tmp/llvm.key https://apt.llvm.org/llvm-snapshot.gpg.key \
+    && echo "8b2a587ffd672c4687e7581dad4b2f6c1bb2ad6b480cd9771ba2ff48e0b8c75d  /tmp/llvm.key" \
+        | sha256sum -c - \
+    && gpg --dearmor -o /usr/share/keyrings/llvm.gpg /tmp/llvm.key && rm /tmp/llvm.key \
+    && echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
+        > /etc/apt/sources.list.d/llvm.list
+# The X11, Wayland, audio and input headers are SDL3's: it opens those libraries at run time,
+# so they stay the desktop's.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        xz-utils git file clang-22 llvm-22 lld-22 libstdc++-14-dev ninja-build pkg-config python3 \
+        libfreetype-dev libharfbuzz-dev libpng-dev zlib1g-dev \
+        libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev \
+        libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev \
+        libegl-dev libgl-dev libgbm-dev libdrm-dev libvulkan-dev \
+        libpipewire-0.3-dev libpulse-dev libasound2-dev libudev-dev libdbus-1-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && for tool in clang clang++ llvm-ar llvm-ranlib ld.lld; do \
+        ln -s "/usr/bin/$tool-22" "/usr/local/bin/$tool"; \
+    done
+# CMake 4.3, the checkout's: 24.04's 3.28 refuses the core's whole-archive link. Kitware's
+# release, pinned by the sha256 it publishes.
+RUN curl -fsSL --retry 5 --retry-all-errors -o /tmp/cmake.tar.gz \
+        https://github.com/Kitware/CMake/releases/download/v4.3.0/cmake-4.3.0-linux-x86_64.tar.gz \
+    && echo "201bdabe17a54e017f119cffa247648e9c44327e52473c2cc60a88fded94652a  /tmp/cmake.tar.gz" \
+        | sha256sum -c - \
+    && tar -xzf /tmp/cmake.tar.gz -C /usr/local --strip-components=1 && rm /tmp/cmake.tar.gz
+
+# SDL3, SDL3_ttf (on 24.04's FreeType and HarfBuzz) and SDL3_image (PNG), which 24.04 does not
+# package: release tarballs pinned by sha256, built into /usr/local. The package carries them.
+RUN set -eu; \
+    build() { \
+        name=$1; url=$2; sum=$3; shift 3; \
+        curl -fsSL --retry 5 --retry-all-errors -o "/tmp/$name.tar.gz" "$url"; \
+        echo "$sum  /tmp/$name.tar.gz" | sha256sum -c -; \
+        mkdir "/tmp/$name"; tar -xzf "/tmp/$name.tar.gz" -C "/tmp/$name" --strip-components=1; \
+        cmake -S "/tmp/$name" -B "/tmp/$name/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_INSTALL_LIBDIR=lib/x86_64-linux-gnu "$@"; \
+        ninja -C "/tmp/$name/build" install; \
+        rm -rf "/tmp/$name" "/tmp/$name.tar.gz"; \
+        ldconfig; \
+    }; \
+    build sdl3 \
+        https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.tar.gz \
+        9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3 \
+        -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF; \
+    build sdl3-ttf \
+        https://github.com/libsdl-org/SDL_ttf/releases/download/release-3.2.2/SDL3_ttf-3.2.2.tar.gz \
+        63547d58d0185c833213885b635a2c0548201cc8f301e6587c0be1a67e1e045d \
+        -DSDLTTF_VENDORED=OFF -DSDLTTF_STRICT=ON -DSDLTTF_HARFBUZZ=ON -DSDLTTF_PLUTOSVG=OFF \
+        -DSDLTTF_SAMPLES=OFF; \
+    build sdl3-image \
+        https://github.com/libsdl-org/SDL_image/releases/download/release-3.4.6/SDL3_image-3.4.6.tar.gz \
+        d2e4637ae700f72e5196b8fbd749850ed2e5e1e09c5a5be8d06ff55aaccf3b01 \
+        -DSDLIMAGE_VENDORED=OFF -DSDLIMAGE_STRICT=ON -DSDLIMAGE_DEPS_SHARED=OFF \
+        -DSDLIMAGE_BACKEND_STB=ON -DSDLIMAGE_PNG_LIBPNG=ON -DSDLIMAGE_WEBP=OFF \
+        -DSDLIMAGE_AVIF=OFF -DSDLIMAGE_JXL=OFF -DSDLIMAGE_TIF=OFF -DSDLIMAGE_SAMPLES=OFF \
+        -DSDLIMAGE_TESTS=OFF

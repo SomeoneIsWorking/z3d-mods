@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from z3dmods import options
@@ -44,42 +46,62 @@ def azahar_source(cfg: Config) -> Path:
     return cfg.azahar_source
 
 
-def core_prefix(cfg: Config) -> Path:
-    return cfg.dependencies / "azahar-core" / f"{AZAHAR_REVISION}-{TOOLCHAIN}" / "prefix"
+@dataclass(frozen=True)
+class Builder:
+    """Where the core and the app are built: this machine, or the package's container
+    (build_container.py)."""
+    # Names the core's prefix beside its revision.
+    toolchain: str
+    # The app's build tree.
+    tree: Callable[[Config], Path]
+    run: Callable[[Config, list[str]], None]
 
 
-def core(cfg: Config) -> Path:
+def _run_here(_cfg: Config, command: list[str]) -> None:
+    subprocess.run(command, check=True)
+
+
+HOST = Builder(TOOLCHAIN, lambda cfg: cfg.app_binary.parent, _run_here)
+
+
+def core_prefix(cfg: Config, builder: Builder = HOST) -> Path:
+    return cfg.dependencies / "azahar-core" / f"{AZAHAR_REVISION}-{builder.toolchain}" / "prefix"
+
+
+def core(cfg: Config, builder: Builder = HOST) -> Path:
     """Builds and installs the core only when its prefix for this revision does not exist."""
-    prefix = core_prefix(cfg)
+    prefix = core_prefix(cfg, builder)
     if not any(prefix.glob("lib*/cmake/AzaharCore/AzaharCoreConfig.cmake")):
         tree = prefix.parent / "build"
+        tree.mkdir(parents=True, exist_ok=True)
         flags = [f"-D{key}={value}" for key, value in AZAHAR_OPTIONS.items()]
-        subprocess.run(["cmake", "-S", str(azahar_source(cfg)), "-B", str(tree), "-G", "Ninja",
-                        "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_INSTALL_PREFIX={prefix}", *flags],
-                       check=True)
-        subprocess.run(["ninja", "-C", str(tree), "install"], check=True)
+        builder.run(cfg, ["cmake", "-S", str(azahar_source(cfg)), "-B", str(tree), "-G", "Ninja",
+                          "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_INSTALL_PREFIX={prefix}", *flags])
+        builder.run(cfg, ["ninja", "-C", str(tree), "install"])
     return prefix
 
 
-def _build(cfg: Config) -> None:
-    tree = cfg.app_binary.parent
+def _build(cfg: Config, builder: Builder) -> Path:
+    tree = builder.tree(cfg)
     if not (tree / "build.ninja").exists():
-        subprocess.run(["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
-                        "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={core(cfg)}"], check=True)
-    subprocess.run(["ninja", "-C", str(tree)], check=True)
+        prefix = core(cfg, builder)
+        tree.mkdir(parents=True, exist_ok=True)
+        builder.run(cfg, ["cmake", "-S", str(cfg.repo / "app"), "-B", str(tree), "-G", "Ninja",
+                          "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_PREFIX_PATH={prefix}"])
+    builder.run(cfg, ["ninja", "-C", str(tree)])
+    return tree / cfg.app_binary.name
 
 
 def binary(cfg: Config) -> Path:
     """Builds the app only when no build exists; an existing build is used as it is."""
     if not cfg.app_binary.exists():
-        _build(cfg)
+        _build(cfg, HOST)
     return cfg.app_binary
 
 
-def current_binary(cfg: Config) -> Path:
-    """The app built from the checkout as it is now, which a package is made of."""
-    _build(cfg)
-    return cfg.app_binary
+def current_binary(cfg: Config, builder: Builder) -> Path:
+    """The app built by `builder` from the checkout as it is now, which a package is made of."""
+    return _build(cfg, builder)
 
 
 def seed_user(cfg: Config, user: Path, fresh: bool) -> None:

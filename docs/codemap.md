@@ -32,6 +32,8 @@
 - `tools/z3dmods/setup.py`: `z3dmods setup --user <folder> <dump>`: the set of a dump's game installed into an app user folder; the app's picker runs it. How a refusal is printed for the app.
 - `tools/z3dmods/set_inputs.py`: the digest of what of ours a set is made from (set, tables, patch, glyphs, tools), which the install writes into the options manifest and a package's library names.
 - `tools/z3dmods/glyphs.py`: port-assets' pad glyphs drawn large by ImageMagick, once per checkout or into a package (`prebuilt/glyphs/`), for the menu textures.
+- `tools/z3dmods/build_container.py`: the podman image the package's app and core are built in (`packaging/Containerfile`), which sets the oldest glibc and libstdc++ a desktop needs.
+- `tools/z3dmods/desktop_container.py`: a container of the oldest distribution the package runs on (`packaging/Containerfile.desktop`), where the input test starts the AppImage.
 - `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the package in another machine's `~/Games/z3d`, the player's data there kept and copied aside, with its shortcuts.
 - `tools/z3dmods/package.py`: `z3dmods package`: the Linux package folder (an AppDir): app, every library it links but the C and C++ runtimes, a relocatable Python with the locked wheels, the tools, sets, prebuilt patches and glyphs, assets; and the AppImage of that folder.
 - `tools/z3dmods/packed.py`: the package's entry point (`python -m z3dmods.packed`): `play` over the player's dump folder, and what the picker runs: `folders` (takes a folder the player chose, keeps it in `folders.json`, writes the library) and `setup`.

@@ -156,7 +156,7 @@ The C++ rewrite stays the fallback if a platform cannot carry a Python runtime (
 `z3dmods package` makes `build/package/z3d` (`tools/z3dmods/package.py`, 171 MB) and
 `build/package/z3d-x86_64.AppImage` (53 MB):
 - `z3d`, the launcher; `bin/z3d`; `lib/`: the core and every library the app links (SDL3,
-  SDL3_ttf, SDL3_image, plutosvg, freetype, harfbuzz, png and what they need) but the C and C++
+  SDL3_ttf, SDL3_image, freetype, harfbuzz, png and what they need) but the C and C++
   runtimes. Vulkan is the desktop's loader, which the core opens itself;
 - `python/`, uv's relocatable CPython 3.12 with the locked wheels (Pillow) in its
   site-packages, and `tools/z3dmods/` on its path: no system Python, no uv;
@@ -179,11 +179,30 @@ The two forms are the same files:
   `<dependencies>/appimage-runtime/`): one file to download and start. It is read-only, so the
   player's data is `~/.local/share/z3d`. It needs FUSE on the desktop (fusermount3), or
   `--appimage-extract-and-run`.
-- Neither runs on a desktop older than the one that built it: the app and the core link that
-  machine's glibc and libstdc++ (Fedora 44 here). A release for other distributions is built
-  on an older base in CI, which is not set up.
+
+The app and the core in it are built in a container (`packaging/Containerfile`,
+`tools/z3dmods/build_container.py`; podman), so the package runs on desktops older than the
+maintainer's:
+- The image is Ubuntu 24.04 with Clang 22 (apt.llvm.org), CMake 4.3 and SDL3, SDL3_ttf and
+  SDL3_image built from their release tarballs, each pinned by SHA-256. It is tagged by the
+  recipe's hash and built once.
+- The checkout, the core's source and the shared checkouts (Lucent, setup-ui, RmlUi) are
+  mounted at their own paths; the core's prefix is `<dependencies>/azahar-core/<revision>-
+  clang-ubuntu24.04`, the app's tree `build/package-app`. The checkout's own build
+  (`build/app`) is not what a package holds.
+- The libraries in `lib/` are the ones the app links there, copied out of the container.
+- What a desktop must have: glibc 2.39 and GCC 13's libstdc++ (Ubuntu 24.04, Debian 13,
+  Fedora 40 or newer), a Vulkan driver, and the X11 or Wayland libraries SDL3 opens. The
+  build refuses a package in which any program or library needs a newer glibc.
+- 24.04 is the floor because Lucent's log uses `<format>`, which GCC 12's libstdc++ (Debian
+  12, Ubuntu 22.04) lacks.
 
 ### Seen (2026-11-14)
+- The older desktop, `z3dmods inputtest appimage-older-desktop`: the AppImage started in a
+  container of Ubuntu 24.04 that holds only a desktop's libraries
+  (`packaging/Containerfile.desktop`, `tools/z3dmods/desktop_container.py`; no network, the
+  test's Gamescope as its display), told the dump folder: it unpacks itself and opens the
+  picker with both games' tiles.
 - The first run (`z3dmods inputtest first-run`, the package's launcher on an empty data folder,
   and `first-run-appimage`, the AppImage): docs/app.md, "Checking it".
 - The Ally, `pk-ally2`: the package installed by `z3dmods shortcut --host ally` over sets an
