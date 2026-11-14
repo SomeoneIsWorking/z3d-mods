@@ -45,8 +45,9 @@ fontconfig (`Noto Sans:bold`).
 Setup: with `--installer <program> [<argument>]...` (the rest of the command line) the picker
 sets up a game whose options manifest is missing from the user folder: `SetInstall`
 (`src/set_install`) runs the installer with the dump's path added and the picker shows its last
-printed line until it ends, then boots the game. `play.py` passes `z3dmods setup --user <user>`
-(plans/packed-app.md).
+printed line until it ends, then boots the game; when it fails the picker shows the installer's
+refusal (its lines that start with "! "), shrunk until it fits, until A. `play.py` passes
+`z3dmods setup --user <user> --mods <the player's mod downloads>` (plans/packed-app.md).
 
 Windowed input: the keyboard uses the player's Azahar keys (a A, s B, z X, x Y, m Start, n Select,
 q L, w R, e ZL, r ZR, t/g/f/h D-pad, arrows circle pad); gamepads by the names on an Xbox pad,
@@ -99,9 +100,14 @@ mouse motion (`z3dmods inputtest aim`, `aim-mm3d`): D-pad Left or ZL logs "mouse
 aim", the same four moves show the same views as the harness frames, and leaving first person
 logs "mouse released after 1600 by 600 counts", the travel the test sent.
 
+The picker and its menus do not read the 3DS pad: `PadInput::menu()` (`MenuPad`) is the host's
+buttons by their names on an Xbox pad (A, B, X, Y, Start, the D-pad and the left stick) and the
+keys that stand for them, taken before a game's chord layout or a set's X/Y trade, so a menu
+button is the same whichever game was played last.
+
 ## Options
 Each game has its own options, opened with X on its picker tile (`options_menu`): Up and Down pick
-a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
+a row, A, Left or Right change it, B or X goes back. `GameOptions` owns them:
 
 - The patch's switches come from the manifest the install writes beside the set,
   `load/mods/<title id>/z3d-options.json` (`tools/z3dmods/options.py`, from
@@ -110,7 +116,7 @@ a row, A, Left or Right change it, B goes back. `GameOptions` owns them:
   relative to the user folder.
 - An `[[option]]` with `pad` instead of `field` is the app's: `cstick_invert_x` and
   `cstick_invert_y` turn the C-stick around on its way to the game (MM3D's camera stick, which the
-  game reads itself). The picker and menus read the stick as held.
+  game reads itself).
 - An `[[option]]` with `layer` names a folder of replacement game files beside the set's `romfs/`
   (`load/mods/<title id>/<layer>/`, written by the install): on, the app lists it in the core's
   `Settings::values.romfs_layers` and the core stacks it over `romfs/` when the game loads
@@ -308,12 +314,13 @@ objects. Rebuild the app: `ninja -C build/app`.
 runs `z3dmods play` and so builds `build/app` only when no build exists. The window's app id
 (`--app-id z3d`) is the shortcut's name, which is how the desktop finds its icon.
 
-`z3dmods shortcut --host ally` installs the player build on that machine instead
-(`tools/z3dmods/host_install.py`): `~/Games/z3d/` holds the newest app build, `lib/libazahar_core.so`,
-the UI font and `user/` (a copy of the installed `load/` sets, `library.json` naming the ROMs in
-the host's `~/ROM/3DS/` under this machine's names, and the app's saves, copied only when the host
-has none). Its menu and Desktop entries run the binary directly with `LD_LIBRARY_PATH` on `lib/`;
-the host's own SDL3 and SDL3_ttf serve the rest. Re-run it after a build or an install.
+`z3dmods shortcut --host ally` builds the package (plans/packed-app.md, "The package") and installs
+it on that machine instead (`tools/z3dmods/host_install.py`): `~/Games/z3d/` is the package, and
+`user/` in it is the player's data, which stays: `folders.json` (the dumps in the host's
+`~/ROM/3DS/`), the mod downloads in `user/mods/`, the sets its picker makes from them and the
+app's saves (copied from here only when the host has none). `user/` without the sets and the
+downloads is copied to `~/Games/z3d-backups/user-<time>.tar` first. Its menu and Desktop entries
+run the package's launcher. Re-run it after a change.
 
 - Picker, 2026-11-13, `z3dmods inputtest picker` (the installed shortcut's Exec line in a headless
   Gamescope, `Z3D_APP_DATA` on a fresh copy of the player's data): both icons and titles from the

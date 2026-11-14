@@ -3,17 +3,17 @@
 Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000125500) on Azahar
 2126.2, as openSU launches it. Azahar data: `~/.local/share/azahar-emu` (mods under
 `load/mods/<titleID>/`). ROMs: the player's own dumps, named in `env-assets/local.json`. Third-party mod downloads live in gitignored
-`env-assets/`, never in git.
+`env-assets/downloads/`, never in git; the tools find each by the hash its set names.
 
 - What is installed and why: [docs/mods.md](docs/mods.md). Module map: [docs/codemap.md](docs/codemap.md).
 - Plans: [docs/plans/](docs/plans/).
 
 ## Layout
-- `sets/<game>.json`: a game's mod set (base mod, textures, global Azahar settings), paths relative
-  to `env-assets/`.
+- `sets/<game>.json`: a game's mod set (base mod, textures, global Azahar settings): each third-party
+  source by name, where to get it and its SHA-256, never a path.
 - `tools/z3dmods/`: the maintainer CLI (`uv run --frozen z3dmods ...`).
 - `env-assets/local.json` (gitignored): ROM paths per title ID. `env-assets/downloads/<mod>/`: each
-  third-party download in its own folder, extracted into `x/`. `env-assets/backup/`: the player's
+  third-party download in its own folder, extracted into `x/` (any layout works: sources are found by hash). `env-assets/backup/`: the player's
   Azahar config and data, copied before any change. `decomp/<game>/`: each game's
   decomp as a submodule (`git submodule update --init decomp/oot3d decomp/mm3d`, not recursive):
   guest addresses and RE findings live there, and a finding a change needs is committed to the
@@ -35,9 +35,10 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   `azahar-core/` in the shared dependency prefix (`Config.dependencies`); see [docs/app.md](docs/app.md). Rebuild the app: `ninja -C build/app`.
 - `... z3dmods play [game]`: the z3d app in a window with the installed sets: its title picker, or
   one game directly; its saves live in `~/.local/share/z3d-mods/`, apart from standalone Azahar's.
-  `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker); `--host ally` installs
-  the app, the sets and its saves in `~/Games/z3d` on the Ally with its own shortcuts.
-- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|chord|chord-mm3d|aim|aim-mm3d|setup>`: the
+  `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker); `--host ally` builds the
+  package and installs it in `~/Games/z3d` on the Ally with its own shortcuts; the player's data there stays.
+- `uv run --frozen z3dmods package`: the Linux package folder, `build/package/z3d` ([docs/plans/packed-app.md](docs/plans/packed-app.md)).
+- `uv run --frozen z3dmods inputtest <oot3d|mm3d|picker|chord|chord-mm3d|aim|aim-mm3d|setup|setup-wrong-dump|setup-missing-mod|setup-different-mod|menu-pad>`: the
   windowed app's input path with real key, mouse and pad events, off the player's desktop; `picker`
   runs the installed shortcut's Exec line. Shots in `scratch/input-test/<scenario>/`.
 

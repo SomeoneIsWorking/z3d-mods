@@ -4,8 +4,13 @@ version = "0.1.0"
 description = "Mod setup and our own mods for OoT3D and MM3D on Azahar"
 requires-python = ">=3.12"
 dependencies = [
-    "evdev>=2.0.0",
     "pillow>=13.0.0",
+]
+
+# What only the checkout's tools use; a package carries the dependencies above alone.
+[dependency-groups]
+dev = [
+    "evdev>=2.0.0",
 ]
 
 [project.scripts]

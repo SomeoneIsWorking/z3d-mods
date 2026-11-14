@@ -1,7 +1,7 @@
 # Codemap
 
 - `tools/z3dmods/cli.py`: the `z3dmods` commands; composes the modules below.
-- `tools/z3dmods/config.py`: the one reader of the environment and `env-assets/local.json`.
+- `tools/z3dmods/config.py`: the one reader of the environment and the local settings: a checkout's `env-assets/local.json`, or a package's layout and the player's `folders.json`.
 - `tools/z3dmods/ctr.py`: decrypted CCI/NCCH/exheader/ExeFS/RomFS reading and `.code` LZ decompression.
 - `tools/z3dmods/zsi.py`: OoT3D and MM3D room files: header commands, their CMB models, replacing a model and moving what follows. Scene files: the collision's vertices and triangles, read and written.
 - `tools/z3dmods/cmb.py`: CMB models, OoT3D's version 6 and MM3D's 10: textures, materials, meshes, vertices; rewriting one shape's geometry.
@@ -9,7 +9,7 @@
 - `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
 - `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, ETC1, ETC1A4) and Azahar's custom-texture file name, by either of its hashes.
 - `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
-- `tools/z3dmods/source_check.py`: the digest of a third-party file or folder, and the refusal of one that is not the copy a set names.
+- `tools/z3dmods/source_check.py`: a set's third-party files found among the player's mod downloads by the set's hashes (archives unpacked first), and the refusal that names a missing or different one and where to get it.
 - `tools/z3dmods/texture_pack.py`: finds a game texture's replacement in an Azahar texture pack by the hash its `pack.json` names.
 - `tools/z3dmods/ctxb.py`: CTXB menu texture bundles.
 - `tools/z3dmods/gar.py`: GAR v2 archives (MM3D's layout bundles).
@@ -29,10 +29,12 @@
 - `tools/z3dmods/play.py`: `z3dmods play [game]`: the app in a window on the player's session, with its own saves: the title picker over the library it writes, or one game.
 - `tools/z3dmods/shortcut.py`: the per-machine desktop shortcut that runs `z3dmods play`.
 - `tools/z3dmods/setup.py`: `z3dmods setup --user <folder> <dump>`: the set of a dump's game installed into an app user folder; the app's picker runs it.
-- `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the app, its sets and saves in another machine's `~/Games/z3d`, with its shortcuts.
-- `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants.
+- `tools/z3dmods/host_install.py`: `z3dmods shortcut --host`: the package in another machine's `~/Games/z3d`, the player's data there kept and copied aside, with its shortcuts.
+- `tools/z3dmods/package.py`: `z3dmods package`: the Linux package folder: app, core and SDL3 libraries, a relocatable Python with the locked wheels, the tools, sets, prebuilt patches and assets.
+- `tools/z3dmods/packed.py`: the package's entry point (`python -m z3dmods.packed`): `play` over the player's dump folder, and `setup`.
+- `tools/z3dmods/symbols.py`: reads each game's decomp (function maps, header offsets, globals) and generates a patch's guest constants; in a package, reads the table saved from it (`prebuilt/<game>/symbols.json`).
 - `tools/z3dmods/games.py`: per-game guest RAM layout the run steps read (play state, save context, cutscene), resolved from the decomp.
-- `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld.
+- `tools/z3dmods/patch_build.py`: builds our MIT patch (`patch/<game>/`) into IPS records with clang and lld; saves a build for a package and reads it back there (`prebuilt/<game>/code.ips`, `hooks.json`).
 - `tools/z3dmods/options.py`: a patch's switches (`patch/<game>/options.toml`): the generated `options.hpp` and the manifest the app's options menu reads.
 - `decomp/oot3d/`: submodule, our fork of zeldaret/oot3d (CC0): OoT3D symbols, structs and RE docs.
 - `decomp/mm3d/`: submodule, SomeoneIsWorking/mm3d-decomp (MIT, private): MM3D 1.0-layout symbols, structs and RE docs.
@@ -56,7 +58,7 @@
   - `options_menu`: the picker's options screen for one game.
   - `title_picker`: the in-window title picker (SDL renderer, SDL3_ttf outline text), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request; the picker's pump.
-  - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands.
+  - `pad_input`: the core's `z3d` input engine: keyboard (the player's Azahar keys), gamepads and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`).
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.

@@ -89,12 +89,16 @@ name = "z3d-mods"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "evdev" },
     { name = "pillow" },
 ]
 
-[package.metadata]
-requires-dist = [
-    { name = "evdev", specifier = ">=2.0.0" },
-    { name = "pillow", specifier = ">=13.0.0" },
+[package.dev-dependencies]
+dev = [
+    { name = "evdev" },
 ]
+
+[package.metadata]
+requires-dist = [{ name = "pillow", specifier = ">=13.0.0" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "evdev", specifier = ">=2.0.0" }]

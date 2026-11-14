@@ -7,7 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, play, setup, shortcut, steps
+from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, steps
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -63,6 +63,11 @@ def input_check(args: argparse.Namespace) -> None:
     print(input_test.run(config.load(), args.scenario))
 
 
+def build_package(args: argparse.Namespace) -> None:
+    cfg = config.load()
+    print(package.build(cfg, args.out or cfg.repo / "build" / "package" / "z3d"))
+
+
 def install_shortcuts(args: argparse.Namespace) -> None:
     cfg = config.load()
     paths = host_install.install(cfg, args.host) if args.host else shortcut.install(cfg)
@@ -103,6 +108,9 @@ def main() -> None:
     app = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
     app.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
     app.set_defaults(run=play_game)
+    packed = commands.add_parser("package", help="build the z3d package folder for Linux")
+    packed.add_argument("--out", type=Path, help="the folder to make; build/package/z3d without it")
+    packed.set_defaults(run=build_package)
     probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key, mouse and pad events")
     probe.add_argument("scenario", choices=sorted(input_test.SCENARIOS))
     probe.set_defaults(run=input_check)
