@@ -210,8 +210,10 @@ def _key(position: tuple[float, ...]) -> tuple[int, ...]:
 class Stairs:
     """One shape's ramp triangles turned into steps."""
 
-    def __init__(self, positions, extras, uvs, indices: list[int], steps: Profile) -> None:
+    def __init__(self, positions, extras, uvs, indices: list[int], steps: Profile, uv_slot: int | None = None) -> None:
         self._profile = steps
+        # Where an extra tuple holds the stair texture's (u, v); None when it holds none.
+        self._uv_slot = uv_slot
         triangles = [indices[i:i + 3] for i in range(0, len(indices) - 2, 3)]
         sums: dict[tuple[int, ...], list[float]] = {}
         # Ramp triangles that share a corner are one flight.
@@ -264,17 +266,35 @@ class Stairs:
         u = sum(self._u(v) for v in piece) / len(piece) % 1
         return self._profile.first <= u <= self._profile.last
 
-    def _place(self, vertex: Vertex) -> tuple[float, float, float]:
-        """Fold a ramp point onto the staircase: the ramp is the line through the noses."""
+    def _folded(self, t: float) -> tuple[float, float]:
+        """Where the ramp point at step coordinate t folds to: the coordinate it stands over and
+        the one whose ramp height it takes."""
         p = self._profile
-        t = self._t(vertex)
         j = math.floor(t - p.crease)
         u = t - p.crease - j
         nose = p.crease + j + p.riser
         if u < p.riser:
-            across, up = nose, nose - 1 + u / p.riser
-        else:
-            across, up = nose + (u - p.riser) / (1 - p.riser), nose
+            return nose, nose - 1 + u / p.riser
+        return nose + (u - p.riser) / (1 - p.riser), nose
+
+    def _riser_rows(self, vertex: Vertex) -> tuple[tuple[float, ...], tuple[float, ...]]:
+        """A ramp point's attributes for the face that rises from its folded place back up to it,
+        bottom then top: the rows a riser paints over that height."""
+        if self._uv_slot is None:
+            return vertex.extra, vertex.extra
+        p = self._profile
+        t = self._t(vertex)
+        _, up = self._folded(t)
+        step = math.floor(up - p.crease - p.riser + KEY)
+        at = self._uv_slot + 1
+        return tuple(vertex.extra[:at] + ((p.crease + step + 1 + p.riser * (h - p.crease - p.riser - step)) / p.steps_per_tile,)
+                     + vertex.extra[at + 1:] for h in (up, t))
+
+    def _place(self, vertex: Vertex) -> tuple[float, float, float]:
+        """Fold a ramp point onto the staircase: the ramp is the line through the noses."""
+        p = self._profile
+        t = self._t(vertex)
+        across, up = self._folded(t)
         d = vertex.along
         scale = 1 / p.steps_per_tile
         return (vertex.position[0] + d[0] * (across - t) * scale,
@@ -286,7 +306,7 @@ class Stairs:
         wherever no other step continues them: up to the ramp along the curbs and the ramp's open
         edges, and between two ramps' steps where they meet out of phase. Last, the closing faces
         past the ramp's edge: a step's plan moves uphill as it folds, so at the top it ends under
-        whatever the ramp leads to."""
+        whatever the ramp leads to. Those are its last riser, cut short, and take a riser's rows."""
         out = []
         stepped = []
         for tri in self._triangles:
@@ -344,8 +364,11 @@ class Stairs:
                          for start, end, a, b, inside in found if start < low + KEY and end > high - KEY]
                 if len(parts) == 1:
                     a, b, inside = parts[0]
-                    close([a.position, b.position, self._place(b), self._place(a)], [a.extra, b.extra, b.extra, a.extra],
-                          beyond if leaves(a, b, inside) else closing)
+                    if leaves(a, b, inside):
+                        (a_low, a_high), (b_low, b_high) = self._riser_rows(a), self._riser_rows(b)
+                        close([a.position, b.position, self._place(b), self._place(a)], [a_high, b_high, b_low, a_low], beyond)
+                    else:
+                        close([a.position, b.position, self._place(b), self._place(a)], [a.extra, b.extra, b.extra, a.extra])
                 for (a, b, _), (c, d, _) in itertools.pairwise(parts):
                     quad = [self._place(a), self._place(b), self._place(d), self._place(c)]
                     if _key(quad[0]) != _key(quad[3]) or _key(quad[1]) != _key(quad[2]):
@@ -579,8 +602,9 @@ def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None) -> tuple[bytes
         count = min(len(column) for column in [current.vertices(shape, "position"), *columns])
         positions = current.vertices(shape, "position")[:count]
         packed = [tuple(v for column in columns for v in column[i]) for i in range(count)]
+        uv_slot = sum(cmb.WIDTHS[name] for name in extras[:extras.index("tex0")])
         stairs = Stairs(positions, packed, current.vertices(shape, "tex0"), current.indices(shape),
-                        profile(texture_image(current, texture, pack)))
+                        profile(texture_image(current, texture, pack)), uv_slot)
         vertices, indices = _flat(stairs.triangles(), extras)
         data = current.with_shape(shape_index, vertices, indices)
         stepped.append(texture.name)

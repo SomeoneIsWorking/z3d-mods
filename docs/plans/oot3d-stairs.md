@@ -138,6 +138,10 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
     that exit, in the ROM as well: a drop on it lands on 3119.0 with the layer and 3120.9
     without, and Death Mountain Crater loads either way (`oot-st21`, `oot-st22`), so there is
     nothing to walk.
+- Walked off the top, 2026-11-15, after the closing faces past a ramp's top left the collision
+  (Kakariko 5460 triangles, 27905 nodes): Kakariko's two flights by the well and the one to
+  the upper houses, each from its foot to 40 past its top with the pad eased to 65%, landing
+  0 to 80, 80 to 160 and 0 to 200 without a stop (`oot-dg23-kak`).
 - Not seen: an adult, Epona or a rolling bomb on the steps, enemies, arrows against a riser.
 
 ## Still open
@@ -184,9 +188,13 @@ File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm
   - Deku Shrine (0x9E00; `mm-dg14-danpei-1`, `mm-dg12-danpei-0`): room 5's and room 6's
     flights of 30 steps and room 8's two low ones (803, 810 and 833 against 807.7, 814.4 and
     836.5), each walked to its top.
-  - Left as it is: where the Deku Shrine's lower flight narrows, the last full-width step's
-    closing face shows as a dark streaked strip 13 units high under the plain slope beside
-    the stairs (`mm-dg14-danpei-1/07-f0-foot.png`): closing faces take one texture row.
+  - Where the Deku Shrine's lower flight narrows, the last full-width step ends under the
+    plain slope beside the stairs and its closing face shows. It took the ramp edge's
+    attributes at all four corners, one texture row smeared over 13 units, a dark streaked
+    strip (`mm-dg14-danpei-1/07-f0-foot.png`). A closing face past the ramp's top is the
+    flight's last riser cut short and now takes a riser's rows over its height, from the
+    crease up (`mm-dg21-danpei-1/07-f0-foot.png`, both in `gap-before-after.png`). The other
+    three dungeons' flights walk and land as before (`mm-dg21-<scene>-1`).
 - A savestate keeps the game files of the run that made it: a state made with the layer on
   loads stepped rooms in a run started with `--option stairs=0`, and after an install that
   changed the layer's files the game stops on the next scene load (`mm-dg5-dg-sct`, `mm-dg9`).
