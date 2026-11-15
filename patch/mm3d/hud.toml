@@ -29,6 +29,9 @@ ammo_full = [
 ]
 status = { at = ["gCommonData", "CommonData.buttonStatus"], bytes = 1 }
 disabled = 0xFF
+# The game's item buttons (EQUIP_BUTTON_Y, X, I, II): a slot on none of them is dim while the
+# game has all four disabled (a shop).
+status_lanes = [1, 2, 3, 4]
 # A song's note by its entry in the ocarina's song list: Time, Healing, Epona's, Soaring, Storms,
 # the Sonata, the Goron Lullaby, its intro, the New Wave, the Elegy, the Oath, the Inverted Song
 # of Time, the Song of Double Time and the scarecrow's.

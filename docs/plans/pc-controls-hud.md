@@ -399,7 +399,10 @@ The path is texture replacement, in both games, with nothing drawn by the app:
 - A slot's item is dim when the game takes none: on one of the game's buttons by that button's
   status, on none while the game has all its item buttons disabled (`status_lanes` in
   `hud.toml`). Seen in OoT3D: dim on Epona and in Link's house, bright in Hyrule Field on foot
-  (`hud-mounted`: house, riding, on-foot). MM3D names no `status_lanes` yet.
+  (`hud-mounted`: house, riding, on-foot). In MM3D the same with its Y, X, I and II: the bow
+  and the ocarina, on none of the game's buttons, dim in the Trading Post (entrance 0x6200,
+  statuses 1 to 4 read 0xFF) on the pad's and the keyboard's HUD and bright in South Clock Town
+  (`mmdim5`; before the table, bright in the shop: `mmdim4`).
 - OoT3D's View: the touch screen's icon for the look, left of the pad's diamond with R3's glyph
   and beside the mouse's sword with F's cap, from the state the game picks its cell by: the
   camera in Link's house, the eye in Kokiri Forest, the camera in first person, Navi while she
