@@ -26,7 +26,8 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   Azahar headless in a Gamescope headless session on the player's data; keys go in as XTest events
   on the player's keyboard bindings, frames and RAM come over Azahar's RPC server, and the player's
   Azahar config is restored afterwards. Steps: `wait:<s>`, `shot:<name>`, `<button>`,
-  `hold:<button>,<s>`, `peek:<addr>,<size>`. `--settings '{"Layout":{"layout_option":1}}'` sets
+  `hold:<button>,<s>`, `peek:<addr>,<size>`; the rest are listed in `tools/z3dmods/steps.py`
+  (`respawn:<entrance>,<room>,<x>,<y>,<z>,<yaw>` puts MM3D's Link in any room of a scene). `--settings '{"Layout":{"layout_option":1}}'` sets
   global settings for that run only. Output: `scratch/runs/<name>/`.
 - `... z3dmods run <game> <name> --harness <steps...>`: the same steps on the harness (the z3d
   app hidden: frame-exact, savestates, watchpoints) on a copy of the player's data;

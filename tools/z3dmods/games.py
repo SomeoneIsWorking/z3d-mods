@@ -30,6 +30,13 @@ class Layout:
     actor_home: int | None = None
     camera_at: int | None = None
     camera_eye: int | None = None
+    # MM3D only: the entry a scene load starts from in place of its entrance (decomp/mm3d
+    # docs/save.md, "Respawn"): the flag's address, the first entry's, and the entry's fields.
+    respawn_flag: int | None = None
+    respawn: int | None = None
+    respawn_yaw: int | None = None
+    respawn_entrance: int | None = None
+    respawn_room: int | None = None
     # MM3D only: where the game keeps the touch screen that is up, the table of play's screens,
     # and where the app's overlay layout puts the touch screen for each entry (screen_overlay.hpp).
     active_screen: int | None = None
@@ -184,6 +191,11 @@ def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
         actor_home=symbols.offset(d, "Actor.home"),
         camera_at=symbols.offset(d, "PlayState.viewAt"),
         camera_eye=symbols.offset(d, "PlayState.viewEye"),
+        respawn_flag=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.respawnFlag"),
+        respawn=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.respawn"),
+        respawn_yaw=symbols.offset(d, "RespawnData.yaw"),
+        respawn_entrance=symbols.offset(d, "RespawnData.entrance"),
+        respawn_room=symbols.offset(d, "RespawnData.room"),
         active_screen=symbols.global_(d, "gUiScreenContext") + symbols.offset(d, "UiScreenContext.activeScreen"),
         screens=symbols.global_(d, "gUiScreens"),
         **_overlay(repo, "mm3d", d),

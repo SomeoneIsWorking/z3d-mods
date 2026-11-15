@@ -3,6 +3,7 @@
 Steps: wait:<s>, shot:<name>, <button>, hold:<button>,<s>, peek:<addr>,<size>,
 poke:<addr>,<hex bytes> (<addr> may be play+<offset>, from the play state, or player+<offset>, from the player actor,
 and <addr>-><offset>[-><offset>...] follows the pointer kept there), warp:<entrance>, teleport:<x>,<y>,<z> (the player), where (print the player's position),
+respawn:<entrance>,<room>,<x>,<y>,<z>,<yaw> (MM3D: warp into a room of the entrance's scene, the player there facing yaw, through no door),
 walk:<x>,<z>[,<s>] (harness: the circle pad steered until the player stands at x, z, printing the way), waitcs:<s>[,<button>] (wait for a cutscene to start, then end,
 pressing <button> meanwhile), csframe:<n> (wait until a running cutscene
 reaches frame n), save:<name> (dump the save context),
@@ -219,6 +220,18 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             session.write(play + layout.next_entrance, struct.pack("<H", int(arg, 0) & 0xFFFF))
             session.write(play + layout.transition_trigger, bytes([TRANSITION_START]))
             log(f"warp to entrance {arg}")
+        elif kind == "respawn":
+            if layout.respawn is None:
+                raise RuntimeError("no respawn layout for this game")
+            entrance, room, x, y, z, yaw = arg.split(",")
+            session.write(layout.respawn, struct.pack("<3f", float(x), float(y), float(z)))
+            session.write(layout.respawn + layout.respawn_yaw, struct.pack("<H", int(yaw, 0) & 0xFFFF))
+            session.write(layout.respawn + layout.respawn_entrance, struct.pack("<H", int(entrance, 0) & 0xFFFF))
+            session.write(layout.respawn + layout.respawn_room, bytes([int(room, 0)]))
+            session.write(layout.respawn_flag, struct.pack("<i", 1))
+            session.write(_play(session, layout) + layout.next_entrance, struct.pack("<H", int(entrance, 0) & 0xFFFF))
+            session.write(_play(session, layout) + layout.transition_trigger, bytes([TRANSITION_START]))
+            log(f"respawn at {arg}")
         elif kind == "teleport":
             player = _player(session, layout)
             position = struct.pack("<3f", *(float(part) for part in arg.split(",")))
