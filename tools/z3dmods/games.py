@@ -108,15 +108,22 @@ def _guest_address(d: symbols.Decomp, terms: list[str | int]) -> int:
     return total
 
 
+def _defined(d: symbols.Decomp, value: object) -> object:
+    """A number, one of the decomp's defines by name, or a list of either."""
+    if isinstance(value, list):
+        return [_defined(d, entry) for entry in value]
+    return d.define(value) if isinstance(value, str) else _resolved(d, value)
+
+
 def _resolved(d: symbols.Decomp, value: object) -> object:
     """hud.toml's `{ at = [...], through = "global" }` as `{ address, pointer }`, wherever it sits;
-    a `mask`, `shift`, the `equals` of a condition, or an `item` and `upgrade` may be one of the
-    decomp's defines."""
+    a `mask`, `shift`, the `equals` of a condition (one value or a list), or an `item` and
+    `upgrade` may be one of the decomp's defines."""
     if isinstance(value, list):
         return [_resolved(d, entry) for entry in value]
     if not isinstance(value, dict):
         return value
-    out = {key: d.define(entry) if key in DEFINED and isinstance(entry, str) else _resolved(d, entry)
+    out = {key: _defined(d, entry) if key in DEFINED else _resolved(d, entry)
            for key, entry in value.items() if key not in ("at", "through")}
     if "at" in value:
         out["address"] = _guest_address(d, value["at"])
@@ -152,7 +159,7 @@ HUD_SHARED = ("ammo", "ammo_index", "ammo_full", "upgrades", "upgrade_masks", "u
               "upgrade_capacities", "upgrade_levels", "status", "disabled", "song_colours")
 
 # The keys whose string value is one of the decomp's defines.
-DEFINED = ("mask", "shift", "equals", "item", "upgrade")
+DEFINED = ("mask", "shift", "equals", "item", "upgrade", "full")
 
 # The folder of item icons beside the installed patch: <item id>.png.
 HUD_ICONS = "z3d-hud-icons"

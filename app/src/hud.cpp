@@ -150,7 +150,7 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
     }
     return found;
   };
-  // { address, bytes, equals } or { address, bytes, least, most }.
+  // { address, bytes, equals } or { address, bytes, least, most }; `equals` may list values.
   const auto conditions = [&](const lucent::json::Value &object, std::string_view key) {
     std::vector<Condition> found;
     const lucent::json::Value *list = object.find(key);
@@ -158,12 +158,25 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
       return found;
     }
     for (const lucent::json::Value &entry : *list->array()) {
-      const uint32_t least = integer(entry, "equals", integer(entry, "least", 0));
-      const uint32_t most = integer(entry, "equals", integer(entry, "most", UINT32_MAX));
-      found.push_back({GuestValue{integer(entry, "address", 0),
-                                  static_cast<uint8_t>(integer(entry, "bytes", 0)),
-                                  integer(entry, "pointer", 0)},
-                       least, most});
+      Condition condition{GuestValue{integer(entry, "address", 0),
+                                     static_cast<uint8_t>(integer(entry, "bytes", 0)),
+                                     integer(entry, "pointer", 0)},
+                          0,
+                          UINT32_MAX,
+                          {}};
+      if (const lucent::json::Value *equals = entry.find("equals");
+          equals != nullptr && equals->array() != nullptr) {
+        for (const lucent::json::Value &value : *equals->array()) {
+          if (!value.integer()) {
+            throw std::runtime_error("hud: a condition's \"equals\" lists whole numbers");
+          }
+          condition.among.push_back(static_cast<uint32_t>(*value.integer()));
+        }
+      } else {
+        condition.least = integer(entry, "equals", integer(entry, "least", 0));
+        condition.most = integer(entry, "equals", integer(entry, "most", UINT32_MAX));
+      }
+      found.push_back(std::move(condition));
     }
     return found;
   };
@@ -382,7 +395,12 @@ std::optional<uint32_t> Hud::read(const GuestValue &value) const {
 bool Hud::hold(const std::vector<Condition> &conditions) const {
   return std::ranges::all_of(conditions, [this](const Condition &condition) {
     const std::optional<uint32_t> value = read(condition.value);
-    return value && *value >= condition.least && *value <= condition.most;
+    if (!value) {
+      return false;
+    }
+    return condition.among.empty()
+               ? *value >= condition.least && *value <= condition.most
+               : std::ranges::find(condition.among, *value) != condition.among.end();
   });
 }
 
@@ -462,7 +480,8 @@ void Hud::draw(const Element &element) {
   switch (element.kind) {
   case Kind::Hearts: {
     const std::optional<uint32_t> health = read(element.value);
-    const std::optional<uint32_t> capacity = read(element.capacity);
+    const std::optional<uint32_t> capacity =
+        element.full != 0 ? std::optional(element.full) : read(element.capacity);
     if (!health || !capacity || element.unit == 0 || element.columns == 0) {
       return;
     }
@@ -559,17 +578,17 @@ void Hud::button(const Element &element, const OverlayRect &box) {
   quad(atlas_->svg(kHudSet, element.frame, static_cast<int>(box.w), static_cast<int>(box.h)), box);
   if (slot) {
     const SlotLink::Slot &held = link_.slot(*slot);
-    content(box, held.item, held.song, held.lane);
+    // The game keeps a status for the items on its own buttons only.
+    content(box, held.item, held.song,
+            held.lane != 0 && status_.bytes != 0 &&
+                read({status_.address + held.lane * status_.bytes, status_.bytes,
+                      status_.pointer}) == disabled_);
     if (const int step = static_cast<int>(std::ceil(held.charge * kChargeSteps)); step > 0) {
       quad(atlas_->arc(static_cast<int>(box.w), step, kChargeSteps), box);
     }
-  } else if (const std::optional<uint32_t> item = read(element.value);
-             item && art_.contains(std::to_string(*item))) {
-    const bool dimmed = element.status.bytes != 0 && read(element.status) == disabled_;
-    const float size = std::round(box.w * kIconShare);
-    const float inset = std::round((box.w - size) / 2.0F);
-    quad(art(std::to_string(*item), size, size), {box.x + inset, box.y + inset, size, size},
-         dimmed ? kDimmed : 1.0F);
+  } else {
+    content(box, read(element.value), std::nullopt,
+            element.status.bytes != 0 && read(element.status) == disabled_);
   }
   const float middle = box.y + box.h / 2.0F;
   for (size_t i = card; i < quads_.size() && share < 1.0F; ++i) {
@@ -598,7 +617,7 @@ void Hud::button(const Element &element, const OverlayRect &box) {
 }
 
 void Hud::content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song,
-                  uint8_t lane) {
+                  bool dimmed) {
   const float size = std::round(box.w * kIconShare);
   const float inset = std::round((box.w - size) / 2.0F);
   const OverlayRect at{box.x + inset, box.y + inset, size, size};
@@ -610,10 +629,6 @@ void Hud::content(const OverlayRect &box, std::optional<uint32_t> item, std::opt
   if (!item || !art_.contains(std::to_string(*item))) {
     return;
   }
-  // The game keeps a status for the items on its own buttons only.
-  const bool dimmed =
-      lane != 0 && status_.bytes != 0 &&
-      read({status_.address + lane * status_.bytes, status_.bytes, status_.pointer}) == disabled_;
   quad(art(std::to_string(*item), size, size), at, dimmed ? kDimmed : 1.0F);
   const auto counted = std::ranges::find(ammoIndex_, *item, &std::pair<uint32_t, uint32_t>::first);
   const std::optional<uint32_t> count =

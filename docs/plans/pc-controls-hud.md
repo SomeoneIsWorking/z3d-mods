@@ -357,9 +357,10 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   travel gives `camera`'s and `aim`'s frames (`camera-fast`, `aim-fast`; the log counts 800 by
   300 for `aim`'s 1600 by 600).
 - An item's count is green at the game's capacity for it (`ammo_full` in `hud.toml`: its upgrade's
-  capacity at the save's level, the N64's fixed ones for OoT3D's bombchus, MM3D's keg and beans).
+  capacity at the save's level, the game's fixed ones for OoT3D's bombchus and beans, MM3D's keg and beans).
   Seen: OoT3D's sticks 20 green at their 20, the slingshot's 20 white in a 30 bag (`inputtest
-  slots`); MM3D's bombs 20 green in a 20 bag, the bow's 20 white in a 30 quiver (`slots-mm3d`), the
+  slots`); its bow 30 green in a 30 quiver and 29 white, bombchus 17 white and 50 green, beans 7
+  white and 15 green, the game's own rule for both (`hud-carrots`, counts and counts-full); MM3D's bombs 20 green in a 20 bag, the bow's 20 white in a 30 quiver (`slots-mm3d`), the
   keg's 1, 30 ice arrows and 20 beans green, 5 light arrows white (`hudfull1`).
 - Small keys in both games: above the rupees in a dungeon, nothing before the first key (the game
   keeps -1 there, a counter's `none`). MM3D's are by dungeon, each dungeon's scenes an element;
@@ -374,8 +375,14 @@ The path is texture replacement, in both games, with nothing drawn by the app:
 - Missing from MM3D's HUD: View; the third wallet's red gem and 500 were not run. The
   clock stays the game's own, drawn with the 4K pack's art ("doesn't the 4k pack have one?"); the
   decomp names its widgets (`PlayHud.gameTimerGroup`) should it ever need to go.
-- Missing from OoT3D's HUD: the carrots and View; the bow's, bombchus' and beans' counts follow
-  the N64's slots and were not seen.
+- OoT3D mounted: the HUD stays up on Epona (the game's visibility mode there is 12, not play's
+  50), six carrots sit beside the hearts, whole for each boost left, and X shows the bow the game
+  puts on its B button with the arrows left (`hud-carrots`: riding-rested, riding-boosted, riding-keys, on-foot).
+- Missing from OoT3D's HUD: View. Mounted, the game's own B ring is still drawn at the top
+  screen's bottom right (the bow a second time, under the B glyph where our pad's button is X),
+  and the slots' items stay bright although the game takes no item there. The ring's owner was
+  not found: decomp/oot3d `docs/hud.md`, "Mounted", has the two switches that take the minimap's
+  markers with it.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the
   Slingshot (OoT3D): a mouse delta turns the view by 0.05 degrees a count within 0.03 degrees
   (`aim-mm5`, `aim-oot3`), and in a window the F key, real mouse motion and leaving the look

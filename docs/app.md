@@ -264,7 +264,7 @@ kind, its rectangle on the top screen's 400x240 and the guest memory it reads, w
 of the decomp's names (`at = ["gCommonData", "CommonData.save", ...]`); the install resolves the
 sums and writes them into `z3d-options.json` as `"hud"`. A value can sit behind a guest pointer
 (`through`) or be a bit field (`mask`, then `shift`), and an element is drawn only while its
-`when` conditions hold.
+`when` conditions hold (a value in `least` to `most`, or `equals` one value or any of a list).
 
 Art comes from two places. Frames, the meter and the pad's glyphs are port-assets' SVGs
 (`--assets <port-assets copy>`: `sets/hud`, `sets/gamepad-xbox360`, the key typeface), which
@@ -296,14 +296,19 @@ ends, so it covers none of the icon, and the ring's rim never shows between its 
 (`hud-mmcount3`, `hud-mmcount5`: 5, 30 and 100), green once it is as many as the game holds of
 the item (`ammo_full`: the capacity of its upgrade at the save's level, read from the game's
 `gUpgradeMasks`, `gUpgradeShifts` and `gUpgradeCapacities`, or a fixed `most`). `hearts` picks one of the game's five hearts (empty,
-a quarter, half, three quarters, full) by the N64's thresholds. A `counter` can read one entry
+a quarter, half, three quarters, full) by the N64's thresholds. The same kind draws OoT3D's
+carrots: a row of a fixed `full` (six), each the whole or the spent carrot of the game's sheet
+by the boosts left, beside the hearts while the game's own status layout is the mounted one
+(decomp/oot3d `docs/hud.md`, "Mounted"; `hud-carrots`: six on Epona, four whole and two spent
+after two boosts, none on foot). A `counter` can read one entry
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
 a `limit` (the game's table by tier, `gUpgradeCapacities` in both games).
 
 The buttons are the same in both games: the pad's diamond and RB's ring beside Y top right,
 the D-pad's cross under the hearts and magic. A shows the game's own word for its action under it (`label`, the action's
 number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's patch hides the
-game's own A button, `patch/mm3d/base_hud.cpp`), X the sword, and Y, B, RB and the cross's four
+game's own A button, `patch/mm3d/base_hud.cpp`), X the sword (the item the game has on its B
+button, with its count where it has one: the bow and its arrows while Link rides), and Y, B, RB and the cross's four
 rings their slots' items from `SlotLink`, a note for a slot with a song, and a gold arc over
 the rim of a slot that plays only once held (`charge`). While the chord is held
 the diamond shows slots 8 to 11. A ring whose two pages draw differently turns over like a card

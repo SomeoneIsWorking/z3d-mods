@@ -48,11 +48,12 @@ private:
     uint32_t mask = UINT32_MAX;
   };
 
-  // Holds while the value reads `least` to `most`.
+  // Holds while the value reads `least` to `most`, or one of `among` where it names any.
   struct Condition {
     GuestValue value;
     uint32_t least = 0;
     uint32_t most = 0;
+    std::vector<uint32_t> among;
   };
 
   enum class Kind : uint8_t { Hearts, Meter, Counter, Button, Prompt, Panel };
@@ -64,9 +65,10 @@ private:
     GuestValue value;
     // Drawn only while all of these hold.
     std::vector<Condition> when;
-    // Hearts: the health all hearts hold. Meter: what a full bar holds, unless `full` says.
+    // Hearts: the health all hearts hold. Meter: what a full bar holds. Both unless `full` says.
     GuestValue capacity;
-    // Hearts: the health in one heart, and hearts in a row. Meter: a full bar.
+    // Hearts: the health in one heart, hearts in a row, and what all hold where the game fixes it
+    // (a horse's carrots). Meter: a full bar.
     uint32_t unit = 0;
     uint32_t columns = 0;
     uint32_t full = 0;
@@ -76,8 +78,8 @@ private:
     // read (if it is one).
     std::string icon;
     GuestValue index;
-    // Hearts: the art of a heart from empty to full. Counter: the art for each `tier`, where it
-    // changes with one (a wallet's size).
+    // Hearts: the art of a heart (or a carrot) from empty to full. Counter: the art for each
+    // `tier`, where it changes with one (a wallet's size).
     std::vector<std::string> art;
     GuestValue tier;
     // Counter: the most it holds, drawn in the full colour: the game's table by `tier`.
@@ -86,9 +88,9 @@ private:
     // nothing.
     std::optional<uint32_t> none;
     // Button and Panel: the frame (hud set). A button shows an item slot's content (`slot`), or
-    // the item `value` reads, under the prompt of its slot or of the verb that presses it; while
-    // the chord is held it shows `chordSlot` instead, where it has one. An item without an icon
-    // is an empty button.
+    // the item `value` reads with its count, under the prompt of its slot or of the verb that
+    // presses it; while the chord is held it shows `chordSlot` instead, where it has one. An item
+    // without an icon is an empty button.
     std::string frame;
     std::optional<size_t> slot;
     std::optional<size_t> chordSlot;
@@ -136,7 +138,7 @@ private:
   void button(const Element &element, const OverlayRect &box);
   // An item's icon in a button's box, its count on a plate below; a song's note.
   void content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song,
-               uint8_t lane);
+               bool dimmed);
   // The pad glyph or key cap of `by`, `size` pixels, its top left corner at (x, y).
   void prompt(const Prompt &by, float x, float y, float size);
 

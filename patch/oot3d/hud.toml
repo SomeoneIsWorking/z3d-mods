@@ -4,10 +4,10 @@
 # The base mod's own HUD is switched off in hooks.s (base_hud). The buttons sit top right: the
 # game's minimap keeps the bottom right.
 
-# Play: a loaded file, the game's HUD fully shown, no menu up.
+# Play: a loaded file, the game's HUD fully shown (on foot or mounted), no menu up.
 show = [
   { at = ["gSaveContext", "SaveContext.gameMode"], bytes = 4, equals = 0 },
-  { at = ["gSaveContext", "SaveContext.hudVisibilityMode"], bytes = 2, equals = 50 },
+  { at = ["gSaveContext", "SaveContext.hudVisibilityMode"], bytes = 2, equals = ["HUD_VISIBILITY_ALL", "HUD_VISIBILITY_A_B_MINIMAP"] },
   { at = ["gHud", "Hud.state"], bytes = 4, equals = 2 },
 ]
 
@@ -16,7 +16,8 @@ show = [
 ammo = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.ammo"], bytes = 1 }
 ammo_index = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 3], [6, 6], [9, 8], [12, 3], [16, 14], [18, 3]]
 # A count is green at the game's capacity for it, CUR_CAPACITY of its upgrade at the save's level;
-# the arrows show the quiver's count. The bombchus at 50 (the N64's Interface_DrawAmmoCount).
+# the arrows show the quiver's count. The bombchus at 50 and the beans at 15
+# (HudItemButtons_UpdateAmmo).
 upgrades = { at = ["gSaveContext", "SaveContext.inventory", "Inventory.upgrades"], bytes = 4 }
 upgrade_masks = { at = ["gUpgradeMasks"], bytes = 4 }
 upgrade_shifts = { at = ["gUpgradeShifts"], bytes = 1 }
@@ -32,6 +33,7 @@ ammo_full = [
   { item = "ITEM_ARROW_LIGHT", upgrade = "UPG_QUIVER" },
   { item = "ITEM_SLINGSHOT", upgrade = "UPG_BULLET_BAG" },
   { item = "ITEM_BOMBCHU", most = 50 },
+  { item = "ITEM_BEAN", most = 15 },
 ]
 status = { at = ["gSaveContext", "SaveContext.buttonStatus"], bytes = 1 }
 disabled = 0xFF
@@ -49,7 +51,8 @@ frame = [42, 42]
 columns = 12
 icons = 144
 
-# The touch screen HUD's own art: the rupee, the key and a heart by quarters.
+# The touch screen HUD's own art: the rupee, the key, a heart by quarters and Epona's carrot,
+# whole and spent.
 [art]
 sheet = "menu/01_US_ENGLISH/menu_top_parts00.ctxb"
 rupee = [128, 96, 18, 18]
@@ -59,6 +62,8 @@ heart_1 = [240, 96, 12, 12]
 heart_2 = [240, 112, 12, 12]
 heart_3 = [240, 128, 12, 12]
 heart_4 = [240, 144, 12, 12]
+carrot = [488, 0, 24, 24]
+carrot_spent = [488, 24, 24, 24]
 
 # The A button's words: an action's number is its word's cell; a sheet a system language, the
 # first the one shown in a language not listed.
@@ -79,6 +84,17 @@ columns = 10
 art = ["heart_0", "heart_1", "heart_2", "heart_3", "heart_4"]
 value = { at = ["gSaveContext", "SaveContext.health"], bytes = 2 }
 capacity = { at = ["gSaveContext", "SaveContext.healthCapacity"], bytes = 2 }
+
+# Epona's carrots beside the hearts while Link rides (the game puts them in the hearts' place):
+# a row of the kind the hearts are, whole for each boost left.
+[[element]]
+kind = "hearts"
+rect = [122, 7, 12, 12]
+columns = 6
+full = "HORSE_BOOSTS"
+art = ["carrot_spent", "carrot"]
+value = { at = ["PlayState.interfaceCtx", "InterfaceContext.numHorseBoosts"], through = "gPlayState", bytes = 1 }
+when = [{ at = ["gHud", "Hud.statusLayout"], bytes = 4, equals = "HUD_STATUS_MOUNTED" }]
 
 [[element]]
 kind = "meter"
