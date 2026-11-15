@@ -384,12 +384,21 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   The game's own B button there is switched off at its owners (`base_b_ring`, `base_b_item` in
   `patch/oot3d/hooks.s`; decomp/oot3d `docs/hud.md`, "Mounted"): no ring, glyph, icon or count
   at the bottom right, the minimap's markers as before (`hud-mounted`: riding, riding-boosted).
-  The One Screen still raises the minimap while mounted, where that ring was.
+  The minimap stays at its on-foot place: The One Screen's lift for that ring is switched off
+  in its payload (`base_minimap`; `hud-minimap`: riding, on-foot).
+- OoT3D minigames: the game's B button is gone there too and X shows the item the game lends
+  with the shots left (`lent` in `hud.toml`). Seen in the Market's shooting gallery: the
+  slingshot with 15, 13 after two shots, pad and keyboard (`hud-gallery`). Bowling, fishing and
+  horseback archery follow the same table from the code, not run.
 - A slot's item is dim when the game takes none: on one of the game's buttons by that button's
   status, on none while the game has all its item buttons disabled (`status_lanes` in
   `hud.toml`). Seen in OoT3D: dim on Epona and in Link's house, bright in Hyrule Field on foot
   (`hud-mounted`: house, riding, on-foot). MM3D names no `status_lanes` yet.
-- Missing from OoT3D's HUD: View.
+- OoT3D's View: the touch screen's icon for the look, left of the pad's diamond with R3's glyph
+  and beside the mouse's sword with F's cap, from the state the game picks its cell by: the
+  camera in Link's house, the eye in Kokiri Forest, the camera in first person, Navi while she
+  calls, dim on Epona (`hud-view`, `hud-minimap` riding). The pack's sheet draws the camera's
+  VIEW and BACK cells alike and without their words, so first person shows the same camera.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the
   Slingshot (OoT3D): a mouse delta turns the view by 0.05 degrees a count within 0.03 degrees
   (`aim-mm5`, `aim-oot3`), and in a window the F key, real mouse motion and leaving the look

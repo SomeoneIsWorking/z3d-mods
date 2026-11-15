@@ -38,14 +38,16 @@ public:
 
 private:
   // A little-endian unsigned value in guest memory; `bytes` 0 is no value. With `pointer`, the
-  // address is an offset from what that guest pointer holds. A bit field is masked, then shifted
-  // down.
+  // address is an offset from what that guest pointer holds, or with `hop` from the pointer kept
+  // that far into what it holds (the player actor in the play state). A bit field is masked, then
+  // shifted down.
   struct GuestValue {
     uint32_t address = 0;
     uint8_t bytes = 0;
     uint32_t pointer = 0;
     uint8_t shift = 0;
     uint32_t mask = UINT32_MAX;
+    std::optional<uint32_t> hop = std::nullopt;
   };
 
   // Holds while the value reads `least` to `most`, or one of `among` where it names any.
@@ -54,6 +56,21 @@ private:
     uint32_t least = 0;
     uint32_t most = 0;
     std::vector<uint32_t> among;
+  };
+
+  // What the game's own B button holds in a minigame while `when` holds: the item it lends and
+  // the count it shows, which reads `over` more than are left.
+  struct Lent {
+    std::vector<Condition> when;
+    uint32_t item = 0;
+    GuestValue count;
+    uint32_t over = 0;
+  };
+
+  // The game's art a prompt stands on while `when` holds.
+  struct Look {
+    std::vector<Condition> when;
+    std::string art;
   };
 
   enum class Kind : uint8_t { Hearts, Meter, Counter, Button, Prompt, Panel };
@@ -88,9 +105,9 @@ private:
     // nothing.
     std::optional<uint32_t> none;
     // Button and Panel: the frame (hud set). A button shows an item slot's content (`slot`), or
-    // the item `value` reads with its count, under the prompt of its slot or of the verb that
-    // presses it; while the chord is held it shows `chordSlot` instead, where it has one. An item
-    // without an icon is an empty button.
+    // the item `value` reads (a minigame's lent one instead) with its count, under the prompt of
+    // its slot or of the verb that presses it; while the chord is held it shows `chordSlot`
+    // instead, where it has one. An item without an icon is an empty button.
     std::string frame;
     std::optional<size_t> slot;
     std::optional<size_t> chordSlot;
@@ -100,9 +117,12 @@ private:
     GuestValue label;
     GuestValue status;
     // Prompt: the chord's own glyph (a pad's button or the keyboard's wide cap), on its own; or a
-    // pad glyph by name.
+    // pad glyph by name; or a verb's glyph at the corner of the game's icon for it, the first of
+    // `looks` that holds, dim while `dim` reads nonzero.
     bool chord = false;
     std::string glyph;
+    std::vector<Look> looks;
+    GuestValue dim;
     // Button: no prompt of its own, where a shared one beside it says which it is.
     bool bare = false;
     // Drawn while a screen that assigns slots is up, instead of in play.
@@ -129,6 +149,8 @@ private:
   // Moves the chord's flip on by the frames shown since the last update.
   void turn();
   [[nodiscard]] bool hold(const std::vector<Condition> &conditions) const;
+  // The minigame item lent now, for an element that reads the game's B item.
+  [[nodiscard]] const Lent *lent(const Element &element) const;
   // Whether the game has the item button `lane` of its status array disabled.
   [[nodiscard]] bool laneDisabled(uint32_t lane) const;
   void update();
@@ -138,9 +160,10 @@ private:
   [[nodiscard]] HudSprite art(const std::string &name, float width, float height);
   // A button element with what it shows now.
   void button(const Element &element, const OverlayRect &box);
-  // An item's icon in a button's box, its count on a plate below; a song's note.
+  // An item's icon in a button's box, its count on a plate below (`lent`'s own count for a lent
+  // item); a song's note.
   void content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song,
-               bool dimmed);
+               bool dimmed, const Lent *lent = nullptr);
   // The pad glyph or key cap of `by`, `size` pixels, its top left corner at (x, y).
   void prompt(const Prompt &by, float x, float y, float size);
 
@@ -164,6 +187,7 @@ private:
   // The game's item buttons in the status array: a slot on none of them is dim while the game
   // has every one disabled.
   std::vector<uint32_t> statusLanes_;
+  std::vector<Lent> lent_;
   // An item's count is full at its upgrade's capacity at the level the save holds (the game's
   // tables: the save's upgrades word, each upgrade's mask and shift, and its capacity by level),
   // or at a fixed `most`.

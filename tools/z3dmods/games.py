@@ -123,7 +123,8 @@ def _defined(d: symbols.Decomp, value: object) -> object:
 
 
 def _resolved(d: symbols.Decomp, value: object) -> object:
-    """hud.toml's `{ at = [...], through = "global" }` as `{ address, pointer }`, wherever it sits;
+    """hud.toml's `{ at = [...], through = "global" }` as `{ address, pointer }`, wherever it sits
+    (`of = "player"`: an offset in the player actor, `pointer` the play state's and `hop` the actor's in it);
     a `mask`, `shift`, the `equals` of a condition (one value or a list), or an `item` and
     `upgrade` may be one of the decomp's defines."""
     if isinstance(value, list):
@@ -131,11 +132,16 @@ def _resolved(d: symbols.Decomp, value: object) -> object:
     if not isinstance(value, dict):
         return value
     out = {key: _defined(d, entry) if key in DEFINED else _resolved(d, entry)
-           for key, entry in value.items() if key not in ("at", "through")}
+           for key, entry in value.items() if key not in ("at", "through", "of")}
     if "at" in value:
         out["address"] = _guest_address(d, value["at"])
     if "through" in value:
         out["pointer"] = symbols.global_(d, value["through"])
+    if "of" in value:
+        if value["of"] != "player":
+            raise SystemExit(f"hud.toml: `of` is \"player\", not {value['of']}")
+        out["pointer"] = symbols.global_(d, "gPlayState")
+        out["hop"] = _player_list_head(d)
     return out
 
 
@@ -160,10 +166,10 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
         "play": symbols.global_(d, "gPlayState"), "player": _player_list_head(d)}
 
 
-# hud.toml's tables every button shares: the counts and when each is full, the statuses and the
-# songs' colours.
+# hud.toml's tables every button shares: the counts and when each is full, the statuses, the
+# minigames' lent items and the songs' colours.
 HUD_SHARED = ("ammo", "ammo_index", "ammo_full", "upgrades", "upgrade_masks", "upgrade_shifts",
-              "upgrade_capacities", "upgrade_levels", "status", "disabled", "status_lanes", "song_colours")
+              "upgrade_capacities", "upgrade_levels", "status", "disabled", "status_lanes", "lent", "song_colours")
 
 # The keys whose string value is one of the decomp's defines.
 DEFINED = ("mask", "shift", "equals", "item", "upgrade", "full")

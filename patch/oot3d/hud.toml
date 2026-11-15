@@ -1,6 +1,7 @@
 # Our play HUD (app/src/hud.hpp): each element's place on the top screen's 400x240 pixels and the
 # guest memory it reads (decomp/oot3d docs/hud.md names it). `at` is a sum: a global of the
-# decomp, `Struct.field` offsets, defines and numbers; `through` reads it off a guest pointer.
+# decomp, `Struct.field` offsets, defines and numbers; `through` reads it off a guest pointer,
+# `of = "player"` off the player actor.
 # The base mod's own HUD is switched off in hooks.s (base_hud). The buttons sit top right: the
 # game's minimap keeps the bottom right.
 
@@ -40,6 +41,26 @@ disabled = 0xFF
 # The game's item buttons (Y, X, I, II) in that array: a slot on none of them is dim while the
 # game has all four disabled (mounted, indoors).
 status_lanes = [1, 2, 3, 4]
+# The game's own B button in a minigame (TopHud.bButtonMode; decomp docs/hud.md) holds the item
+# the game lends and the shots left; the button that reads the game's B item shows them instead.
+lent = [
+  { item = "ITEM_SLINGSHOT", over = 1, count = { at = ["PlayState.shootingGalleryStatus"], through = "gPlayState", bytes = 1 }, when = [
+    { at = ["gTopHud", "TopHud.bButtonMode"], bytes = 4, equals = "B_BUTTON_SHOOTING_GALLERY" },
+    { at = ["gSaveContext", "SaveContext.linkAge"], bytes = 4, equals = 1 },
+  ] },
+  { item = "ITEM_BOW", over = 1, count = { at = ["PlayState.shootingGalleryStatus"], through = "gPlayState", bytes = 1 }, when = [
+    { at = ["gTopHud", "TopHud.bButtonMode"], bytes = 4, equals = "B_BUTTON_SHOOTING_GALLERY" },
+  ] },
+  { item = "ITEM_BOMBCHU", count = { at = ["PlayState.bombchuBowlingStatus"], through = "gPlayState", bytes = 1 }, when = [
+    { at = ["gTopHud", "TopHud.bButtonMode"], bytes = 4, equals = "B_BUTTON_BOWLING" },
+  ] },
+  { item = "ITEM_FISHING_POLE", when = [
+    { at = ["gTopHud", "TopHud.bButtonMode"], bytes = 4, equals = "B_BUTTON_FISHING" },
+  ] },
+  { item = "ITEM_BOW", count = { at = ["PlayState.interfaceCtx", "InterfaceContext.hbaAmmo"], through = "gPlayState", bytes = 2 }, when = [
+    { at = ["gTopHud", "TopHud.bButtonMode"], bytes = 4, equals = "B_BUTTON_HORSEBACK_ARCHERY" },
+  ] },
+]
 # A song's note by its place among the quest items' songs: the warp songs in their own colours
 # (Minuet to Prelude), then Zelda's Lullaby, Epona's, Saria's, the Sun's, Time and Storms.
 song_colours = [
@@ -67,6 +88,10 @@ heart_3 = [240, 128, 12, 12]
 heart_4 = [240, 144, 12, 12]
 carrot = [488, 0, 24, 24]
 carrot_spent = [488, 24, 24, 24]
+view = [128, 0, 48, 48]
+navi = [176, 0, 48, 48]
+view_camera = [128, 48, 48, 48]
+view_back = [176, 48, 48, 48]
 
 # The A button's words: an action's number is its word's cell; a sheet a system language, the
 # first the one shown in a language not listed.
@@ -127,6 +152,35 @@ index = { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2 }
 when = [
   { at = ["PlayState.sceneNum"], through = "gPlayState", bytes = 2, least = 3, most = 16 },
   { at = ["gSaveContext", "SaveContext.mapIndex"], bytes = 2, most = 18 },
+]
+
+# View, the touch screen's own icon for the look (Hud_UpdateGameplay picks its cell): Navi while
+# she calls, BACK in first person, the camera where the scene has two fixed ones, else the eye;
+# dim while the game takes no press of it.
+[[element]]
+kind = "prompt"
+device = "pad"
+verb = "first_person"
+rect = [290, 3, 24, 24]
+dim = { at = ["gHud", "Hud.flags"], bytes = 4, mask = "HUD_FLAG_VIEW_DIM" }
+looks = [
+  { art = "navi", when = [{ at = ["PlayState.interfaceCtx", "InterfaceContext.naviCalling"], through = "gPlayState", bytes = 2, least = 1 }] },
+  { art = "view_back", when = [{ at = ["Player.viewMode"], of = "player", bytes = 1, equals = "PLAYER_VIEW_FIRST_PERSON" }] },
+  { art = "view_camera", when = [{ at = ["R_SCENE_CAM_TYPE_OFFSET"], through = "gGameInfo", bytes = 2, equals = "SCENE_CAM_TYPE_FIXED_TOGGLE_VIEWPOINT" }] },
+  { art = "view" },
+]
+
+[[element]]
+kind = "prompt"
+device = "keyboard"
+verb = "first_person"
+rect = [292, 37, 24, 24]
+dim = { at = ["gHud", "Hud.flags"], bytes = 4, mask = "HUD_FLAG_VIEW_DIM" }
+looks = [
+  { art = "navi", when = [{ at = ["PlayState.interfaceCtx", "InterfaceContext.naviCalling"], through = "gPlayState", bytes = 2, least = 1 }] },
+  { art = "view_back", when = [{ at = ["Player.viewMode"], of = "player", bytes = 1, equals = "PLAYER_VIEW_FIRST_PERSON" }] },
+  { art = "view_camera", when = [{ at = ["R_SCENE_CAM_TYPE_OFFSET"], through = "gGameInfo", bytes = 2, equals = "SCENE_CAM_TYPE_FIXED_TOGGLE_VIEWPOINT" }] },
+  { art = "view" },
 ]
 
 # Play: the pad's diamond and RB at its corner top right, the D-pad's cross under the hearts.

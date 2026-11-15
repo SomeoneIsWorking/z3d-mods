@@ -19,8 +19,10 @@ SECTIONS {
   .patch.base_b_item kTopHudDraw + 0x458 : { KEEP(*(.patch.base_b_item)) }
   .patch.play_update kGameplayUpdate + 0x9C : { KEEP(*(.patch.play_update)) }
   .patch.base_camera kGameplayUpdate + 0xA8 : { KEEP(*(.patch.base_camera)) }
-  /* The One Screen 891b60e's payload: Hud_Submit's visible flag (decomp docs/hud.md). */
+  /* The One Screen 891b60e's payload (decomp docs/hud.md): Hud_Submit's visible flag. */
   .patch.base_hud 0x612C84 : { KEEP(*(.patch.base_hud)) }
+  /* Minimap_Project's mounted test. */
+  .patch.base_minimap 0x6148C8 : { KEEP(*(.patch.base_minimap)) }
   . = PAYLOAD;
   .payload : { KEEP(*(.options)) *(.text*) *(.rodata*) *(.data*) }
   /* The item slots' block the app reads and writes (tools/z3dmods/slot_link.py). */

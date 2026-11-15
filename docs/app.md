@@ -306,11 +306,19 @@ after two boosts, none on foot). A `counter` can read one entry
 of an array (`index`), pick its art by a `tier` (MM3D's wallet picks the gem) and turn green at
 a `limit` (the game's table by tier, `gUpgradeCapacities` in both games).
 
+A `prompt` with `looks` is the game's icon for a verb with the verb's glyph at its corner: the
+first look whose `when` holds is drawn, dim while `dim` reads nonzero. OoT3D's View is one (R3,
+F): Navi while she calls, the camera in first person and where the scene has two fixed cameras,
+else the eye, dim while the game takes no press (decomp/oot3d `docs/hud.md`, "The view icon";
+`hud-view`). A value `of = "player"` is read off the player actor.
+
 The buttons are the same in both games: the pad's diamond and RB's ring beside Y top right,
 the D-pad's cross under the hearts and magic. A shows the game's own word for its action under it (`label`, the action's
 number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's patch hides the
 game's own A button, `patch/mm3d/base_hud.cpp`), X the sword (the item the game has on its B
-button, with its count where it has one: the bow and its arrows while Link rides), and Y, B, RB and the cross's four
+button, with its count where it has one: the bow and its arrows while Link rides; in a minigame
+the item the game lends with the shots left, `lent` in `hud.toml`, first entry whose `when`
+holds, by OoT3D's `TopHud.bButtonMode`; `hud-gallery`: the slingshot with 15, then 13), and Y, B, RB and the cross's four
 rings their slots' items from `SlotLink`, a note for a slot with a song (an item dim while the game takes none: by the status of the
 game's button it is on, or, on none, while the game has every item button of `status_lanes`
 disabled; `hud-mounted`: dim on Epona and in Link's house), and a gold arc over

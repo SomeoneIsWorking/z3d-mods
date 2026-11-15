@@ -130,15 +130,19 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
   if (elements == nullptr || elements->array() == nullptr) {
     throw std::runtime_error(manifest.string() + ": \"hud\" wants elements");
   }
-  const auto guest = [](const lucent::json::Value &object, std::string_view key) {
-    const lucent::json::Value *value = object.find(key);
-    if (value == nullptr) {
-      return GuestValue{};
+  const auto valueOf = [](const lucent::json::Value &value) {
+    GuestValue found{
+        integer(value, "address", 0),       static_cast<uint8_t>(integer(value, "bytes", 0)),
+        integer(value, "pointer", 0),       static_cast<uint8_t>(integer(value, "shift", 0)),
+        integer(value, "mask", UINT32_MAX), std::nullopt};
+    if (value.find("hop") != nullptr) {
+      found.hop = integer(value, "hop", 0);
     }
-    return GuestValue{
-        integer(*value, "address", 0), static_cast<uint8_t>(integer(*value, "bytes", 0)),
-        integer(*value, "pointer", 0), static_cast<uint8_t>(integer(*value, "shift", 0)),
-        integer(*value, "mask", UINT32_MAX)};
+    return found;
+  };
+  const auto guest = [&](const lucent::json::Value &object, std::string_view key) {
+    const lucent::json::Value *value = object.find(key);
+    return value != nullptr ? valueOf(*value) : GuestValue{};
   };
   const auto strings = [](const lucent::json::Value &object, std::string_view key) {
     std::vector<std::string> found;
@@ -158,12 +162,7 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
       return found;
     }
     for (const lucent::json::Value &entry : *list->array()) {
-      Condition condition{GuestValue{integer(entry, "address", 0),
-                                     static_cast<uint8_t>(integer(entry, "bytes", 0)),
-                                     integer(entry, "pointer", 0)},
-                          0,
-                          UINT32_MAX,
-                          {}};
+      Condition condition{valueOf(entry), 0, UINT32_MAX, {}};
       if (const lucent::json::Value *equals = entry.find("equals");
           equals != nullptr && equals->array() != nullptr) {
         for (const lucent::json::Value &value : *equals->array()) {
@@ -202,6 +201,16 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
       }
       ammoIndex_.emplace_back(static_cast<uint32_t>(*(*pair.array())[0].integer()),
                               static_cast<uint32_t>(*(*pair.array())[1].integer()));
+    }
+  }
+  if (const lucent::json::Value *list = hud->find("lent");
+      list != nullptr && list->array() != nullptr) {
+    for (const lucent::json::Value &entry : *list->array()) {
+      if (entry.find("item") == nullptr) {
+        throw std::runtime_error(manifest.string() + ": hud lent names an item");
+      }
+      lent_.push_back({conditions(entry, "when"), integer(entry, "item", 0), guest(entry, "count"),
+                       integer(entry, "over", 0)});
     }
   }
   upgrades_ = guest(*hud, "upgrades");
@@ -290,6 +299,13 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
                                device);
     }
     element.glyph = text(entry, "glyph");
+    if (const lucent::json::Value *looks = entry.find("looks");
+        looks != nullptr && looks->array() != nullptr) {
+      for (const lucent::json::Value &look : *looks->array()) {
+        element.looks.push_back({conditions(look, "when"), text(look, "art")});
+      }
+    }
+    element.dim = guest(entry, "dim");
     element.when = conditions(entry, "when");
     element.index = guest(entry, "index");
     element.label = guest(entry, "label");
@@ -339,6 +355,7 @@ void Hud::requireArt() {
   bool buttons = false;
   for (const Element &element : elements_) {
     std::ranges::for_each(element.art, piece);
+    std::ranges::for_each(element.looks, piece, &Look::art);
     switch (element.kind) {
     case Kind::Hearts:
       break;
@@ -384,7 +401,10 @@ Hud::~Hud() {
 
 std::optional<uint32_t> Hud::read(const GuestValue &value) const {
   if (value.pointer != 0) {
-    const std::optional<uint32_t> base = read({value.pointer, sizeof(uint32_t)});
+    std::optional<uint32_t> base = read({value.pointer, sizeof(uint32_t)});
+    if (value.hop && base && *base != 0) {
+      base = read({*base + *value.hop, sizeof(uint32_t)});
+    }
     return base && *base != 0
                ? read({*base + value.address, value.bytes, 0, value.shift, value.mask})
                : std::nullopt;
@@ -418,6 +438,16 @@ bool Hud::laneDisabled(uint32_t lane) const {
                                      status_.pointer}) == disabled_;
 }
 
+const Hud::Lent *Hud::lent(const Element &element) const {
+  if (element.value.bytes == 0) {
+    return nullptr;
+  }
+  const auto found = std::ranges::find_if(lent_, [this](const Lent &entry) {
+    return hold(entry.when);
+  });
+  return found != lent_.end() ? &*found : nullptr;
+}
+
 // Only what is drawn counts: an item without an icon (the game's "none") is an empty ring.
 Hud::Face Hud::face(const Element &element, std::optional<size_t> slot) const {
   const auto drawn = [this](std::optional<uint32_t> value, std::string_view prefix) {
@@ -432,7 +462,9 @@ Hud::Face Hud::face(const Element &element, std::optional<size_t> slot) const {
     return {drawn(held.item ? std::optional<uint32_t>(*held.item) : std::nullopt, ""), std::nullopt,
             std::nullopt};
   }
-  return {drawn(read(element.value), ""), std::nullopt, drawn(read(element.label), kWordArt)};
+  const Lent *lend = lent(element);
+  return {drawn(lend != nullptr ? std::optional<uint32_t>(lend->item) : read(element.value), ""),
+          std::nullopt, drawn(read(element.label), kWordArt)};
 }
 
 void Hud::turn() {
@@ -572,7 +604,19 @@ void Hud::draw(const Element &element) {
     if (element.chord) {
       by.pad = PadInput::kChord;
     }
-    prompt(by, box.x, box.y, box.h);
+    if (element.looks.empty()) {
+      prompt(by, box.x, box.y, box.h);
+      return;
+    }
+    const auto look = std::ranges::find_if(element.looks, [this](const Look &l) {
+      return hold(l.when);
+    });
+    if (look == element.looks.end()) {
+      return;
+    }
+    quad(art(look->art, box.w, box.h), box, read(element.dim).value_or(0) != 0 ? kDimmed : 1.0F);
+    const float size = std::max(std::round(box.w * kGlyphShare), kGlyphLeast);
+    prompt(by, box.x - std::round(size / 4.0F), box.y - std::round(size / 4.0F), size);
     return;
   }
   }
@@ -604,8 +648,9 @@ void Hud::button(const Element &element, const OverlayRect &box) {
       quad(atlas_->arc(static_cast<int>(box.w), step, kChargeSteps), box);
     }
   } else {
-    content(box, read(element.value), std::nullopt,
-            element.status.bytes != 0 && read(element.status) == disabled_);
+    const Lent *lend = lent(element);
+    content(box, lend != nullptr ? std::optional<uint32_t>(lend->item) : read(element.value),
+            std::nullopt, element.status.bytes != 0 && read(element.status) == disabled_, lend);
   }
   const float middle = box.y + box.h / 2.0F;
   for (size_t i = card; i < quads_.size() && share < 1.0F; ++i) {
@@ -634,7 +679,7 @@ void Hud::button(const Element &element, const OverlayRect &box) {
 }
 
 void Hud::content(const OverlayRect &box, std::optional<uint32_t> item, std::optional<uint8_t> song,
-                  bool dimmed) {
+                  bool dimmed, const Lent *lent) {
   const float size = std::round(box.w * kIconShare);
   const float inset = std::round((box.w - size) / 2.0F);
   const OverlayRect at{box.x + inset, box.y + inset, size, size};
@@ -648,16 +693,20 @@ void Hud::content(const OverlayRect &box, std::optional<uint32_t> item, std::opt
   }
   quad(art(std::to_string(*item), size, size), at, dimmed ? kDimmed : 1.0F);
   const auto counted = std::ranges::find(ammoIndex_, *item, &std::pair<uint32_t, uint32_t>::first);
-  const std::optional<uint32_t> count =
-      counted != ammoIndex_.end()
-          ? read({ammo_.address + counted->second * ammo_.bytes, ammo_.bytes})
-          : std::nullopt;
+  std::optional<uint32_t> count;
+  if (lent != nullptr) {
+    if (const std::optional<uint32_t> held = read(lent->count)) {
+      count = *held - std::min(*held, lent->over);
+    }
+  } else if (counted != ammoIndex_.end()) {
+    count = read({ammo_.address + counted->second * ammo_.bytes, ammo_.bytes});
+  }
   if (count) {
     // A plate hanging off the ring's bottom, centred: it starts where the icon ends and hides the
     // rim.
     const HudSprite plate =
         atlas_->text(std::to_string(*count), static_cast<int>(std::round(box.w * kCountShare)),
-                     full(*item, *count) ? HudInk::FullPlate : HudInk::Plate);
+                     lent == nullptr && full(*item, *count) ? HudInk::FullPlate : HudInk::Plate);
     quad(plate,
          {box.x + std::round((box.w - plate.w) / 2.0F), box.y + inset + size, plate.w, plate.h});
   }

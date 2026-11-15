@@ -49,6 +49,12 @@
     mov r0, #0
 .section .expect.base_hud, "", %progbits
     .word 0xC3A00001 @ movgt r0, #1
+@ The One Screen's Minimap_Project lifts the minimap clear of the game's B button while mounted;
+@ that button is off the top screen (base_b_ring), so the minimap stays where it is on foot.
+.section .patch.base_minimap, "ax", %progbits
+    nop
+.section .expect.base_minimap, "", %progbits
+    .word 0x0A000092 @ beq: mounted
 @ The game's own B button on the top screen (the bow while mounted, a minigame's item): ours
 @ shows it (hud.toml). TopHud_UpdateButtons keeps its ring off screen in every mode, and
 @ TopHud_Draw does not draw its item and count.
