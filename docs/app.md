@@ -311,7 +311,9 @@ the D-pad's cross under the hearts and magic. A shows the game's own word for it
 number: OoT3D's `gTopHud.doAction`, MM3D's `PlayState.aButtonDoAction`; MM3D's patch hides the
 game's own A button, `patch/mm3d/base_hud.cpp`), X the sword (the item the game has on its B
 button, with its count where it has one: the bow and its arrows while Link rides), and Y, B, RB and the cross's four
-rings their slots' items from `SlotLink`, a note for a slot with a song, and a gold arc over
+rings their slots' items from `SlotLink`, a note for a slot with a song (an item dim while the game takes none: by the status of the
+game's button it is on, or, on none, while the game has every item button of `status_lanes`
+disabled; `hud-mounted`: dim on Epona and in Link's house), and a gold arc over
 the rim of a slot that plays only once held (`charge`). While the chord is held
 the diamond shows slots 8 to 11. A ring whose two pages draw differently turns over like a card
 when the chord is pressed or let go: the ring, its icon, its count and A's word squash to no

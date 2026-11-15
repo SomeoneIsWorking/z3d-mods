@@ -163,7 +163,7 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
 # hud.toml's tables every button shares: the counts and when each is full, the statuses and the
 # songs' colours.
 HUD_SHARED = ("ammo", "ammo_index", "ammo_full", "upgrades", "upgrade_masks", "upgrade_shifts",
-              "upgrade_capacities", "upgrade_levels", "status", "disabled", "song_colours")
+              "upgrade_capacities", "upgrade_levels", "status", "disabled", "status_lanes", "song_colours")
 
 # The keys whose string value is one of the decomp's defines.
 DEFINED = ("mask", "shift", "equals", "item", "upgrade", "full")

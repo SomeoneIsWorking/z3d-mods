@@ -21,6 +21,8 @@ kTextRendererInit = "TextRenderer_Init"
 kTextRendererAddGlyph = "TextRenderer_AddGlyph"
 kTextRendererFillStatic = "TextRenderer_FillStaticGlyphTexture"
 kQbfFindGlyph = "QbfFont_FindGlyph"
+kTopHudDraw = "TopHud_Draw"
+kTopHudUpdateButtons = "TopHud_UpdateButtons"
 
 [globals]
 kSaveContext = "gSaveContext"

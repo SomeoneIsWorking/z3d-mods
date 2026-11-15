@@ -49,6 +49,17 @@
     mov r0, #0
 .section .expect.base_hud, "", %progbits
     .word 0xC3A00001 @ movgt r0, #1
+@ The game's own B button on the top screen (the bow while mounted, a minigame's item): ours
+@ shows it (hud.toml). TopHud_UpdateButtons keeps its ring off screen in every mode, and
+@ TopHud_Draw does not draw its item and count.
+.section .patch.base_b_ring, "ax", %progbits
+    b . + 0x18
+.section .expect.base_b_ring, "", %progbits
+    .word 0x0A000004 @ beq: no B button mode
+.section .patch.base_b_item, "ax", %progbits
+    nop
+.section .expect.base_b_item, "", %progbits
+    .word 0x1BFB2E77 @ blne HudItemButtons_Draw
 @ PadMgr_RequestPadData: the pad word its ocarina note mapping reads, after The One Screen's hook.
 .section .patch.song_notes, "ax", %progbits
     bl song_notes

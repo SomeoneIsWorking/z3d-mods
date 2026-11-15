@@ -129,6 +129,8 @@ private:
   // Moves the chord's flip on by the frames shown since the last update.
   void turn();
   [[nodiscard]] bool hold(const std::vector<Condition> &conditions) const;
+  // Whether the game has the item button `lane` of its status array disabled.
+  [[nodiscard]] bool laneDisabled(uint32_t lane) const;
   void update();
   void draw(const Element &element);
   void quad(const HudSprite &sprite, const OverlayRect &at, float opacity = 1.0F);
@@ -159,6 +161,9 @@ private:
   std::vector<std::pair<uint32_t, uint32_t>> ammoIndex_;
   GuestValue status_;
   uint32_t disabled_ = 0;
+  // The game's item buttons in the status array: a slot on none of them is dim while the game
+  // has every one disabled.
+  std::vector<uint32_t> statusLanes_;
   // An item's count is full at its upgrade's capacity at the level the save holds (the game's
   // tables: the save's upgrades word, each upgrade's mask and shift, and its capacity by level),
   // or at a fixed `most`.

@@ -381,11 +381,15 @@ The path is texture replacement, in both games, with nothing drawn by the app:
 - OoT3D mounted: the HUD stays up on Epona (the game's visibility mode there is 12, not play's
   50), six carrots sit beside the hearts, whole for each boost left, and X shows the bow the game
   puts on its B button with the arrows left (`hud-carrots`: riding-rested, riding-boosted, riding-keys, on-foot).
-- Missing from OoT3D's HUD: View. Mounted, the game's own B ring is still drawn at the top
-  screen's bottom right (the bow a second time, under the B glyph where our pad's button is X),
-  and the slots' items stay bright although the game takes no item there. The ring's owner was
-  not found: decomp/oot3d `docs/hud.md`, "Mounted", has the two switches that take the minimap's
-  markers with it.
+  The game's own B button there is switched off at its owners (`base_b_ring`, `base_b_item` in
+  `patch/oot3d/hooks.s`; decomp/oot3d `docs/hud.md`, "Mounted"): no ring, glyph, icon or count
+  at the bottom right, the minimap's markers as before (`hud-mounted`: riding, riding-boosted).
+  The One Screen still raises the minimap while mounted, where that ring was.
+- A slot's item is dim when the game takes none: on one of the game's buttons by that button's
+  status, on none while the game has all its item buttons disabled (`status_lanes` in
+  `hud.toml`). Seen in OoT3D: dim on Epona and in Link's house, bright in Hyrule Field on foot
+  (`hud-mounted`: house, riding, on-foot). MM3D names no `status_lanes` yet.
+- Missing from OoT3D's HUD: View.
 - Mouse aim: built and measured in both games, in first person and with the bow (MM3D) and the
   Slingshot (OoT3D): a mouse delta turns the view by 0.05 degrees a count within 0.03 degrees
   (`aim-mm5`, `aim-oot3`), and in a window the F key, real mouse motion and leaving the look

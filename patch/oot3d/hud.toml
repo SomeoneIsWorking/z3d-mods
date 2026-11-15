@@ -37,6 +37,9 @@ ammo_full = [
 ]
 status = { at = ["gSaveContext", "SaveContext.buttonStatus"], bytes = 1 }
 disabled = 0xFF
+# The game's item buttons (Y, X, I, II) in that array: a slot on none of them is dim while the
+# game has all four disabled (mounted, indoors).
+status_lanes = [1, 2, 3, 4]
 # A song's note by its place among the quest items' songs: the warp songs in their own colours
 # (Minuet to Prelude), then Zelda's Lullaby, Epona's, Saria's, the Sun's, Time and Storms.
 song_colours = [

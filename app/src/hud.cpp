@@ -184,6 +184,15 @@ Hud::Hud(GameWindow &window, Emulator &emulator, const PadInput &pad, const Slot
   ammo_ = guest(*hud, "ammo");
   status_ = guest(*hud, "status");
   disabled_ = integer(*hud, "disabled", 0xFF);
+  if (const lucent::json::Value *lanes = hud->find("status_lanes");
+      lanes != nullptr && lanes->array() != nullptr) {
+    for (const lucent::json::Value &lane : *lanes->array()) {
+      if (!lane.integer()) {
+        throw std::runtime_error(manifest.string() + ": hud status_lanes lists button indices");
+      }
+      statusLanes_.push_back(static_cast<uint32_t>(*lane.integer()));
+    }
+  }
   if (const lucent::json::Value *indices = hud->find("ammo_index");
       indices != nullptr && indices->array() != nullptr) {
     for (const lucent::json::Value &pair : *indices->array()) {
@@ -404,6 +413,11 @@ bool Hud::hold(const std::vector<Condition> &conditions) const {
   });
 }
 
+bool Hud::laneDisabled(uint32_t lane) const {
+  return status_.bytes != 0 && read({status_.address + lane * status_.bytes, status_.bytes,
+                                     status_.pointer}) == disabled_;
+}
+
 // Only what is drawn counts: an item without an icon (the game's "none") is an empty ring.
 Hud::Face Hud::face(const Element &element, std::optional<size_t> slot) const {
   const auto drawn = [this](std::optional<uint32_t> value, std::string_view prefix) {
@@ -578,11 +592,14 @@ void Hud::button(const Element &element, const OverlayRect &box) {
   quad(atlas_->svg(kHudSet, element.frame, static_cast<int>(box.w), static_cast<int>(box.h)), box);
   if (slot) {
     const SlotLink::Slot &held = link_.slot(*slot);
-    // The game keeps a status for the items on its own buttons only.
+    // The game keeps a status for its own buttons only: a slot on one has that button's, a slot
+    // on none is as usable as the buttons it could take.
     content(box, held.item, held.song,
-            held.lane != 0 && status_.bytes != 0 &&
-                read({status_.address + held.lane * status_.bytes, status_.bytes,
-                      status_.pointer}) == disabled_);
+            held.lane != 0
+                ? laneDisabled(held.lane)
+                : !statusLanes_.empty() && std::ranges::all_of(statusLanes_, [this](uint32_t lane) {
+                    return laneDisabled(lane);
+                  }));
     if (const int step = static_cast<int>(std::ceil(held.charge * kChargeSteps)); step > 0) {
       quad(atlas_->arc(static_cast<int>(box.w), step, kChargeSteps), box);
     }
