@@ -2,7 +2,8 @@
 folder is the package (package.py) with the player's data in `user/` inside it. The host's own
 files serve it: the dumps in ROM/3DS of its home folder, the player's mod downloads in
 `user/mods`; its picker sets each game up from them. What is in `user/` stays, and is copied
-aside first. A menu and a Desktop entry open the title picker.
+aside first. A menu and a Desktop entry open the title picker, and so does a Steam shortcut for game mode
+(re-harness `steam_shortcut.py`, through the host's running Steam).
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import json
 import shlex
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -22,6 +24,7 @@ ROMS = "ROM/3DS"
 SAVES = app.COPIED
 # What a backup leaves out of user/: the sets and the mod downloads, which setup makes again.
 DERIVED = ("user/Azahar/load", "user/mods", "user/Azahar/shaders", "user/Azahar/log")
+STEAM_NAME = "z3d"
 
 
 def _ssh(host: str, command: str) -> str:
@@ -64,4 +67,9 @@ def install(cfg: Config, host: str) -> list[Path]:
     written = [applications / entry.name, home / "Desktop" / entry.name]
     for path in written:
         _rsync([entry], host, path)
+    steam_shortcut = cfg.repo / ".." / ".." / "shared" / "re-harness" / "tools" / "steam_shortcut.py"
+    steam = subprocess.run([sys.executable, "-I", str(steam_shortcut), "--host", host, "add", "--name", STEAM_NAME,
+                            "--exe", str(root / "z3d")], text=True, capture_output=True, check=False)
+    if steam.returncode != 0:
+        print(f"{host}: no Steam shortcut: {steam.stderr.strip()}")
     return [*written, backup]
