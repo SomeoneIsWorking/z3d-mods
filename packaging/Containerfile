@@ -33,7 +33,8 @@ RUN curl -fsSL --retry 5 --retry-all-errors -o /tmp/cmake.tar.gz \
     && tar -xzf /tmp/cmake.tar.gz -C /usr/local --strip-components=1 && rm /tmp/cmake.tar.gz
 
 # SDL3, SDL3_ttf (on 24.04's FreeType and HarfBuzz) and SDL3_image (PNG), which 24.04 does not
-# package: release tarballs pinned by sha256, built into /usr/local. The package carries them.
+# package: tarballs pinned by sha256, built into /usr/local. The package carries them. SDL3 is the
+# SomeoneIsWorking fork, which knows InputPlumber's Steam Deck pads (Bazzite without Steam running).
 RUN set -eu; \
     build() { \
         name=$1; url=$2; sum=$3; shift 3; \
@@ -48,8 +49,8 @@ RUN set -eu; \
         ldconfig; \
     }; \
     build sdl3 \
-        https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.tar.gz \
-        9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3 \
+        https://github.com/SomeoneIsWorking/SDL/archive/8ec78d6f72bf33b8038196f44c75c885fe60ce4f.tar.gz \
+        3e8c807722d21b78794c9ee167b58d542b7f5414c522483009a72d0681242860 \
         -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF; \
     build sdl3-ttf \
         https://github.com/libsdl-org/SDL_ttf/releases/download/release-3.2.2/SDL3_ttf-3.2.2.tar.gz \
