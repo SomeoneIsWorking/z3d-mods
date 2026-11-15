@@ -5,6 +5,7 @@
 
 #include "app_config.hpp"
 #include "screen_overlay.hpp"
+#include "window_mode.hpp"
 
 #include "core/frontend/emu_window.h"
 
@@ -47,6 +48,8 @@ inline constexpr std::array kModKeys{
 // What asks for the menu: the picker from a game, the way out of a screen of the picker's.
 inline constexpr SDL_Scancode kMenuKey = SDL_SCANCODE_F10;
 inline constexpr SDL_GamepadButton kMenuButton = SDL_GAMEPAD_BUTTON_GUIDE;
+// Flips fullscreen, as Alt+Enter does.
+inline constexpr SDL_Scancode kFullscreenKey = SDL_SCANCODE_F11;
 
 class GameWindow final : public Frontend::EmuWindow {
 public:
@@ -62,7 +65,8 @@ public:
   void PollEvents() override;
   // The picker's pump: no touch; left clicks come back in window pixels. `each` is also given
   // every event, for a screen that reads them itself.
-  [[nodiscard]] std::vector<SDL_FPoint> pollMenu(const std::function<void(const SDL_Event &)> &each = {});
+  [[nodiscard]] std::vector<SDL_FPoint>
+  pollMenu(const std::function<void(const SDL_Event &)> &each = {});
   // A game's title on the window and the window in its layout's shape (core_settings.hpp).
   void boot(const std::string &title);
 
@@ -82,6 +86,12 @@ public:
   [[nodiscard]] SDL_FPoint takeMouseMotion() {
     return std::exchange(mouseMotion_, {});
   }
+
+  // Saved for the next start; F11 or Alt+Enter flips it too. A hidden window stays unmapped.
+  [[nodiscard]] bool fullscreen() const {
+    return mode_.fullscreen();
+  }
+  void setFullscreen(bool fullscreen);
 
   [[nodiscard]] SDL_Window *sdlWindow() const {
     return window_;
@@ -116,6 +126,7 @@ private:
 
   PadInput &pad_;
   bool hidden_;
+  WindowMode mode_;
   SDL_Window *window_ = nullptr;
   uint64_t frames_ = 0;
   bool closeRequested_ = false;

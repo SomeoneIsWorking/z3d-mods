@@ -1230,8 +1230,9 @@ def _picker(session: Session, pad: Gamepad) -> None:
 
 
 def _options(session: Session, pad: Gamepad) -> None:
-    """The picker's options: X on MM3D opens them, A turns the cutscene skip off, and Start then
-    leaves the opening narration running."""
+    """The picker's options: X on MM3D opens them, A turns the cutscene skip off, Up scrolls to the
+    Fullscreen row and A and the fullscreen key flip it, and Start then leaves the opening narration
+    running."""
     game = session.expect("picker: on ")
     while "Majora" not in game:
         session.key("menu", "right")
@@ -1245,6 +1246,15 @@ def _options(session: Session, pad: Gamepad) -> None:
     session.key("menu", "a")
     session.expect("options: cutscene_skip = Off")
     session.shot("skip-off")
+    while not row.endswith("options: row fullscreen"):
+        session.key("menu", "up")
+        row = session.expect("options: row ")
+    session.shot("fullscreen-row")
+    session.key("menu", "a")
+    session.expect("fullscreen off")
+    session.shot("fullscreen-off")
+    session.key("window", "fullscreen")
+    session.expect("fullscreen on")
     session.key("menu", "b")
     session.expect("picker: on ")
     session.shot("picker")

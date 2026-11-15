@@ -58,7 +58,9 @@ Frontend::EmuWindow::WindowSystemInfo nativeSurface(SDL_Window *window) {
 
 } // namespace
 
-GameWindow::GameWindow(const AppConfig &config, PadInput &pad) : pad_(pad), hidden_(config.hidden) {
+GameWindow::GameWindow(const AppConfig &config, PadInput &pad)
+    : pad_(pad), hidden_(config.hidden),
+      mode_(hidden_ ? std::filesystem::path() : config.userDir / "window.json") {
   SDL_SetHint(SDL_HINT_APP_ID, config.appId.c_str());
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
     throw sdlError("SDL_Init");
@@ -76,6 +78,7 @@ GameWindow::GameWindow(const AppConfig &config, PadInput &pad) : pad_(pad), hidd
   }
   if (!hidden_) {
     fitToDisplay();
+    SDL_SetWindowFullscreen(window_, mode_.fullscreen());
   }
   window_info = nativeSurface(window_);
   updateLayout();
@@ -127,6 +130,7 @@ Prompt GameWindow::menuPrompt() {
 
 void GameWindow::listKeys(std::ostream &out) {
   out << "window\tmenu\t" << SDL_GetScancodeName(kMenuKey) << '\n';
+  out << "window\tfullscreen\t" << SDL_GetScancodeName(kFullscreenKey) << '\n';
   for (const ModKeyBinding &binding : kModKeys) {
     out << "window\t" << binding.name << '\t' << SDL_GetScancodeName(binding.key) << '\n';
   }
@@ -150,9 +154,13 @@ void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> 
       if (event.key.repeat) {
         break;
       }
-      if (event.key.scancode == kMenuKey) {
+      if (event.key.scancode == kFullscreenKey ||
+          (event.key.scancode == SDL_SCANCODE_RETURN && (event.key.mod & SDL_KMOD_ALT) != 0)) {
+        setFullscreen(!mode_.fullscreen());
+      } else if (event.key.scancode == kMenuKey) {
         menuRequested_ = true;
-      } else if (const auto *mod = std::ranges::find(kModKeys, event.key.scancode, &ModKeyBinding::key);
+      } else if (const auto *mod =
+                     std::ranges::find(kModKeys, event.key.scancode, &ModKeyBinding::key);
                  mod != kModKeys.end()) {
         modKey_ = mod->does;
       }
@@ -195,6 +203,14 @@ void GameWindow::pump(bool inGame, const std::function<void(const SDL_Event &)> 
   }
 }
 
+void GameWindow::setFullscreen(bool fullscreen) {
+  mode_.setFullscreen(fullscreen);
+  if (!hidden_ && !SDL_SetWindowFullscreen(window_, fullscreen)) {
+    lucent::warn("z3d", "fullscreen: {}", SDL_GetError());
+  }
+  lucent::info("z3d", "fullscreen {}", fullscreen ? "on" : "off");
+}
+
 void GameWindow::fitToDisplay() {
   const Layout::FramebufferLayout shape = Layout::FrameLayoutFromResolutionScale(1);
   SDL_Rect usable{};
@@ -214,8 +230,8 @@ void GameWindow::updateLayout() {
   int height = 0;
   SDL_GetWindowSizeInPixels(window_, &width, &height);
   if (Settings::values.layout_option.GetValue() == Settings::LayoutOption::CustomLayout) {
-    app::placeOverlay(static_cast<unsigned>(std::max(width, 1)), static_cast<unsigned>(std::max(height, 1)),
-                      overlay_);
+    app::placeOverlay(static_cast<unsigned>(std::max(width, 1)),
+                      static_cast<unsigned>(std::max(height, 1)), overlay_);
   }
   UpdateCurrentFramebufferLayout(static_cast<unsigned>(std::max(width, 1)),
                                  static_cast<unsigned>(std::max(height, 1)));
@@ -229,8 +245,10 @@ void GameWindow::touchScreen(std::optional<TouchPoint> at) {
   }
   const auto &screen = GetFramebufferLayout().bottom_screen;
   // The middle of the touched pixel.
-  const auto px = screen.left + (static_cast<unsigned>(at->x) * 2 + 1) * screen.GetWidth() / (Core::kScreenBottomWidth * 2);
-  const auto py = screen.top + (static_cast<unsigned>(at->y) * 2 + 1) * screen.GetHeight() / (Core::kScreenBottomHeight * 2);
+  const auto px = screen.left + (static_cast<unsigned>(at->x) * 2 + 1) * screen.GetWidth() /
+                                    (Core::kScreenBottomWidth * 2);
+  const auto py = screen.top + (static_cast<unsigned>(at->y) * 2 + 1) * screen.GetHeight() /
+                                   (Core::kScreenBottomHeight * 2);
   if (touching_) {
     TouchMoved(px, py);
   } else {
@@ -260,10 +278,9 @@ void GameWindow::touch(SDL_FPoint at, bool pressed) {
     int width = 0;
     int height = 0;
     SDL_GetWindowSizeInPixels(window_, &width, &height);
-    const std::optional<TouchPoint> point =
-        overlayTouch(static_cast<unsigned>(std::max(width, 1)),
-                     static_cast<unsigned>(std::max(height, 1)), overlay_, at.x * density,
-                     at.y * density);
+    const std::optional<TouchPoint> point = overlayTouch(static_cast<unsigned>(std::max(width, 1)),
+                                                         static_cast<unsigned>(std::max(height, 1)),
+                                                         overlay_, at.x * density, at.y * density);
     if (point || touching_) {
       touchScreen(point);
     }

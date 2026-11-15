@@ -58,6 +58,9 @@ printed lines it reads (`src/tool_process`); a tool's refusal is its lines that 
   and Down pick a row, A opens it, B goes to the parent, X or Start takes the folder shown, a
   click opens a row, F10 or Guide gives up. A name too long for its line loses its middle. A folder
   the tools refuse (no dump of either game in it) stays on the screen with the reason.
+- The options list scrolls to keep the selected row above the hints. After the game's own options
+  comes "Fullscreen" (`WindowMode`, `<user>/window.json`, on unless the player turned it off), the
+  same switch F11 and Alt+Enter flip anywhere in the window.
 - The options' last row, "Games and mods folders", runs `FolderSetup` again: B or Escape on a
   question keeps that folder, and the picker reopens on the library the tools wrote. Each
   question shows the folder set now ("Now: ..."), which `<tools> folders --user <user> --kept
@@ -80,7 +83,8 @@ laid out by `tools/z3dmods/slot_link.py`), and `PadInput` reads the host through
 The left mouse button on the bottom screen is the stylus where it shows. `z3d --keys` prints
 every key and mouse binding, a `<table>\t<name>\t<key>` line each; the tools read their keys
 from it (`tools/z3dmods/app_keys.py`). In the window F10 or Guide returns to the picker, F5
-reads the patch again, F6 takes it out or puts it back, F7 switches the textures.
+reads the patch again, F6 takes it out or puts it back, F7 switches the textures, F11 or
+Alt+Enter switches fullscreen.
 `PadInput::lastDevice()` is the device a button or key was last pressed on; the HUD's prompts
 and the menus' hints follow it.
 

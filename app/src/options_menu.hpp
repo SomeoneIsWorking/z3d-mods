@@ -1,6 +1,7 @@
 // The options screen of one game, drawn on the title picker's canvas: up and down pick an
-// option, left, right or A change it, B, X, F10 or Guide go back. Changes are saved as they are made.
-// With `folders`, a last row leaves to change the games and mods folders (folder_setup.hpp).
+// option, left, right or A change it, B, X, F10 or Guide go back. Changes are saved as they are
+// made. After the game's options, a Fullscreen row (game_window.hpp). With `folders`, a last row
+// leaves to change the games and mods folders (folder_setup.hpp).
 #pragma once
 
 #include "menu_canvas.hpp"
@@ -16,10 +17,11 @@ class GameWindow;
 
 class OptionsMenu {
 public:
-  OptionsMenu(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad, GameOptions &options,
-              std::string title, bool folders)
-      : canvas_(canvas), renderer_(canvas.renderer()), engine_(canvas.engine()), font_(canvas.font()),
-        window_(window), pad_(pad), options_(options), title_(std::move(title)), folders_(folders) {
+  OptionsMenu(const MenuCanvas &canvas, GameWindow &window, const PadInput &pad,
+              GameOptions &options, std::string title, bool folders)
+      : canvas_(canvas), renderer_(canvas.renderer()), engine_(canvas.engine()),
+        font_(canvas.font()), window_(window), pad_(pad), options_(options),
+        title_(std::move(title)), folders_(folders) {
   }
 
   enum class Left { Back, ForFolders };
@@ -30,6 +32,7 @@ private:
   // Each logs the menu's new state, which the input tests wait on.
   void select(size_t index);
   [[nodiscard]] size_t rows() const;
+  [[nodiscard]] bool onFullscreen() const;
   [[nodiscard]] bool onFolders() const;
   void step(int direction);
   void draw();
@@ -45,6 +48,8 @@ private:
   std::string title_;
   bool folders_;
   size_t selected_ = 0;
+  // The first row drawn.
+  size_t first_ = 0;
 };
 
 } // namespace z3d::app

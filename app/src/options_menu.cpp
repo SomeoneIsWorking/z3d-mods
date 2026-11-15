@@ -20,6 +20,8 @@ constexpr const char *kBack = "Back";
 constexpr const char *kFolders = "Games and mods folders";
 constexpr const char *kFoldersChange = "Change";
 constexpr const char *kFoldersRow = "folders";
+constexpr const char *kFullscreen = "Fullscreen";
+constexpr const char *kFullscreenRow = "fullscreen";
 // Text heights as shares of the window's height, capped by its width so a row fits a narrow window.
 constexpr float kHeadingShare = 1.0F / 16.0F;
 constexpr float kRowShare = 1.0F / 24.0F;
@@ -27,6 +29,8 @@ constexpr float kHeadingWidthShare = 1.0F / 16.0F;
 constexpr float kRowWidthShare = 1.0F / 27.0F;
 constexpr float kMargin = 0.06F;
 constexpr float kRowPitch = 1.9F;
+constexpr float kRowsTop = 0.24F;
+constexpr float kHintsTop = 0.9F;
 
 struct Held {
   bool up = false;
@@ -44,21 +48,31 @@ struct Held {
 } // namespace
 
 size_t OptionsMenu::rows() const {
-  return options_.items().size() + (folders_ ? 1 : 0);
+  return options_.items().size() + 1 + (folders_ ? 1 : 0);
+}
+
+bool OptionsMenu::onFullscreen() const {
+  return selected_ == options_.items().size();
 }
 
 bool OptionsMenu::onFolders() const {
-  return selected_ == options_.items().size();
+  return folders_ && selected_ == options_.items().size() + 1;
 }
 
 void OptionsMenu::select(size_t index) {
   selected_ = index;
   lucent::info("menu", "options: row {}",
-               onFolders() ? kFoldersRow : options_.items()[selected_].id);
+               onFullscreen() ? kFullscreenRow
+               : onFolders()  ? kFoldersRow
+                              : options_.items()[selected_].id);
 }
 
 void OptionsMenu::step(int direction) {
   if (onFolders()) {
+    return;
+  }
+  if (onFullscreen()) {
+    window_.setFullscreen(!window_.fullscreen());
     return;
   }
   options_.step(selected_, direction);
@@ -75,9 +89,6 @@ OptionsMenu::Left OptionsMenu::run() {
     (void)window_.pollMenu();
     const Held now = Held::from(pad_.menu());
     const size_t count = rows();
-    if (count == 0) {
-      break;
-    }
     if (now.up && !before.up) {
       select((selected_ + count - 1) % count);
     }
@@ -137,21 +148,32 @@ void OptionsMenu::draw() {
   const float row = std::min(height * kRowShare, width * kRowWidthShare);
   TTF_SetFontSize(font_, row);
   const float pitch = row * kRowPitch;
-  float y = height * 0.24F;
-  for (size_t i = 0; i < options_.items().size(); ++i) {
-    const Option &item = options_.items()[i];
-    text(item.label, left, y, i == selected_, false);
-    text(item.choices[item.value], right, y, i == selected_, true);
+  // The rows that fit above the hints; the list scrolls to keep the selected one among them.
+  const auto shown =
+      std::max<size_t>(static_cast<size_t>(height * (kHintsTop - kRowsTop) / pitch), 1);
+  first_ = std::clamp(first_, selected_ + 1 > shown ? selected_ + 1 - shown : 0, selected_);
+  const size_t last = std::min(rows(), first_ + shown);
+  float y = height * kRowsTop;
+  for (size_t i = first_; i < last; ++i) {
+    const bool selected = i == selected_;
+    if (i < options_.items().size()) {
+      const Option &item = options_.items()[i];
+      text(item.label, left, y, selected, false);
+      text(item.choices[item.value], right, y, selected, true);
+    } else if (i == options_.items().size()) {
+      text(kFullscreen, left, y, selected, false);
+      text(window_.fullscreen() ? "On" : "Off", right, y, selected, true);
+    } else {
+      text(kFolders, left, y, selected, false);
+      text(kFoldersChange, right, y, selected, true);
+    }
     y += pitch;
   }
-  if (folders_) {
-    text(kFolders, left, y, onFolders(), false);
-    text(kFoldersChange, right, y, onFolders(), true);
-  }
-  const std::array hints{Hint{{PadInput::menuPrompt(&MenuPad::up), PadInput::menuPrompt(&MenuPad::down)}, kSelect},
-                         Hint{{PadInput::menuPrompt(&MenuPad::a)}, kChange},
-                         Hint{{PadInput::menuPrompt(&MenuPad::b)}, kBack}};
-  canvas_.hints(hints, pad_.lastDevice(), {left, height * 0.9F}, row, right - left, false);
+  const std::array hints{
+      Hint{{PadInput::menuPrompt(&MenuPad::up), PadInput::menuPrompt(&MenuPad::down)}, kSelect},
+      Hint{{PadInput::menuPrompt(&MenuPad::a)}, kChange},
+      Hint{{PadInput::menuPrompt(&MenuPad::b)}, kBack}};
+  canvas_.hints(hints, pad_.lastDevice(), {left, height * kHintsTop}, row, right - left, false);
   SDL_RenderPresent(renderer_);
 }
 

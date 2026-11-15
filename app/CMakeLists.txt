@@ -33,6 +33,7 @@ add_executable(z3d
   src/tool_process.cpp
   src/set_install.cpp
   src/game_window.cpp
+  src/window_mode.cpp
   src/pad_input.cpp
   src/slot_link.cpp
   src/mouse_aim.cpp
