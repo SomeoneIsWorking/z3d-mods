@@ -372,7 +372,10 @@ The path is texture replacement, in both games, with nothing drawn by the app:
   scene, shown, like the game's, once the scene's map is owned
   (Tingle's). Seen in South Clock Town, Termina Field and Woodfall Temple (`mmmap7`, `mmmap3`)
   and in the window (`map-zoom-mm3d`, `play-minimap`), the Map screen's own map unchanged.
-- Missing from MM3D's HUD: View; the third wallet's red gem and 500 were not run. The
+- The third wallet, written to the file (`SaveData.upgrades`' wallet bits 2, rupees 500):
+  a red gem and a green 500, 499 and 200 in white, as the game's own touch screen draws them
+  (`mm-wallet3`, `mm-wallet3-both`); wallet bits 3 read the same.
+- Missing from MM3D's HUD: View. The
   clock stays the game's own, drawn with the 4K pack's art ("doesn't the 4k pack have one?"); the
   decomp names its widgets (`PlayHud.gameTimerGroup`) should it ever need to go.
 - OoT3D mounted: the HUD stays up on Epona (the game's visibility mode there is 12, not play's
