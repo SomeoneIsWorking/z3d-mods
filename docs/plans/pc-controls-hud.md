@@ -67,11 +67,12 @@ masks by context.
   minimap; MM3D's clock stays the game's own. It replaces pasting the touch screen into the
   play view; full-screen menus may still show the touch screen.
 - Each element sits where a console HUD puts it and occludes as little of the 3D view as possible.
-- Vector, drawn at the output resolution (user: "SVG HUD (item icons can stay as they are)"):
-  button rings and frames, glyphs, key caps, hearts, magic and rupee frames and the
-  minimap's frame are vector art (port-assets SVGs, extended there where missing) rasterized at
-  the window's size, never a bitmap scaled up. The item icons stay the game's or the pack's
-  raster art.
+- Simple shapes are vector, drawn at the output resolution (user: "Icons should stay from texture
+  pack, I only wanted like circle things as SVGs like very simple shapes and such"): button
+  rings, panels, the D-pad's cross, glyphs, key caps and the magic bar are port-assets SVGs
+  rasterized at the window's size, never a bitmap scaled up. Every icon is the texture pack's
+  copy of the game's art (the game's own without a pack): items, hearts, the rupee, the key,
+  the carrots, the view icons and the A button's words.
 
 ### Rule (user, 2026-11-14)
 On the crop layout (`mm-ov2`, tabs and item buttons circled): "No man no, please do this properly
