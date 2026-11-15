@@ -190,7 +190,9 @@ is the row that asks for the folders again (Setup above). `GameOptions` owns the
   effect at boot (a layer, the layout, the textures).
 - At boot the app applies layout and textures through `applyGameSettings` and writes the block once
   the game is loaded; `loadstate` writes it again, since a state carries the block of the run that
-  made it.
+  made it. A state also carries the game files that run had open: a layer stays as it was when
+  the state was made, and a state from before an install that changed those files stops the game
+  on its next scene load.
 - The menu lives on the picker because the core's renderer owns the window while a game runs: a
   change takes effect the next time the game boots.
 

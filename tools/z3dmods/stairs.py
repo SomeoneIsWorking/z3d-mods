@@ -32,6 +32,9 @@ PROFILE_BINS = 64
 # at most this share of the texture wide.
 CURB_STRENGTH = 0.4
 MAX_CURB = 0.25
+# A painted riser is at least this share of a step: a sharper edge nearer the crease is the
+# crease's own shadow line (z2_danpei's dkh_step_01 paints one under a riser less dark than it).
+MIN_RISER = 1 / 16
 KEY = 1e-3
 # Normals are stored as signed bytes.
 NORMAL_STEPS = 127
@@ -71,8 +74,8 @@ class Profile:
 
 
 def profile(image: Image.Image) -> Profile:
-    """Find the painted steps: the strongest row period, its sharp light-to-dark edge (the nose,
-    lit tread over shaded riser) and its darkest row (the crease).
+    """Find the painted steps: the strongest row period, its darkest row (the crease) and its
+    sharp light-to-dark edge a riser above that (the nose, lit tread over shaded riser).
 
     Rows run downhill as v falls; uphill a step reads crease, riser, nose, tread.
     """
@@ -99,13 +102,17 @@ def profile(image: Image.Image) -> Profile:
         b = (first + i) % PROFILE_BINS
         last = bins[b] / weight[b] if weight[b] else last
         folded[b] = last
-    nose = max(range(PROFILE_BINS), key=lambda b: folded[b] - folded[(b + 1) % PROFILE_BINS])
     crease = min(range(PROFILE_BINS), key=lambda b: folded[b])
     # Row phase to uphill step phase: t = -row / period.
-    nose_t = -((nose + 1) / PROFILE_BINS) % 1
     crease_t = -((crease + 0.5) / PROFILE_BINS) % 1
+
+    def riser(nose: int) -> float:
+        return (-((nose + 1) / PROFILE_BINS) - crease_t) % 1
+
+    nose = max((b for b in range(PROFILE_BINS) if riser(b) >= MIN_RISER),
+               key=lambda b: folded[b] - folded[(b + 1) % PROFILE_BINS])
     first, last = _curbs(gray, steps)
-    return Profile(steps, crease_t, (nose_t - crease_t) % 1, first, last)
+    return Profile(steps, crease_t, riser(nose), first, last)
 
 
 def _curbs(gray: Image.Image, steps: int) -> tuple[float, float]:
@@ -274,10 +281,12 @@ class Stairs:
                 max(vertex.position[1] + d[1] * (up - t) * scale, vertex.foot),
                 vertex.position[2] + d[2] * (across - t) * scale)
 
-    def _fold(self, whole_curbs: bool = False) -> tuple[list, list[tuple]]:
+    def _fold(self, whole_curbs: bool = False) -> tuple[list, list[tuple], list[tuple]]:
         """The folded faces as (position, extra) corner triples, and the faces that close the steps
         wherever no other step continues them: up to the ramp along the curbs and the ramp's open
-        edges, and between two ramps' steps where they meet out of phase."""
+        edges, and between two ramps' steps where they meet out of phase. Last, the closing faces
+        past the ramp's edge: a step's plan moves uphill as it folds, so at the top it ends under
+        whatever the ramp leads to."""
         out = []
         stepped = []
         for tri in self._triangles:
@@ -305,43 +314,57 @@ class Stairs:
                 start = _dot(a.position, d)
                 nearest = tuple(p - start * x for p, x in zip(a.position, d))
                 line = (tuple(round(x / KEY) for x in d), tuple(round(x / LINE) for x in nearest))
-                lines.setdefault(line, []).append((start, start + length, a, b))
+                inside = tuple(sum(v.position[axis] for v in piece) / len(piece) for axis in range(3))
+                lines.setdefault(line, []).append((start, start + length, a, b, inside))
         closing = []
+        beyond = []
 
-        def close(quad: list[tuple[float, float, float]], extras: list[tuple[float, ...]]) -> None:
+        def close(quad: list[tuple[float, float, float]], extras: list[tuple[float, ...]], faces: list = closing) -> None:
             corners = list(zip(quad, extras))
-            closing.append((corners[0], corners[1], corners[2]))
-            closing.append((corners[0], corners[2], corners[3]))
+            faces.append((corners[0], corners[1], corners[2]))
+            faces.append((corners[0], corners[2], corners[3]))
+
+        def leaves(a: Vertex, b: Vertex, inside: tuple[float, float, float]) -> bool:
+            """Whether the edge a to b of a piece folds away from the piece, seen from above."""
+            across = (b.position[2] - a.position[2], a.position[0] - b.position[0])
+            moved = [_sub(self._place(v), v.position) for v in (a, b)]
+            out = sum(across[0] * m[0] + across[1] * m[2] for m in moved) / 2
+            side = across[0] * (inside[0] - a.position[0]) + across[1] * (inside[2] - a.position[2])
+            return out * side < -KEY * math.hypot(*across) * abs(side)
 
         # Two steps continue each other along an edge when they fold it to the same place. Ramps
         # that meet with their painted steps out of phase fold it to two: a face joins those.
         # An edge with no step beyond it is closed up to the ramp.
         for found in lines.values():
-            cuts = sorted({s for start, end, _, _ in found for s in (start, end)})
+            cuts = sorted({s for start, end, *_ in found for s in (start, end)})
             for low, high in itertools.pairwise(cuts):
                 if high - low < KEY:
                     continue
-                parts = [(_mix(a, b, (low - start) / (end - start)), _mix(a, b, (high - start) / (end - start)))
-                         for start, end, a, b in found if start < low + KEY and end > high - KEY]
+                parts = [(_mix(a, b, (low - start) / (end - start)), _mix(a, b, (high - start) / (end - start)), inside)
+                         for start, end, a, b, inside in found if start < low + KEY and end > high - KEY]
                 if len(parts) == 1:
-                    a, b = parts[0]
-                    close([a.position, b.position, self._place(b), self._place(a)], [a.extra, b.extra, b.extra, a.extra])
-                for (a, b), (c, d) in itertools.pairwise(parts):
+                    a, b, inside = parts[0]
+                    close([a.position, b.position, self._place(b), self._place(a)], [a.extra, b.extra, b.extra, a.extra],
+                          beyond if leaves(a, b, inside) else closing)
+                for (a, b, _), (c, d, _) in itertools.pairwise(parts):
                     quad = [self._place(a), self._place(b), self._place(d), self._place(c)]
                     if _key(quad[0]) != _key(quad[3]) or _key(quad[1]) != _key(quad[2]):
                         close(quad, [a.extra, b.extra, d.extra, c.extra])
-        return out, closing
+        return out, closing, beyond
 
     def triangles(self) -> list[tuple[tuple[tuple[float, ...], tuple[float, ...]], ...]]:
         """The drawn faces, flat shaded by the caller; the closing faces are seen from either side."""
-        out, closing = self._fold()
+        out, closing, beyond = self._fold()
+        closing += beyond
         return out + closing + [(a, c, b) for a, b, c in closing]
 
     def floor(self) -> list[tuple[tuple[tuple[float, ...], tuple[float, ...]], ...]]:
         """The faces to stand on and walk into. A step's plan moves up the ramp as it folds, so
-        the closing faces that are not upright fill the plan it leaves at the ramp's ends; they
-        face up. The upright ones are lower than the height the game checks walls at."""
-        out, closing = self._fold(whole_curbs=True)
+        the closing faces that are not upright fill the plan it leaves at the ramp's foot; they
+        face up. The upright ones are lower than the height the game checks walls at. The ones
+        past the ramp's top lie under the landing's floor, where they stop a walking Link at its
+        edge."""
+        out, closing, _ = self._fold(whole_curbs=True)
         for a, b, c in closing:
             normal = _cross(_sub(b[0], a[0]), _sub(c[0], a[0]))
             if abs(normal[1]) > UPRIGHT * math.sqrt(_dot(normal, normal)):

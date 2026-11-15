@@ -46,6 +46,11 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
   on the ramp as curbs along both sides, as the vanilla flights paint them; two-sided side panels
   close the steps up to the curbs and the open edges. The painted shading lands on the matching
   face because the cuts follow the texture's own v and u.
+- The nose is the sharpest light-to-dark edge at least a sixteenth of a step above the crease.
+  The Deku Shrine's `dkh_step_01` paints a lit tread, a riser less dark and a black line under
+  it; the sharpest edge is that line's, which made the riser 0.8% of a step: its faces drew the
+  black line stretched over 13 units (`mm-dg12-danpei-1`). Now 43%, a lit tread over a shaded
+  riser (`mm-dg14-danpei-1`). Every other stair texture of both games reads as before.
 - Shown in game: Kakariko's intro cutscene, frame 140 (`warp:0xDB csframe:140`), the flight by
   the well has a stepped silhouette where vanilla has a straight ramp edge, with the 4K pack on.
 - A primitive set holds at most 32767 indices; more crashes the game (decomp/oot3d
@@ -66,7 +71,11 @@ a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work)
      read from the drawn ramp under them: flat treads and upright risers, each with the ramp
      triangle's surface type and flags. No step folds below the flight's foot. The faces that
      close a step up to the ramp where no other step continues it are kept when they face up
-     (they fill the plan a step leaves at the ramp's ends) and dropped when upright.
+     and lie within the ramp (they fill the plan a step leaves at its foot) and dropped when
+     upright. A step's plan moves uphill as it folds, so the last one ends under the landing
+     and its closing face slopes up to the landing's edge from below: those are dropped too.
+     Kept, one stopped Link at the top of Woodfall Temple's flights at any stick short of full
+     (`mm-dg6-21000`: he stands at z 120.0, the landing's edge; `mm-dg10` walks on).
   3. Walls and ceilings lose their parts between a ramp and one step below it. The ROM had
      solid ground there, so its walls end anywhere in it: in the Stock Pot Inn the upper floor's
      ceiling and the wall under it reach 4 units below the ramp and stopped Link on the last
@@ -155,11 +164,33 @@ File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm
 - Measured 2026-11-14 (`mm-st15-<scene>`, drops and a walk up each flight):
   Stock Pot Inn (steps 13 apart, walked to the upper floor), Milk Bar, Music Box House, Ranch
   house (both flights), Astral Observatory rooms 0 and 1 (32 heights 7.5 apart, four flights
-  walked), Woodfall Temple (four flights), Ikana Graveyard's Dampe passage (30 steps of 13.3),
-  Ancient Castle of Ikana, Beneath the Graveyard: all walked without a stop. The frames show
-  stepped stairs with Link on a tread in the Inn, the Milk Bar, the Music Box House and the
-  Observatory; in the dungeons the flight's room is not loaded from the entrance used, so those
-  frames are black and only the heights speak.
+  walked), Woodfall Temple (four flights), the Deku Shrine (`z2_danpei`, 30 steps of 13.3),
+  the Oceanside Spider House (`z2_kindan2`), Beneath the Graveyard: all walked without a stop.
+  The frames show stepped stairs with Link on a tread in the Inn, the Milk Bar, the Music Box
+  House and the Observatory.
+- The dungeon flights, seen 2026-11-15. Their rooms are behind doors, so Link is put in the
+  room by the game's respawn entry (`respawn:<entrance>,<room>,<x>,<y>,<z>,<yaw>`, decomp/mm3d
+  `docs/save.md`), at each flight's foot, walked 40 past its top with the pad eased to 65%, and
+  stood on its middle; the same with `--option stairs=0` without the walk (a 65% pad does not
+  climb Woodfall Temple's ramps in the ROM at all). Frames in `scratch/runs/<run>/`, on then off:
+  - Woodfall Temple (0x3000; `mm-dg12-miturin-1`, `-0`): room 3's two flights out of the
+    poison water (treads at -1531, -1521, -1511 where the ramp reads -1525) and its long one
+    (-1401, -1316 against -1395, -1305), room 10's (-234, -133 against -231, -132). Drawn
+    risers and a stepped edge on every one; off, the painted ramp with straight curbs.
+  - Beneath the Graveyard (0x0A00; `mm-dg12-hakashita-1`, `-0`): room 2's two flights of six
+    steps up to the curtain, 0, 2, 16, 23, 30, 36, 40 walked; 9 and 23 against 12 and 24.
+  - Oceanside Spider House (0x4A00; `mm-dg12-kindan2-1`, `-0`): room 1's flight, -38 and
+    55.4 against -30 and 60, walked to the upper floor.
+  - Deku Shrine (0x9E00; `mm-dg14-danpei-1`, `mm-dg12-danpei-0`): room 5's and room 6's
+    flights of 30 steps and room 8's two low ones (803, 810 and 833 against 807.7, 814.4 and
+    836.5), each walked to its top.
+  - Left as it is: where the Deku Shrine's lower flight narrows, the last full-width step's
+    closing face shows as a dark streaked strip 13 units high under the plain slope beside
+    the stairs (`mm-dg14-danpei-1/07-f0-foot.png`): closing faces take one texture row.
+- A savestate keeps the game files of the run that made it: a state made with the layer on
+  loads stepped rooms in a run started with `--option stairs=0`, and after an install that
+  changed the layer's files the game stops on the next scene load (`mm-dg5-dg-sct`, `mm-dg9`).
+  Boot again after an install, and boot each option's run from its own state.
 - South Clock Town (`mm-st20-ct<flight>`, entered at the owl statue, entrance 0xD890, which is
   past Tatl's first-day talk): the four flights Link can stand on are walked foot to top without
   a stop, the two by the tower landing 4.5 to 6 apart (40 to 54, 35 to 60) and the two upper
