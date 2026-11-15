@@ -58,6 +58,8 @@ heart_1 = [482, 50, 12, 12]
 heart_2 = [482, 34, 12, 12]
 heart_3 = [482, 18, 12, 12]
 heart_4 = [482, 2, 12, 12]
+view = [444, 119, 40, 30]
+view_return = [444, 166, 40, 30]
 
 [[element]]
 kind = "hearts"
@@ -147,6 +149,31 @@ none = 0xFF
 value = { at = ["gCommonData", "CommonData.save", "SaveData.dungeonKeys", "DUNGEON_INDEX_STONE_TOWER_TEMPLE"], bytes = 1 }
 when = [
   { at = ["PlayState.sceneNum"], through = "gPlayState", bytes = 2, equals = "SCENE_STONE_TOWER_TEMPLE_INVERTED" },
+]
+
+# View, the touch screen's own icon for the look (MainScreen_UpdateButtons shows one of its three):
+# the camera in first person and in the pictograph box's view, else the eye. The pictograph box's
+# own icon, which the game shows once it is held, is left out: R3 and F press ZL, which looks.
+[[element]]
+kind = "prompt"
+device = "pad"
+verb = "first_person"
+rect = [290, 6, 24, 18]
+looks = [
+  { art = "view_return", when = [{ at = ["gPictographOn"], bytes = 2, least = 1 }] },
+  { art = "view_return", when = [{ at = ["PLAYER_VIEW_MODE"], of = "player", bytes = 1, equals = "PLAYER_VIEW_FIRST_PERSON" }] },
+  { art = "view" },
+]
+
+[[element]]
+kind = "prompt"
+device = "keyboard"
+verb = "first_person"
+rect = [292, 40, 24, 18]
+looks = [
+  { art = "view_return", when = [{ at = ["gPictographOn"], bytes = 2, least = 1 }] },
+  { art = "view_return", when = [{ at = ["PLAYER_VIEW_MODE"], of = "player", bytes = 1, equals = "PLAYER_VIEW_FIRST_PERSON" }] },
+  { art = "view" },
 ]
 
 # Play: the pad's diamond and RB at its corner top right, the D-pad's cross under the hearts.

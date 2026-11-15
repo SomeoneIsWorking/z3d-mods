@@ -375,8 +375,13 @@ The path is texture replacement, in both games, with nothing drawn by the app:
 - The third wallet, written to the file (`SaveData.upgrades`' wallet bits 2, rupees 500):
   a red gem and a green 500, 499 and 200 in white, as the game's own touch screen draws them
   (`mm-wallet3`, `mm-wallet3-both`); wallet bits 3 read the same.
-- Missing from MM3D's HUD: View. The
-  clock stays the game's own, drawn with the 4K pack's art ("doesn't the 4k pack have one?"); the
+- MM3D's View: the touch screen's icon for the look in the same places as OoT3D's, the eye,
+  and the camera in first person (`mmview`: eye, first, keys; `mmview2`), from the state
+  `MainScreen_UpdateButtons` shows its cell by (decomp/mm3d `docs/hud.md`, "The view icon"). The
+  game's pictograph box icon there is left out: R3 and F press ZL, which looks. After the shared
+  HUD changes for OoT3D's mount and View, `inputtest slots-mm3d` and South Clock Town (`mmreg`)
+  read as before.
+- MM3D's clock stays the game's own, drawn with the 4K pack's art ("doesn't the 4k pack have one?"); the
   decomp names its widgets (`PlayHud.gameTimerGroup`) should it ever need to go.
 - OoT3D mounted: the HUD stays up on Epona (the game's visibility mode there is 12, not play's
   50), six carrots sit beside the hearts, whole for each boost left, and X shows the bow the game

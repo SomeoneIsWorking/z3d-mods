@@ -310,7 +310,9 @@ A `prompt` with `looks` is the game's icon for a verb with the verb's glyph at i
 first look whose `when` holds is drawn, dim while `dim` reads nonzero. OoT3D's View is one (R3,
 F): Navi while she calls, the camera in first person and where the scene has two fixed cameras,
 else the eye, dim while the game takes no press (decomp/oot3d `docs/hud.md`, "The view icon";
-`hud-view`). A value `of = "player"` is read off the player actor.
+`hud-view`). MM3D's is one too: the camera in first person and in the pictograph box's view,
+else the eye (decomp/mm3d `docs/hud.md`, "The view icon"; `mmview`). A value `of = "player"`
+is read off the player actor.
 
 The buttons are the same in both games: the pad's diamond and RB's ring beside Y top right,
 the D-pad's cross under the hearts and magic. A shows the game's own word for its action under it (`label`, the action's
