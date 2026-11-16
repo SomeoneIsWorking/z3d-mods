@@ -6,6 +6,12 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#ifdef __APPLE__
+#define VK_USE_PLATFORM_METAL_EXT
+#include <SDL3/SDL_vulkan.h>
+#include <vulkan/vulkan.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -17,6 +23,65 @@ namespace {
 std::runtime_error sdlError(const char *what) {
   return std::runtime_error(std::string(what) + ": " + SDL_GetError());
 }
+
+#ifdef __APPLE__
+// SDL's Vulkan renderer makes an instance that leaves portability drivers out, and MoltenVK is
+// one; its own surface would also be a second Metal view over the window's layer, which the core
+// draws to after the canvas is gone. The canvas makes both and hands them over.
+template <typename F> F vkFunction(VkInstance instance, const char *name) {
+  const auto get =
+      reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+  const auto found = reinterpret_cast<F>(get(instance, name));
+  if (found == nullptr) {
+    throw std::runtime_error(std::string("no Vulkan function ") + name);
+  }
+  return found;
+}
+
+VkInstance portableInstance() {
+  if (!SDL_Vulkan_LoadLibrary(nullptr)) {
+    throw sdlError("SDL_Vulkan_LoadLibrary");
+  }
+  Uint32 count = 0;
+  const char *const *sdlNames = SDL_Vulkan_GetInstanceExtensions(&count);
+  std::vector<const char *> names(sdlNames, sdlNames + count);
+  for (const char *wanted : {VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+                             VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME}) {
+    if (std::ranges::none_of(names, [&](const char *name) {
+          return std::string_view(name) == wanted;
+        })) {
+      names.push_back(wanted);
+    }
+  }
+  VkApplicationInfo app{.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                        .apiVersion = VK_API_VERSION_1_1};
+  const VkInstanceCreateInfo info{.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+                                  .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+                                  .pApplicationInfo = &app,
+                                  .enabledExtensionCount = static_cast<uint32_t>(names.size()),
+                                  .ppEnabledExtensionNames = names.data()};
+  VkInstance instance = VK_NULL_HANDLE;
+  const VkResult made = vkFunction<PFN_vkCreateInstance>(VK_NULL_HANDLE, "vkCreateInstance")(
+      &info, nullptr, &instance);
+  if (made != VK_SUCCESS) {
+    throw std::runtime_error("vkCreateInstance: " + std::to_string(made));
+  }
+  return instance;
+}
+
+VkSurfaceKHR layerSurface(VkInstance instance, const void *layer) {
+  const VkMetalSurfaceCreateInfoEXT info{.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT,
+                                         .pLayer = static_cast<const CAMetalLayer *>(layer)};
+  VkSurfaceKHR surface = VK_NULL_HANDLE;
+  const VkResult made = vkFunction<PFN_vkCreateMetalSurfaceEXT>(
+      instance, "vkCreateMetalSurfaceEXT")(instance, &info, nullptr, &surface);
+  if (made != VK_SUCCESS) {
+    throw std::runtime_error("vkCreateMetalSurfaceEXT: " + std::to_string(made));
+  }
+  return surface;
+}
+#endif
 
 // Shares of a hint's art: the gap after it, the space between two hints, a cap's lettering and
 // the room beside a word on a cap.
@@ -30,7 +95,22 @@ constexpr Rgb kCapInk{24, 24, 30};
 
 MenuCanvas::MenuCanvas(GameWindow &window, const std::filesystem::path &font, std::filesystem::path assets)
     : assets_(std::move(assets)) {
+#ifdef __APPLE__
+  auto *const instance = portableInstance();
+  vkInstance_ = instance;
+  const VkSurfaceKHR surface = layerSurface(instance, window.GetWindowInfo().render_surface);
+  vkSurface_ = reinterpret_cast<uint64_t>(surface);
+  const SDL_PropertiesID props = SDL_CreateProperties();
+  SDL_SetPointerProperty(props, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, window.sdlWindow());
+  SDL_SetStringProperty(props, SDL_PROP_RENDERER_CREATE_NAME_STRING, "vulkan");
+  SDL_SetPointerProperty(props, SDL_PROP_RENDERER_CREATE_VULKAN_INSTANCE_POINTER, instance);
+  SDL_SetNumberProperty(props, SDL_PROP_RENDERER_CREATE_VULKAN_SURFACE_NUMBER,
+                        static_cast<Sint64>(vkSurface_));
+  renderer_ = SDL_CreateRendererWithProperties(props);
+  SDL_DestroyProperties(props);
+#else
   renderer_ = SDL_CreateRenderer(window.sdlWindow(), "vulkan");
+#endif
   if (renderer_ == nullptr) {
     throw sdlError("SDL_CreateRenderer");
   }
@@ -55,6 +135,17 @@ MenuCanvas::~MenuCanvas() {
   }
   TTF_Quit();
   SDL_DestroyRenderer(renderer_);
+#ifdef __APPLE__
+  // The renderer does not own what it was given; the core makes its own after this.
+  auto *const instance = static_cast<VkInstance>(vkInstance_);
+  if (vkSurface_ != 0) {
+    vkFunction<PFN_vkDestroySurfaceKHR>(instance, "vkDestroySurfaceKHR")(
+        instance, reinterpret_cast<VkSurfaceKHR>(vkSurface_), nullptr);
+  }
+  if (instance != VK_NULL_HANDLE) {
+    vkFunction<PFN_vkDestroyInstance>(instance, "vkDestroyInstance")(instance, nullptr);
+  }
+#endif
 }
 
 SDL_FPoint MenuCanvas::size() const {

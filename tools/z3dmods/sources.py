@@ -95,7 +95,7 @@ def fetch() -> list[Path]:
         hook = folder / "hooks" / "pre-commit"
         if hook.exists():
             # The core's configure copies its hook in, and the build container cannot write the checkout.
-            shutil.copyfile(hook, folder / ".git" / "hooks" / "pre-commit")
+            shutil.copy(hook, folder / ".git" / "hooks" / "pre-commit")
         if source.submodules:
             subprocess.run(["git", "-C", str(folder), "submodule", "update", "--quiet", "--init", "--recursive",
                             "--depth", "1"], check=True)

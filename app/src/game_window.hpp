@@ -128,6 +128,8 @@ private:
   bool hidden_;
   WindowMode mode_;
   SDL_Window *window_ = nullptr;
+  // macOS only: the view of the window's CAMetalLayer (SDL_MetalView).
+  void *metalView_ = nullptr;
   uint64_t frames_ = 0;
   bool closeRequested_ = false;
   bool menuRequested_ = false;

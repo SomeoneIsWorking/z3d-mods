@@ -104,8 +104,11 @@ SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")
 def _session_env() -> dict[str, str]:
     if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"):
         return {key: os.environ[key] for key in SESSION_KEYS if key in os.environ}
+    if shutil.which("systemctl") is None:
+        # macOS: windows go to the logged-in session, no display variable names it.
+        return {}
     # A machine without a user session (a build runner) has no display to name.
-    shown = subprocess.run(["systemctl", "--user", "show-environment"], capture_output=True,
+    shown =subprocess.run(["systemctl", "--user", "show-environment"], capture_output=True,
                            text=True, check=False).stdout
     found = dict(line.split("=", 1) for line in shown.splitlines() if "=" in line)
     return {key: found[key] for key in SESSION_KEYS if key in found}

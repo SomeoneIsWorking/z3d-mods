@@ -10,7 +10,7 @@ dependencies = [
 # What only the checkout's tools use; a package carries the dependencies above alone.
 [dependency-groups]
 dev = [
-    "evdev>=2.0.0",
+    "evdev>=2.0.0; sys_platform == 'linux'",
 ]
 
 [project.scripts]

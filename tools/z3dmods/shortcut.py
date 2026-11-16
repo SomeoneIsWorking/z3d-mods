@@ -3,7 +3,11 @@ through `z3dmods play` on the newest build (app.binary builds only when none exi
 
 from __future__ import annotations
 
+import shlex
 import shutil
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 
 from z3dmods import play
@@ -29,7 +33,59 @@ def desktop_entry(exec_: str, folder: Path | None = None) -> str:
             "Icon=z3d\nTerminal=false\nCategories=Game;\n")
 
 
+# macOS: the picker as an app in the player's Applications folder.
+MAC_APP = Path.home() / "Applications" / "z3d.app"
+MAC_BUNDLE_ID = "io.github.someoneisworking.z3d"
+
+
+def _mac_icon(svg: Path, icns: Path) -> None:
+    """The app icon from the SVG: Quick Look draws it, sips scales each size, iconutil packs them."""
+    with tempfile.TemporaryDirectory() as scratch:
+        drawn = Path(scratch)
+        subprocess.run(["qlmanage", "-t", "-s", "1024", "-o", str(drawn), str(svg)], check=True, capture_output=True)
+        png = drawn / f"{svg.name}.png"
+        iconset = drawn / "z3d.iconset"
+        iconset.mkdir()
+        for size in (16, 32, 128, 256, 512):
+            for scale in (1, 2):
+                name = f"icon_{size}x{size}{'@2x' if scale == 2 else ''}.png"
+                subprocess.run(["sips", "-z", str(size * scale), str(size * scale), str(png), "--out",
+                                str(iconset / name)], check=True, capture_output=True)
+        subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns)], check=True)
+
+
+def _mac_install(cfg: Config) -> list[Path]:
+    contents = MAC_APP / "Contents"
+    if MAC_APP.exists():
+        shutil.rmtree(MAC_APP)
+    (contents / "MacOS").mkdir(parents=True)
+    (contents / "Resources").mkdir()
+    _mac_icon(cfg.repo / "app" / "icon" / "z3d.svg", contents / "Resources" / "z3d.icns")
+    (contents / "Info.plist").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        '<plist version="1.0"><dict>\n'
+        "<key>CFBundleName</key><string>z3d</string>\n"
+        f"<key>CFBundleIdentifier</key><string>{MAC_BUNDLE_ID}</string>\n"
+        "<key>CFBundleExecutable</key><string>z3d</string>\n"
+        "<key>CFBundleIconFile</key><string>z3d</string>\n"
+        "<key>CFBundlePackageType</key><string>APPL</string>\n"
+        "<key>LSApplicationCategoryType</key><string>public.app-category.games</string>\n"
+        "<key>NSHighResolutionCapable</key><true/>\n"
+        "</dict></plist>\n")
+    launcher = contents / "MacOS" / "z3d"
+    # Finder starts an app with a bare PATH: the tool command names uv by its full path.
+    command = " ".join(shlex.quote(part) for part in (*cfg.tool_command, "play"))
+    log = cfg.app_data / "launch.log"
+    launcher.write_text(f"#!/bin/sh\nmkdir -p {shlex.quote(str(log.parent))}\n"
+                        f"exec {command} >{shlex.quote(str(log))} 2>&1\n")
+    launcher.chmod(0o755)
+    return [MAC_APP]
+
+
 def install(cfg: Config) -> list[Path]:
+    if sys.platform == "darwin":
+        return _mac_install(cfg)
     icons = Path.home() / ".local/share/icons/hicolor/scalable/apps"
     icons.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(cfg.repo / "app" / "icon" / "z3d.svg", icons / "z3d.svg")

@@ -8,6 +8,7 @@ import json
 import shutil
 import struct
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -64,7 +65,16 @@ def patch(repo: Path, game: str, payload: int) -> Patch:
     return shipped
 
 
+# macOS: Homebrew's LLVM, which is not on PATH; Apple's clang is the one there, and it has no lld.
+HOMEBREW_LLVM = ("/opt/homebrew/opt/llvm/bin", "/opt/homebrew/opt/lld/bin")
+
+
 def _tool(name: str) -> str:
+    if sys.platform == "darwin":
+        path = shutil.which(name, path=":".join(HOMEBREW_LLVM))
+        if not path:
+            raise RuntimeError(f"{name} not found: brew install llvm lld")
+        return path
     path = shutil.which(name)
     if not path:
         raise RuntimeError(f"{name} not found: install clang and lld (Fedora: dnf install clang lld)")

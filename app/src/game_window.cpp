@@ -28,7 +28,8 @@ std::runtime_error sdlError(const char *what) {
 // The first window takes this much of the display, in the frame's shape.
 constexpr float kDisplayShare = 0.85F;
 
-Frontend::EmuWindow::WindowSystemInfo nativeSurface(SDL_Window *window) {
+// `metalView` receives the view a macOS window's layer lives in, for the window to free.
+Frontend::EmuWindow::WindowSystemInfo nativeSurface(SDL_Window *window, SDL_MetalView &metalView) {
   Frontend::EmuWindow::WindowSystemInfo info;
   const SDL_PropertiesID props = SDL_GetWindowProperties(window);
   const std::string_view driver = SDL_GetCurrentVideoDriver();
@@ -46,10 +47,19 @@ Frontend::EmuWindow::WindowSystemInfo nativeSurface(SDL_Window *window) {
     // NOLINTNEXTLINE(performance-no-int-to-ptr)
     info.render_surface = reinterpret_cast<void *>(
         static_cast<uintptr_t>(SDL_GetNumberProperty(props, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0)));
+  } else if (driver == "cocoa") {
+    // MoltenVK draws to a CAMetalLayer, which needs no display connection.
+    info.type = Frontend::WindowSystemType::MacOS;
+    metalView = SDL_Metal_CreateView(window);
+    if (metalView == nullptr) {
+      throw sdlError("SDL_Metal_CreateView");
+    }
+    info.render_surface = SDL_Metal_GetLayer(metalView);
   } else {
     throw std::runtime_error("no Vulkan surface for SDL video driver " + std::string(driver));
   }
-  if (info.display_connection == nullptr || info.render_surface == nullptr) {
+  if ((info.type != Frontend::WindowSystemType::MacOS && info.display_connection == nullptr) ||
+      info.render_surface == nullptr) {
     throw std::runtime_error("SDL window has no native surface");
   }
   info.render_surface_scale = SDL_GetWindowPixelDensity(window);
@@ -80,11 +90,14 @@ GameWindow::GameWindow(const AppConfig &config, PadInput &pad)
     fitToDisplay();
     SDL_SetWindowFullscreen(window_, mode_.fullscreen());
   }
-  window_info = nativeSurface(window_);
+  window_info = nativeSurface(window_, metalView_);
   updateLayout();
 }
 
 GameWindow::~GameWindow() {
+  if (metalView_ != nullptr) {
+    SDL_Metal_DestroyView(metalView_);
+  }
   SDL_DestroyWindow(window_);
   SDL_Quit();
 }

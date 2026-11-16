@@ -26,8 +26,15 @@ constexpr std::array kSignals{SIGTERM, SIGINT};
 } // namespace
 
 TermSignal::TermSignal() {
-  if (pipe2(pipe_.data(), O_CLOEXEC | O_NONBLOCK) != 0) {
+  // macOS has no pipe2: the flags go on each end after the pipe is made.
+  if (pipe(pipe_.data()) != 0) {
     throw std::runtime_error("no pipe for the signals");
+  }
+  for (const int end : pipe_) {
+    if (fcntl(end, F_SETFD, FD_CLOEXEC) != 0 ||
+        fcntl(end, F_SETFL, fcntl(end, F_GETFL) | O_NONBLOCK) != 0) {
+      throw std::runtime_error("no flags on the signals' pipe");
+    }
   }
   SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
   for (const int signal : kSignals) {

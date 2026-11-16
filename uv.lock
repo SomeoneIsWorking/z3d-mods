@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -94,11 +94,11 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "evdev" },
+    { name = "evdev", marker = "sys_platform == 'linux'" },
 ]
 
 [package.metadata]
 requires-dist = [{ name = "pillow", specifier = ">=13.0.0" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "evdev", specifier = ">=2.0.0" }]
+dev = [{ name = "evdev", marker = "sys_platform == 'linux'", specifier = ">=2.0.0" }]
