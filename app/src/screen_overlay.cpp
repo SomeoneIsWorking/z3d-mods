@@ -101,6 +101,21 @@ OverlayRect extent(const OverlayLayout &layout) {
   return {left, top, right - left, bottom - top};
 }
 
+// The layout's 400x240 in a window: as large as the window holds it whole, in its middle. A
+// window narrower than 5:3 (a 16:10 screen) has bars above and below, a wider one beside it.
+struct Fit {
+  float unit;
+  float left;
+  float top;
+};
+
+Fit fit(unsigned width, unsigned height) {
+  const auto w = static_cast<float>(width);
+  const auto h = static_cast<float>(height);
+  const float unit = std::min(h / kOverlayHeight, w / kOverlayWidth);
+  return {unit, (w - kOverlayWidth * unit) / 2.0F, (h - kOverlayHeight * unit) / 2.0F};
+}
+
 } // namespace
 
 OverlayLayout splitLayout() {
@@ -110,9 +125,9 @@ OverlayLayout splitLayout() {
 }
 
 OverlayRect overlayWindowRect(unsigned width, unsigned height, const OverlayRect &rect) {
-  const float unit = static_cast<float>(height) / kOverlayHeight;
-  const float left = (static_cast<float>(width) - kOverlayWidth * unit) / 2.0F;
-  return {left + rect.x * unit, rect.y * unit, rect.w * unit, rect.h * unit};
+  const Fit at = fit(width, height);
+  return {at.left + rect.x * at.unit, at.top + rect.y * at.unit, rect.w * at.unit,
+          rect.h * at.unit};
 }
 
 void placeOverlay(unsigned width, unsigned height, const OverlayLayout &layout) {
@@ -142,9 +157,9 @@ void placeOverlay(unsigned width, unsigned height, const OverlayLayout &layout) 
 
 std::optional<TouchPoint> overlayTouch(unsigned width, unsigned height,
                                        const OverlayLayout &layout, float x, float y) {
-  const float unit = static_cast<float>(height) / kOverlayHeight;
-  const float ux = (x - (static_cast<float>(width) - kOverlayWidth * unit) / 2.0F) / unit;
-  const float uy = y / unit;
+  const Fit at = fit(width, height);
+  const float ux = (x - at.left) / at.unit;
+  const float uy = (y - at.top) / at.unit;
   for (auto piece = layout.pieces.rbegin(); piece != layout.pieces.rend(); ++piece) {
     const OverlayRect &to = piece->to;
     if (ux < to.x || uy < to.y || ux >= to.x + to.w || uy >= to.y + to.h) {
