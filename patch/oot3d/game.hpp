@@ -8,6 +8,7 @@
 namespace z3dmods::oot3d {
 
 inline constexpr int32_t kGameModeNormal = 0;
+inline constexpr int32_t kGameModeFileSelect = 2;
 inline constexpr int32_t kFileNumDebug = 0xFEDC;
 
 // sceneLoadFlag: 20 asks for an outgoing scene transition; -20 is the incoming fade, 0 none.

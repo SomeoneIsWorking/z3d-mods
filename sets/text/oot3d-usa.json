@@ -1,11 +1,19 @@
 {
-  "about": "OoT3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Arimo (sets/fonts, SIL OFL 1.1). messages: one table a language, each the prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\") in that language's own words. Markup is qm.py's: {24:xx} is a prompt icon (decomp/oot3d docs/message.md): 06 A, 07 B, 08 X, 0a L (LT), 0b R (RT), 0c START (drawn as Menu), the touch icons 16 Ocarina (drawn as D-pad Down, a new file's ocarina slot), 17 Navi and 18 View (R3), 19 Gear, 1a Items, 1b Map (View), and the item buttons 1e, 1f, 1c, 1d, which the prompt sheet draws as Y, B, RB and the D-pad (sets/hud/the-one-screen-891b60e.json). 02 is drawn as LB (the chord) and 03 as RB (the song list), the +Control Pad's Up and Right, 05 the chord's four slots (its Left) and 0e Pause (the lit 3DS), which no message uses.",
+  "about": "OoT3D (USA) text for the PC (tools/z3dmods/text.py). font: the text font drawn again from Arimo (sets/fonts, SIL OFL 1.1); outlined_fonts: the file-select date's glyphs, from Arimo Bold. messages: one table a language, each the prompts reworded for our inputs (docs/plans/pc-controls-hud.md, \"Layout\") in that language's own words. Markup is qm.py's: {24:xx} is a prompt icon (decomp/oot3d docs/message.md): 06 A, 07 B, 08 X, 0a L (LT), 0b R (RT), 0c START (drawn as Menu), the touch icons 16 Ocarina (drawn as D-pad Down, a new file's ocarina slot), 17 Navi and 18 View (R3), 19 Gear, 1a Items, 1b Map (View), and the item buttons 1e, 1f, 1c, 1d, which the prompt sheet draws as Y, B, RB and the D-pad (sets/hud/the-one-screen-891b60e.json). 02 is drawn as LB (the chord) and 03 as RB (the song list), the +Control Pad's Up and Right, 05 the chord's four slots (its Left) and 0e Pause (the lit 3DS), which no message uses.",
   "font": {
     "file": "message/us/ltn16.qbf",
     "outline": "Arimo[wght].ttf",
     "weight": 500,
     "scale": 8
   },
+  "outlined_fonts": [
+    {
+      "file": "message/sys8.qbf",
+      "outline": "Arimo[wght].ttf",
+      "weight": 700,
+      "scale": 8
+    }
+  ],
   "messages": [
     {
       "file": "message/us/us.qm",

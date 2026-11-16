@@ -191,6 +191,9 @@ def generate(repo: Path, game: str, out: Path) -> Generated:
     header = out / "symbols.hpp"
     header.write_text("\n".join(lines))
     linker = out / "symbols.ld"
+    # Offsets and defines too, so that a data site can be named by its field and index.
     linker.write_text(f"/* Generated from {origin}. */\n" +
-                      "".join(f"{k} = 0x{v:08X};\n" for k, v in addresses.items()))
+                      "".join(f"{k} = 0x{v:08X};\n" for k, v in addresses.items()) +
+                      "".join(f"{k} = 0x{v:X};\n" for k, v in offsets.items()) +
+                      "".join(f"{k} = {v};\n" for k, v in values.items()))
     return Generated(header, linker)

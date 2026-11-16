@@ -5,6 +5,9 @@ of its messages reworded for our inputs. One table per game, sets/text/<game>.js
 - "font": the game's font file, the outline font (sets/fonts/), its weight and the scale of
   the pack's images. The image's name is the hash of the texture the game makes of the font
   (OoT3D: its static glyph texture, patch/oot3d/font_atlas.cpp; MM3D: each sheet).
+- "outlined_fonts": the game's outlined bitmap fonts (OoT3D's file-select date), each with the
+  same keys; their files stay as they are and only their glyph texture is drawn again
+  (outlined_font.py).
 - "messages": one table a language, applied in order: the message file, the language (QM:
   its index in the file; GMSG files hold one each) and "edits", a file beside the table with
   the language's own edits: each a regular expression over the message's markup (qm.py,
@@ -21,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from z3dmods import gmsg, gzf, pica_texture, qbf, qm, text_font
+from z3dmods import gmsg, gzf, outlined_font, pica_texture, qbf, qm, text_font
 
 FONTS = "fonts"
 
@@ -148,6 +151,12 @@ def build(read: Callable[[str], bytes], table: Path, new_hash: bool) -> tuple[di
         files[font["file"]], textures, fit = make(read(font["file"]), table.parent.parent / FONTS / font["outline"],
                                                   font.get("weight"), font["scale"], new_hash)
         print(f"{font['file']}: {font['outline']} at {fit}")
+    for outlined in document.get("outlined_fonts", []):
+        redrawn = outlined_font.Redrawn(qbf.Font.parse(read(outlined["file"])),
+                                        table.parent.parent / FONTS / outlined["outline"], outlined.get("weight"),
+                                        outlined["scale"])
+        textures |= redrawn.textures(new_hash)
+        print(f"{outlined['file']}: glyph texture drawn from {outlined['outline']}")
     for messages in document.get("messages", []):
         path = messages["file"]
         edits = json.loads((table.parent / messages["edits"]).read_text())["edits"]

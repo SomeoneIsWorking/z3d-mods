@@ -1,5 +1,7 @@
 """QBF1, OoT3D's text font (decomp/oot3d docs/message.md, "The font files"): a sorted glyph table
-and cells of 4-bit alpha, row by row with the high nibble first. Also the texture the game
+and cells of 4-bit alpha, row by row with the high nibble first, or (message/sys8.qbf, the
+outlined digits of file select) of a byte a pixel, its intensity in the high nibble and its
+alpha in the low one. Also the texture the game
 keeps a font in once our patch makes every text renderer use its static glyph texture
 ("Drawing glyphs" there; patch/oot3d/font_atlas.cpp fills the same cells)."""
 
@@ -38,28 +40,35 @@ class Font:
     cell_height: int
     format: int
     glyphs: tuple[Glyph, ...]
-    # Each cell as an "L" image of sixteen levels (0, 17, ... 255).
+    # Each cell as an "L" image of sixteen levels (0, 17, ... 255), or "LA" for a font of 8 bits.
     cells: tuple[Image.Image, ...]
+    bits: int = 4
 
     @classmethod
     def parse(cls, data: bytes) -> Font:
         magic, glyph_count, cell_count, default_char, unknown, bits, width, height, format_ = HEADER.unpack_from(data)
-        if magic != MAGIC or bits != 4:
-            raise ValueError("not a 4-bit QBF1 font")
+        if magic != MAGIC or bits not in (4, 8):
+            raise ValueError("not a QBF1 font of 4 or 8 bits")
         glyphs = tuple(Glyph(*GLYPH.unpack_from(data, HEADER.size + i * GLYPH.size)) for i in range(glyph_count))
         base = HEADER.size + glyph_count * GLYPH.size
-        size = width * height // 2
+        size = width * height * bits // 8
         if len(data) != base + cell_count * size:
             raise ValueError("QBF1 font: the cells do not end at the file's end")
         cells = []
         for i in range(cell_count):
             raw = data[base + i * size: base + (i + 1) * size]
-            cell = Image.new("L", (width, height))
-            cell.putdata([((raw[p // 2] >> (0 if p % 2 else 4)) & 15) * 17 for p in range(width * height)])
+            if bits == 8:
+                cell = Image.new("LA", (width, height))
+                cell.putdata([((b >> 4) * 17, (b & 15) * 17) for b in raw])
+            else:
+                cell = Image.new("L", (width, height))
+                cell.putdata([((raw[p // 2] >> (0 if p % 2 else 4)) & 15) * 17 for p in range(width * height)])
             cells.append(cell)
-        return cls(default_char, unknown, width, height, format_, glyphs, tuple(cells))
+        return cls(default_char, unknown, width, height, format_, glyphs, tuple(cells), bits)
 
     def build(self) -> bytes:
+        if self.bits != 4:
+            raise ValueError("only a 4-bit QBF1 font is written")
         out = bytearray(HEADER.pack(MAGIC, len(self.glyphs), len(self.cells), self.default_char, self.unknown, 4,
                                     self.cell_width, self.cell_height, self.format))
         for glyph in self.glyphs:
@@ -95,12 +104,12 @@ class Font:
 
 
 def static_texture(font: Font, cells: tuple[Image.Image, ...] | None = None) -> Image.Image:
-    """The static glyph texture's alpha, top row first; `cells` stand in for the font's own (a
-    larger copy of each)."""
+    """The static glyph texture, top row first: its alpha, or its intensity and alpha ("LA") for a
+    font of 8 bits; `cells` stand in for the font's own (a larger copy of each)."""
     cells = cells or font.cells
     scale = cells[0].width // font.cell_width
     pitch_x, pitch_y = _pow2(font.cell_width) * scale, _pow2(font.cell_height) * scale
-    texture = Image.new("L", (pitch_x * COLUMNS, pitch_y * (CHARS // COLUMNS)))
+    texture = Image.new(cells[0].mode, (pitch_x * COLUMNS, pitch_y * (CHARS // COLUMNS)))
     for index, cell in enumerate(font.texture_cells()):
         if cell is not None:
             texture.paste(cells[cell], ((index % COLUMNS) * pitch_x, (index // COLUMNS) * pitch_y))

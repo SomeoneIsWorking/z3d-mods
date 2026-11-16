@@ -21,8 +21,10 @@ ETC1 = etc1.ETC1
 ETC1A4 = etc1.ETC1A4
 # GL_ALPHA with 4-bit texels: a pixel is its tile's nibble in Morton order, the low nibble first.
 A4 = 0x67616756
+# GL_LUMINANCE_ALPHA with a byte a texel: intensity in the high nibble, alpha in the low one.
+IA4 = 0x67606758
 # Azahar's VideoCore::PixelFormat numbers, as pack file names spell them.
-PACK_FORMATS = {RGBA4: 4, A4: 11, ETC1: 12, ETC1A4: 13}
+PACK_FORMATS = {RGBA4: 4, IA4: 9, A4: 11, ETC1: 12, ETC1A4: 13}
 
 
 def _morton(x: int, y: int) -> int:
@@ -67,9 +69,22 @@ def encode_a4(alpha: Image.Image) -> bytes:
     return bytes(out)
 
 
+def encode_ia4(texture: Image.Image) -> bytes:
+    """An "LA" image as a 4-bit intensity and alpha texture, each rounded to sixteen levels."""
+    width, height = texture.size
+    pixels = texture.tobytes()
+    out = bytearray(width * height)
+    tiles = width // 8
+    for y in range(height):
+        for x in range(width):
+            i, a = pixels[2 * (y * width + x)], pixels[2 * (y * width + x) + 1]
+            out[((y // 8) * tiles + x // 8) * 64 + _morton(x & 7, y & 7)] = ((i + 8) // 17) << 4 | (a + 8) // 17
+    return bytes(out)
+
+
 def decoded_hash(image: Image.Image, gl_format: int) -> int:
     rows = [image.crop((0, y, image.width, y + 1)).tobytes() for y in range(image.height - 1, -1, -1)]
-    if gl_format in (ETC1, ETC1A4, A4):
+    if gl_format in (ETC1, ETC1A4, A4, IA4):
         return cityhash.hash64(b"".join(rows))
     if gl_format != RGBA4:
         raise ValueError(f"texture format 0x{gl_format:08X} is not hashed")

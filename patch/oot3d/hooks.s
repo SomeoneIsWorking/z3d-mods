@@ -49,6 +49,45 @@
     mov r0, #0
 .section .expect.base_hud, "", %progbits
     .word 0xC3A00001 @ movgt r0, #1
+@ File select's BACK button (quads 173 and 174, its lit frame 118 to 120; decomp
+@ docs/file_select.md): 40 pixels left of the touch screen, into the top screen's corner, which
+@ file_select.cpp and base_file_select_* bring into view.
+.section .patch.back_lit, "a", %progbits
+    .float -40.0, 202.0, 10.0, 202.0, -40.0, 204.0
+.section .expect.back_lit, "", %progbits
+    .float 0.0, 202.0, 50.0, 202.0, 0.0, 204.0
+.section .patch.back_button, "a", %progbits
+    .float -40.0, 204.0, 0.0, 204.0
+.section .expect.back_button, "", %progbits
+    .float 0.0, 204.0, 40.0, 204.0
+@ The touch screen's 2D layers (TouchScreen2D_BeginLayer0 to 3): each one's projection, widened
+@ while file select is up.
+.section .patch.touch_projection0, "ax", %progbits
+    bl _ZN7z3dmods5oot3d20fileSelectProjectionEPvPfPKf
+.section .expect.touch_projection0, "", %progbits
+    .word 0xEBFC163B @ bl Camera2D_SetMatrices
+.section .patch.touch_projection1, "ax", %progbits
+    bl _ZN7z3dmods5oot3d20fileSelectProjectionEPvPfPKf
+.section .expect.touch_projection1, "", %progbits
+    .word 0xEBFC1CE7 @ bl Camera2D_SetMatrices
+.section .patch.touch_projection2, "ax", %progbits
+    bl _ZN7z3dmods5oot3d20fileSelectProjectionEPvPfPKf
+.section .expect.touch_projection2, "", %progbits
+    .word 0xEBFC2006 @ bl Camera2D_SetMatrices
+.section .patch.touch_projection3, "ax", %progbits
+    bl _ZN7z3dmods5oot3d20fileSelectProjectionEPvPfPKf
+.section .expect.touch_projection3, "", %progbits
+    .word 0xEBFC2569 @ bl Camera2D_SetMatrices
+@ The One Screen's file select on the top screen: framebuffer rows 0 to 400, not 40 to 360,
+@ for the projection file_select.cpp widens to match.
+.section .patch.base_file_select_row, "ax", %progbits
+    mov r1, #0
+.section .expect.base_file_select_row, "", %progbits
+    .word 0xE3A01028 @ mov r1, #40
+.section .patch.base_file_select_rows, "ax", %progbits
+    mov r3, #400
+.section .expect.base_file_select_rows, "", %progbits
+    .word 0xE3A03D05 @ mov r3, #320
 @ The One Screen's Minimap_Project lifts the minimap clear of the game's B button while mounted;
 @ that button is off the top screen (base_b_ring), so the minimap stays where it is on foot.
 .section .patch.base_minimap, "ax", %progbits
