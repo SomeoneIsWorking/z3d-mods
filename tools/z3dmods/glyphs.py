@@ -19,11 +19,22 @@ FOLDER = "glyphs"
 
 
 def _draw(svg: Path, png: Path) -> None:
+    """librsvg draws it: rsvg-convert itself where it is installed, else ImageMagick, whose SVG
+    reader is librsvg on Fedora. Homebrew's ImageMagick has no librsvg, and its own reader paints
+    a gradient fill black (the key cap)."""
+    png.parent.mkdir(parents=True, exist_ok=True)
+    rsvg = shutil.which("rsvg-convert")
+    if rsvg is not None:
+        subprocess.run([rsvg, "--width", str(SIDE), "--height", str(SIDE), "--keep-aspect-ratio",
+                        "--output", str(png), str(svg)], check=True)
+        return
     magick = shutil.which("magick")
     if magick is None:
-        raise RuntimeError("magick is missing: sudo dnf install ImageMagick (Fedora), "
-                           "sudo apt install imagemagick (Debian/Ubuntu)")
-    png.parent.mkdir(parents=True, exist_ok=True)
+        raise RuntimeError("rsvg-convert and magick are missing: brew install librsvg (macOS), "
+                           "sudo dnf install ImageMagick (Fedora), sudo apt install imagemagick (Debian/Ubuntu)")
+    if "RSVG" not in subprocess.run([magick, "-list", "format"], capture_output=True, text=True, check=True).stdout:
+        raise RuntimeError("this ImageMagick draws SVG without librsvg, which gets gradients wrong: "
+                           "install rsvg-convert (brew install librsvg)")
     subprocess.run([magick, "-background", "none", "-density", "1200", str(svg), "-resize", f"{SIDE}x{SIDE}",
                     str(png)], check=True)
 

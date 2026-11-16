@@ -39,8 +39,9 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   `... z3dmods shortcut` adds the per-machine desktop shortcut (the picker); `--host ally` builds the
   package and installs it in `~/Games/z3d` on the Ally with its own shortcuts; the player's data there stays.
 - macOS (Apple silicon): the same checkout builds and plays. Needs Homebrew's `cmake ninja
-  sdl3 sdl3_ttf sdl3_image molten-vk vulkan-loader vulkan-headers llvm lld` (the patch is built
-  with Homebrew's LLVM, not Apple's clang); the core draws through MoltenVK on the window's
+  sdl3 sdl3_ttf sdl3_image molten-vk vulkan-loader vulkan-headers llvm lld librsvg` (the patch is built
+  with Homebrew's LLVM, not Apple's clang; glyphs are drawn by rsvg-convert, since Homebrew's
+  ImageMagick has no librsvg); the core draws through MoltenVK on the window's
   CAMetalLayer. `z3dmods shortcut` there makes `~/Applications/z3d.app`. `inputtest` and `run`
   stay Linux-only (Gamescope, XTest, uinput); `package` makes the Linux package only.
 - `uv run --frozen z3dmods package`: the Linux package, `build/package/z3d` (a folder) and

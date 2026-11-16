@@ -85,8 +85,9 @@ python/             python/: CPython (also python/lib/python*/LICENSE.txt); the 
 appimage-runtime    the AppImage's own first bytes: github.com/AppImage/type2-runtime
                     (MIT), release {runtime}
 assets/LICENSE      port-assets' glyphs (MIT), which prebuilt/glyphs/ is drawn from
-assets/fonts/OFL.txt, fonts/OFL.txt
-                    the Noto Sans typefaces (SIL Open Font License 1.1)
+assets/fonts/OFL.txt
+                    port-assets' Noto Sans key lettering (SIL Open Font License 1.1)
+fonts/OFL.txt       Open Sans, the picker's font (SIL Open Font License 1.1)
 sets/fonts/*-OFL.txt
                     Arimo and Jost, the games' text fonts (SIL Open Font License 1.1)
 """
@@ -266,7 +267,7 @@ def build(cfg: Config, out: Path) -> Path:
     shutil.copyfile(cfg.port_assets / "LICENSE", out / "assets" / "LICENSE")
     (out / "fonts").mkdir()
     shutil.copyfile(cfg.ui_font(), out / "fonts" / cfg.ui_font().name)
-    shutil.copyfile(cfg.port_assets / "fonts" / "OFL.txt", out / "fonts" / "OFL.txt")
+    shutil.copyfile(cfg.ui_font().with_name("OpenSans-OFL.txt"), out / "fonts" / "OFL.txt")
     shutil.copyfile(cfg.repo / "app" / "icon" / "z3d.svg", out / "z3d.svg")
     shutil.copyfile(cfg.repo / "LICENSE", out / "LICENSE")
     revision = _run("git", "-C", str(cfg.repo), "rev-parse", "HEAD").strip()

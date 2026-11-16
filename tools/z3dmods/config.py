@@ -63,18 +63,10 @@ class Config:
         return self.azahar_data / "load" / "textures" / title_id
 
     def ui_font(self) -> Path:
-        """The title picker's outline font: the package's, else fontconfig's."""
-        if self.bundled_font is not None:
-            return self.bundled_font
-        if shutil.which("fc-match") is None:
-            raise RuntimeError("fc-match is missing: sudo dnf install fontconfig (Fedora), "
-                               "sudo apt install fontconfig (Debian/Ubuntu)")
-        found = subprocess.run(["fc-match", "-f", "%{file}", UI_FONT], capture_output=True, text=True,
-                               check=True).stdout.strip()
-        if not found.endswith((".ttf", ".otf")):
-            raise RuntimeError(f"fontconfig has no outline font for {UI_FONT!r}: sudo dnf install "
-                               "google-noto-sans-fonts (Fedora), sudo apt install fonts-noto-core (Debian/Ubuntu)")
-        return Path(found)
+        """The title picker's outline font: the package's copy, or the checkout's (UI_FONT)."""
+        if self.bundled_font is None or not self.bundled_font.exists():
+            raise RuntimeError(f"the picker's font is missing: {self.bundled_font}")
+        return self.bundled_font
 
     def key_font(self) -> Path:
         """port-assets' key-label typeface, which new HUD lettering uses."""
@@ -93,7 +85,9 @@ class Config:
         return glyphs
 
 
-UI_FONT = "Noto Sans:bold"
+# The picker's font, in the checkout: Open Sans Bold (SIL Open Font License 1.1, OpenSans-OFL.txt
+# beside it), from github.com/googlefonts/opensans fonts/ttf.
+UI_FONT = Path("app") / "fonts" / "OpenSans-Bold.ttf"
 # Moves the app's data (saves included) for a test run of the installed shortcut (input_test.py).
 APP_DATA_ENV = "Z3D_APP_DATA"
 # Names another folder of mod downloads for a test run.
@@ -108,7 +102,7 @@ def _session_env() -> dict[str, str]:
         # macOS: windows go to the logged-in session, no display variable names it.
         return {}
     # A machine without a user session (a build runner) has no display to name.
-    shown =subprocess.run(["systemctl", "--user", "show-environment"], capture_output=True,
+    shown = subprocess.run(["systemctl", "--user", "show-environment"], capture_output=True,
                            text=True, check=False).stdout
     found = dict(line.split("=", 1) for line in shown.splitlines() if "=" in line)
     return {key: found[key] for key in SESSION_KEYS if key in found}
@@ -174,4 +168,5 @@ def load() -> Config:
         session_env=_session_env(),
         port_assets=Path(os.environ.get("PORT_ASSETS_DIR") or REPO.parent.parent / "shared" / "port-assets"),
         tool_command=(uv, "--directory", str(REPO), "run", "--frozen", "z3dmods"),
+        bundled_font=REPO / UI_FONT,
     )

@@ -74,10 +74,14 @@ def _mac_install(cfg: Config) -> list[Path]:
         "<key>NSHighResolutionCapable</key><true/>\n"
         "</dict></plist>\n")
     launcher = contents / "MacOS" / "z3d"
-    # Finder starts an app with a bare PATH: the tool command names uv by its full path.
     command = " ".join(shlex.quote(part) for part in (*cfg.tool_command, "play"))
     log = cfg.app_data / "launch.log"
-    launcher.write_text(f"#!/bin/sh\nmkdir -p {shlex.quote(str(log.parent))}\n"
+    # Finder's PATH is /usr/bin:/bin:/usr/sbin:/sbin: the tools also look up uv and Homebrew's
+    # programs (magick, the Vulkan loader's MoltenVK) by name.
+    path = ":".join(dict.fromkeys([str(Path(cfg.tool_command[0]).parent), "/opt/homebrew/bin",
+                                   "/usr/bin", "/bin", "/usr/sbin", "/sbin"]))
+    launcher.write_text(f"#!/bin/sh\nexport PATH={shlex.quote(path)}\n"
+                        f"mkdir -p {shlex.quote(str(log.parent))}\n"
                         f"exec {command} >{shlex.quote(str(log))} 2>&1\n")
     launcher.chmod(0o755)
     return [MAC_APP]

@@ -40,7 +40,8 @@ Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
 `tools/z3dmods/app.py` derives a game's from its set: its `screen_layout`, textures when it has a
 pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
 `<user>/library.json`, an array of `{"rom", "layout", "textures", "options"}` per set (and
-`"inputs"` in a package), and takes the font from fontconfig (`Noto Sans:bold`).
+`"inputs"` in a package), and takes its font from the checkout (`app/fonts/OpenSans-Bold.ttf`, Open Sans Bold under the
+SIL Open Font License 1.1).
 
 Setup: `--tools <program> [<argument>]...` (the rest of the command line) is the tools as the
 picker runs them (`play.py` passes `Config.tool_command`), each run a child process whose
