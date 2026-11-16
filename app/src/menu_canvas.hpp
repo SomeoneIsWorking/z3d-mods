@@ -89,11 +89,13 @@ private:
     int height;
   };
 
-  // macOS only: the Vulkan instance and surface the renderer is given (VkInstance and
-  // VkSurfaceKHR), made by the canvas so that MoltenVK, a portability driver, is enumerated and the
-  // window's one CAMetalLayer is drawn to.
+#ifdef __APPLE__
+  // The Vulkan instance and surface the renderer is given (VkInstance and VkSurfaceKHR), made by
+  // the canvas so that MoltenVK, a portability driver, is enumerated and the window's one
+  // CAMetalLayer is drawn to.
   void *vkInstance_ = nullptr;
   uint64_t vkSurface_ = 0;
+#endif
   SDL_Renderer *renderer_ = nullptr;
   TTF_TextEngine *engine_ = nullptr;
   TTF_Font *font_ = nullptr;
