@@ -25,6 +25,13 @@ A4 = 0x67616756
 IA4 = 0x67606758
 # Azahar's VideoCore::PixelFormat numbers, as pack file names spell them.
 PACK_FORMATS = {RGBA4: 4, IA4: 9, A4: 11, ETC1: 12, ETC1A4: 13}
+# Bits a texel takes in each format.
+TEXEL_BITS = {RGBA4: 16, IA4: 8, A4: 4, ETC1: 4, ETC1A4: 8}
+
+
+def level_size(width: int, height: int, gl_format: int) -> int:
+    """The bytes of a texture's first level; a game's texture data carries its smaller levels after it."""
+    return width * height * TEXEL_BITS[gl_format] // 8
 
 
 def _morton(x: int, y: int) -> int:

@@ -503,8 +503,9 @@ def _flat(triangles, extras: list[str]) -> tuple[dict[str, list[tuple[float, ...
 
 
 def texture_image(model: cmb.Cmb, texture: cmb.Texture, pack: TexturePack | None) -> Image.Image:
-    """The texture as the player sees it: the pack's replacement when it has one."""
-    data = model.texture_data(texture)
+    """The texture as the player sees it: the pack's replacement when it has one. Azahar names it by
+    the first level alone."""
+    data = model.texture_data(texture)[:pica_texture.level_size(texture.width, texture.height, texture.format)]
     image = pica_texture.decode(data, texture.width, texture.height, texture.format)
     found = pack.replacement(image, data, texture.format) if pack else None
     return found or image
