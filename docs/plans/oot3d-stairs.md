@@ -129,8 +129,51 @@ Seen 2026-11-18:
   the game paints blocks. After: they match the frame with the option off.
 - MM3D Observatory room 1 on Stone medium with the stone in a quarter of the rows
   (`stone-mm-obs`): the four flights walked -480 to -129 in 8s, the landings keep the game's wood.
-- Not right yet: the stone has one colour for every flight, so a dark or wooden flight (Desert
-  Colossus, the Observatory) turns pale stone under its vertex colour.
+
+### Stone only where the game paints stone (2026-11-18)
+User: "Maybe not all stairs should be the babies, maybe like if the stairs are grass themed or
+something, they can be the other 3d ones." Before this, every flight took the same pale stone, so
+Desert Colossus's sandstone and the Observatory's wood turned light stone under their vertex colour.
+Now the Stone layers give each stair texture the stone only when its paint reads as stone
+(`stairs_stone.reads_as_stone`): the step columns' mean colour (`Profile.hue`, `saturation`,
+measured in `stairs.profile` from the pack image when there is one) is grey (saturation at most
+0.40) or beige (hue 38 to 60 degrees). Redder paint (wood, sand, earth) and greener (grass) take the
+painted fold at the layer's rise, collision included. `install` prints each texture's decision:
+
+| Game | Texture | Rooms | Hue | Saturation | Steps |
+|---|---|---|---|---|---|
+| OoT3D | `dg_gcp_kaidan_0` | ganontikasonogo 0 | 43 | 0.34 | stone |
+| OoT3D | `dg_gnn_kaidan_0` | ganontika 1 | 46 | 0.29 | stone |
+| OoT3D | `s01_kaidan_01` | Kakariko | 40 | 0.50 | stone |
+| OoT3D | `s07_kaidan_01` | Zora's Domain 0, 1 | 51 | 0.24 | stone |
+| OoT3D | `s11_kaidan_01` | Desert Colossus | 25 | 0.42 | painted |
+| OoT3D | `s12_kaidan_01` | Gerudo's Fortress | 35 | 0.46 | painted |
+| OoT3D | `s15_kaidan_01` | Hyrule Castle | 55 | 0.20 | stone |
+| OoT3D | `s16_kaidan_01` | Death Mountain Trail | 33 | 0.59 | painted |
+| MM3D | `Z2mitu_step_00`, `_01` | Woodfall Temple 3, 10 | 57, 55 | 0.22, 0.28 | stone |
+| MM3D | `cleast`, `clsouth`, `clwest_step_01` | Clock Town | 33 | 0.29 | stone |
+| MM3D | `clnorth_en_step` | North Clock Town | 40 | 0.26 | stone |
+| MM3D | `dkh_step_01`, `dkh_step_suna_0` | Deku Shrine | 33, 47 | 0.26, 0.23 | stone |
+| MM3D | `hak_r02_step_01` | Beneath the Graveyard | 58 | 0.24 | stone |
+| MM3D | `kindan2_kaidan` | Oceanside Spider House | 48 | 0.21 | stone |
+| MM3D | `org_step_01` | Music Box House | 38 | 0.22 | stone |
+| MM3D | `mil_step_01` | Milk Bar | 31 | 0.66 | painted |
+| MM3D | `om_step_01` | Ranch house | 24 | 0.86 | painted |
+| MM3D | `tenmon_step_02` | Observatory 1 | 36 | 0.59 | painted |
+| MM3D | `yado_step_01` | Stock Pot Inn | 33 | 0.80 | painted |
+
+Kakariko's paint is the closest call: its hue is 40 against the bound of 38, and Gerudo's
+Fortress's equally sandy steps are 35. A pack that shifts Kakariko's paint redder would move it to
+the fold.
+
+Seen 2026-11-18 on Stone medium (`theme-oot-2`, `theme-mm-2`, `theme-mm-spider-2`) against Painted
+medium (`theme-oot-5`, `theme-mm-5`, `theme-mm-b-5`) and off (`off-tour`, `theme-mm-b-0`):
+- Kakariko's well flight: stone as before, walked 0, 8 ... 80.
+- Desert Colossus, Gerudo's Fortress, Death Mountain Trail: the painted fold, frame for frame as on
+  Painted medium; Desert Colossus walked -32 to 48 and Gerudo's Fortress 54 to 333 in 8s, the same
+  heights as on Painted medium.
+- MM3D Observatory room 1 and the Milk Bar: the painted fold, as on Painted medium; walked -480 to
+  -272 and -8 to 152 in 8s. The Oceanside Spider House: stone, walked -120 to 180 in 7.9s.
 
 ## Built (2026-11-13)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine

@@ -13,12 +13,13 @@ the treads.
 from __future__ import annotations
 
 import cmath
+import colorsys
 import itertools
 import math
 import re
 from dataclasses import dataclass, replace
 
-from PIL import Image
+from PIL import Image, ImageStat
 
 from z3dmods import cmb, pica_texture, zsi
 from z3dmods.texture_pack import TexturePack
@@ -71,6 +72,9 @@ class Profile:
     # the sides, which stay flat on the ramp.
     first: float = 0.0
     last: float = 1.0
+    # The step columns' mean colour: its hue in degrees and its saturation.
+    hue: float = 0.0
+    saturation: float = 0.0
 
 
 def profile(image: Image.Image) -> Profile:
@@ -112,7 +116,10 @@ def profile(image: Image.Image) -> Profile:
     nose = max((b for b in range(PROFILE_BINS) if riser(b) >= MIN_RISER),
                key=lambda b: folded[b] - folded[(b + 1) % PROFILE_BINS])
     first, last = _curbs(gray, steps)
-    return Profile(steps, crease_t, riser(nose), first, last)
+    columns = image.convert("RGB").crop((round(first * width), 0, max(round(last * width), round(first * width) + 1),
+                                         height))
+    hue, saturation, _ = colorsys.rgb_to_hsv(*(c / 255 for c in ImageStat.Stat(columns).mean))
+    return Profile(steps, crease_t, riser(nose), first, last, hue * 360, saturation)
 
 
 def _curbs(gray: Image.Image, steps: int) -> tuple[float, float]:
@@ -656,10 +663,12 @@ class Shape:
 class Painted:
     """The game's painted steps folded below the ramp, each painted step `rise` units high."""
 
-    clears_under = True
-
     def __init__(self, rise: float) -> None:
         self.rise = rise
+
+    def clears_under(self, ramp: Ramp) -> bool:
+        """Whether the steps over `ramp` open space below it, where walls and ceilings are cut."""
+        return True
 
     def triangles(self, shape: Shape) -> list:
         uv_slot = shape.slot("tex0")
@@ -953,11 +962,11 @@ def collision(scene: zsi.Scene, drawn: list[Ramp], style) -> bytes | None:
         pieces.extend((index, over, ramp) for over, ramp in on)
     if not pieces:
         return None
-    stepped = [(ramp.box(), ramp) for ramp in {id(ramp): ramp for _, _, ramp in pieces}.values()]
+    stepped = [(ramp.box(), ramp) for ramp in {id(ramp): ramp for _, _, ramp in pieces}.values()
+               if style.clears_under(ramp)]
     for index in others:
         polygon = scene.polygons[index]
-        cleared = _clear_of_steps([tuple(float(v) for v in scene.vertices[i]) for i in polygon.vertices()],
-                                  stepped) if style.clears_under else None
+        cleared = _clear_of_steps([tuple(float(v) for v in scene.vertices[i]) for i in polygon.vertices()], stepped)
         if cleared is None:
             polygons.append(polygon)
             continue

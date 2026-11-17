@@ -235,6 +235,9 @@ def install(cfg: Config, game: GameSet) -> Path:
         rooms[layer.folder], uses = _stepped_rooms(rom, base_romfs, game.stairs, pack, rules, style)
         for scene, use in uses.items():
             print(f"{layer.label} {scene}: {use}")
+    for name, steps in sorted(stone.chosen.items()):
+        print(f"Stone layers, {name}: {'stone' if stairs_stone.reads_as_stone(steps) else 'painted'}"
+              f" (hue {steps.hue:.0f}, saturation {steps.saturation:.2f})")
     menus, keyboard = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
                                  cfg.glyph_set(), AppKeys(cfg))
                        if game.hud else ({}, {}))

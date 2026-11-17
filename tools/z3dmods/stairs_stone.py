@@ -10,6 +10,9 @@ Across the flight, the columns the game's texture paints as curbs stay curbs: wa
 run on the step noses, drawn with the game's own texture at the ramp's own coordinates. The steps
 wear our stone (sets/stairs/stone.svg), drawn into the same texture's step columns, so one texture
 and one material carry both. The collision is the treads, risers, fronts and curb tops.
+
+Only textures whose paint reads as stone take this; wood, sand, earth and grass keep the painted
+fold (stairs.Painted) at the same rise.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from PIL import Image
 from z3dmods import cmb, config, etc1, glyphs, pica_texture
 from z3dmods.stairs import (
     KEY,
+    Painted,
     Profile,
     Ramp,
     Shape,
@@ -378,18 +382,37 @@ def _curb_uv(ramp: Ramp, point: tuple[float, float, float]) -> tuple[float, floa
     return u, v
 
 
-class Stone:
-    """Stone steps `rise` units high. `textures` makes the stone into each stair texture, shared by
-    every size."""
+# Paint saturation up to this reads as grey masonry.
+GREY = 0.40
+# Hues (degrees) of beige stone paint; Kakariko's steps are 40. Redder is wood, sand or earth,
+# greener is grass.
+BEIGE = (38.0, 60.0)
 
-    clears_under = False
+
+def reads_as_stone(steps: Profile) -> bool:
+    """Whether a stair texture's paint reads as stone, so its flights take our stone steps; the
+    rest (wood, sand, earth, grass) keep the painted fold."""
+    return steps.saturation <= GREY or BEIGE[0] <= steps.hue <= BEIGE[1]
+
+
+class Stone:
+    """Stone steps `rise` units high where the game paints stone, the painted fold at the same rise
+    elsewhere. `textures` makes the stone into each stair texture, shared by every size."""
 
     def __init__(self, rise: float, textures: StoneTextures) -> None:
         self.rise = rise
         self._textures = textures
+        self._painted = Painted(rise)
+
+    def clears_under(self, ramp: Ramp) -> bool:
+        return not reads_as_stone(ramp.profile)
 
     def triangles(self, shape: Shape) -> list | None:
-        """The shape's flights in stone; None for a shape with none, which keeps its paint."""
+        """The shape's flights in stone, or folded when its paint is not stone; None for a shape
+        with none, which keeps its paint."""
+        self._textures.chosen[shape.source.textures[shape.texture].name] = shape.steps
+        if not reads_as_stone(shape.steps):
+            return self._painted.triangles(shape)
         found = shape_ramps(shape.model, shape.index, shape.steps, self.rise)
         if not found:
             return None
@@ -431,11 +454,16 @@ class Stone:
         return [tuple(t) for t in out]
 
     def retexture(self, data: bytes, source: cmb.Cmb, slot: int, steps: Profile, image: Image.Image) -> bytes:
+        if not reads_as_stone(steps):
+            return data
         return self._textures.retexture(data, slot, stone_rect(source, slot, steps, self.rise), image)
 
     def floor(self, pieces: list[tuple[int, list, Ramp]], drawn: list[Ramp]) -> list[tuple[int, list]]:
-        """The flights' solid faces over each collision piece, cut at the piece's outline."""
-        made = flights(drawn, self.rise)
+        """The flights' solid faces over each collision piece, cut at the piece's outline; the
+        painted fold's steps over the pieces of ramps whose paint is not stone."""
+        folded = [piece for piece in pieces if not reads_as_stone(piece[2].profile)]
+        pieces = [piece for piece in pieces if reads_as_stone(piece[2].profile)]
+        made = flights([ramp for ramp in drawn if reads_as_stone(ramp.profile)], self.rise)
         by_ramp = {(ramp.shape, ramp.positions): flight for flight in made for ramp in flight.ramps}
         solid: dict[int, list[list[tuple[float, float, float]]]] = {}
         out = []
@@ -456,7 +484,7 @@ class Stone:
                         continue
                     seen.add(key)
                     out.append((index, list(triangle)))
-        return out
+        return out + self._painted.floor(folded, drawn)
 
 
 def _clip(polygon: list[tuple[float, float, float]], outline: list[tuple[float, float, float]]) -> list:
@@ -492,6 +520,8 @@ class StoneTextures:
         # Pack file name to PNG bytes.
         self.pack_images: dict[str, bytes] = {}
         self._stone: Image.Image | None = None
+        # Every stair texture a stone layer met, by name, with its profile.
+        self.chosen: dict[str, Profile] = {}
 
     def _drawn(self) -> Image.Image:
         if self._stone is None:
