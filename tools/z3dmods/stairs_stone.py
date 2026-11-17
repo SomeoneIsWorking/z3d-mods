@@ -15,6 +15,7 @@ and one material carry both. The collision is the treads, risers, fronts and cur
 from __future__ import annotations
 
 import io
+import itertools
 import math
 import struct
 from dataclasses import dataclass, field, replace
@@ -22,7 +23,20 @@ from dataclasses import dataclass, field, replace
 from PIL import Image
 
 from z3dmods import cmb, config, etc1, glyphs, pica_texture
-from z3dmods.stairs import KEY, Profile, Ramp, Shape, _along, _cross, _dot, _fan, _key, _sub, _unit, shape_ramps
+from z3dmods.stairs import (
+    KEY,
+    Profile,
+    Ramp,
+    Shape,
+    _along,
+    _cross,
+    _dot,
+    _fan,
+    _key,
+    _sub,
+    _unit,
+    shape_ramps,
+)
 from z3dmods.texture_pack import TexturePack
 
 STONE_SVG = config.REPO / "sets" / "stairs" / "stone.svg"
@@ -284,11 +298,74 @@ def _wound(triangle: list, facing: tuple[float, float, float], position=lambda c
     return triangle
 
 
-def _stone_columns(steps: Profile, width: int) -> tuple[float, float]:
-    """The u range the stone tile is drawn over in the texture, clear of the curb columns."""
-    if steps.first <= 0 and steps.last >= 1:
-        return 0.0, 1.0
-    return steps.first + INSET / width, steps.last - INSET / width
+@dataclass(frozen=True)
+class Rect:
+    """Where the stone sits in a stair texture, in texture coordinates within one tile."""
+
+    low_u: float
+    high_u: float
+    low_v: float
+    high_v: float
+
+    def at(self, s: float, v: float) -> tuple[float, float]:
+        return self.low_u + s * (self.high_u - self.low_u), self.low_v + v * (self.high_v - self.low_v)
+
+
+def _in_tile(values: list[float]) -> tuple[float, float]:
+    """The span of `values` moved into the tile it starts in; a span over a whole tile is the tile."""
+    tile = math.floor(min(values) + EPSILON)
+    low, high = min(values) - tile, max(values) - tile
+    return (0.0, 1.0) if high - low >= 1 - EPSILON else (low, high)
+
+
+def _overlaps(span: tuple[float, float], low: float, high: float, slack: float) -> bool:
+    return any(span[0] + shift < high - slack and span[1] + shift > low + slack for shift in (-1, 0, 1))
+
+
+def _widest(spans: list[tuple[float, float]], slack: float) -> tuple[float, float]:
+    merged: list[list[float]] = []
+    for low, high in sorted(spans):
+        if merged and low <= merged[-1][1] + slack:
+            merged[-1][1] = max(merged[-1][1], high)
+        else:
+            merged.append([low, high])
+    return tuple(max(merged, key=lambda m: m[1] - m[0]))
+
+
+def _inset(low: float, high: float, texels: float) -> tuple[float, float]:
+    return (0.0, 1.0) if low <= 0 and high >= 1 else (low + texels, high - texels)
+
+
+def stone_rect(source: cmb.Cmb, slot: int, steps: Profile, rise: float) -> Rect:
+    """The stone's place in texture `slot`: the widest run of step columns the flights paint, and
+    across it the widest band of rows no other triangle of those shapes samples, so they keep the
+    game's paint where they can."""
+    texture = source.textures[slot]
+    climbs, painted = [], []
+    for index in sorted({mesh.shape for mesh in source.meshes if source.materials[mesh.material][0] == slot}):
+        stepped = {tuple(tri) for tri, _ in shape_ramps(source, index, steps, rise)}
+        shape = source.shapes[index]
+        uvs = source.vertices(shape, "tex0")
+        indices = source.indices(shape)
+        for i in range(0, len(indices) - 2, 3):
+            tri = indices[i:i + 3]
+            box = _in_tile([uvs[j][0] for j in tri]), _in_tile([uvs[j][1] for j in tri])
+            (climbs if tuple(tri) in stepped else painted).append(box)
+    if not climbs:
+        raise ValueError(f"{texture.name}: no flight paints it")
+    slack_u, slack_v = 1 / texture.width, 1 / texture.height
+    low_u, high_u = _widest([u for u, _ in climbs], slack_u)
+    low_u, high_u = _inset(max(low_u, steps.first), min(high_u, steps.last), INSET / texture.width)
+    # A triangle over a whole tile of rows meets the stone in any band.
+    taken = [v for u, v in painted if v != (0.0, 1.0) and _overlaps(u, low_u, high_u, slack_u)]
+    edges = sorted({0.0, 1.0, *(x for v in taken for x in v)})
+    free = [(a, b) for a, b in itertools.pairwise(edges)
+            if not any(_overlaps(v, a, b, slack_v) for v in taken)]
+    if not free:
+        raise ValueError(f"{texture.name}: no rows free of the game's other paint in its step columns")
+    low_v, high_v = _widest(free, slack_v)
+    low_v, high_v = _inset(low_v, high_v, INSET / texture.height)
+    return Rect(low_u, high_u, low_v, high_v)
 
 
 def _curb_uv(ramp: Ramp, point: tuple[float, float, float]) -> tuple[float, float]:
@@ -311,11 +388,13 @@ class Stone:
         self.rise = rise
         self._textures = textures
 
-    def triangles(self, shape: Shape) -> list:
+    def triangles(self, shape: Shape) -> list | None:
+        """The shape's flights in stone; None for a shape with none, which keeps its paint."""
         found = shape_ramps(shape.model, shape.index, shape.steps, self.rise)
+        if not found:
+            return None
         tex0, color = shape.slot("tex0"), shape.slot("color")
-        texture = self._textures.texture(shape.model, shape.index)
-        low_u, high_u = _stone_columns(shape.steps, texture.width)
+        rect = stone_rect(shape.source, shape.texture, shape.steps, self.rise)
         stepped = {tuple(tri) for tri, _ in found}
         out = []
         tris = [shape.indices[i:i + 3] for i in range(0, len(shape.indices) - 2, 3)]
@@ -332,7 +411,7 @@ class Stone:
                 corners = [shape.packed[j][color:color + 4] for tri in members for j in tri]
                 base = [sum(c[i] for c in corners) / len(corners) for i in range(4)]
 
-            def extra(uv: tuple[float, float], shade: float) -> tuple[float, ...]:
+            def extra(uv: tuple[float, float], shade: float, template=template, base=base) -> tuple[float, ...]:
                 values = list(template)
                 values[tex0:tex0 + 2] = uv
                 if base is not None:
@@ -347,12 +426,12 @@ class Stone:
                     out.extend(_wound(list(t), face.facing) for t in _fan(polygon))
                     continue
                 for piece in _tiles(face):
-                    polygon = [(p, extra((low_u + s * (high_u - low_u), v), face.shade)) for p, s, v in piece]
+                    polygon = [(p, extra(rect.at(s, v), face.shade)) for p, s, v in piece]
                     out.extend(_wound(list(t), face.facing) for t in _fan(polygon))
         return [tuple(t) for t in out]
 
-    def retexture(self, data: bytes, slot: int, steps: Profile, image: Image.Image) -> bytes:
-        return self._textures.retexture(data, slot, steps, image)
+    def retexture(self, data: bytes, source: cmb.Cmb, slot: int, steps: Profile, image: Image.Image) -> bytes:
+        return self._textures.retexture(data, slot, stone_rect(source, slot, steps, self.rise), image)
 
     def floor(self, pieces: list[tuple[int, list, Ramp]], drawn: list[Ramp]) -> list[tuple[int, list]]:
         """The flights' solid faces over each collision piece, cut at the piece's outline."""
@@ -414,38 +493,35 @@ class StoneTextures:
         self.pack_images: dict[str, bytes] = {}
         self._stone: Image.Image | None = None
 
-    def texture(self, model: cmb.Cmb, shape_index: int) -> cmb.Texture:
-        mesh = next(m for m in model.meshes if m.shape == shape_index)
-        return model.textures[model.materials[mesh.material][0]]
-
     def _drawn(self) -> Image.Image:
         if self._stone is None:
             self._stone = glyphs.image(STONE_SVG).convert("RGB")
         return self._stone
 
-    def _composite(self, image: Image.Image, steps: Profile, width: int, height: int) -> Image.Image:
+    def _composite(self, image: Image.Image, rect: Rect, width: int, height: int) -> Image.Image:
         out = image.convert("RGBA").resize((width, height), Image.LANCZOS)
-        low, high = _stone_columns(steps, width)
-        left, right = round(low * width), round(high * width)
-        if right > left:
-            stone = self._drawn().resize((right - left, height), Image.LANCZOS).convert("RGBA")
-            out.paste(stone, (left, 0))
+        left, right = round(rect.low_u * width), round(rect.high_u * width)
+        # Rows run down as v falls.
+        top, bottom = round((1 - rect.high_v) * height), round((1 - rect.low_v) * height)
+        if right > left and bottom > top:
+            stone = self._drawn().resize((right - left, bottom - top), Image.LANCZOS).convert("RGBA")
+            out.paste(stone, (left, top))
         return out
 
-    def retexture(self, data: bytes, slot: int, steps: Profile, image: Image.Image) -> bytes:
-        """The model with texture `slot`'s pixels made stone over the steps. `image` is the texture
-        as the player saw it before (the pack's copy when there is one)."""
+    def retexture(self, data: bytes, slot: int, rect: Rect, image: Image.Image) -> bytes:
+        """The model with texture `slot`'s pixels made stone over `rect`. `image` is the texture as
+        the player saw it before (the pack's copy when there is one)."""
         model = cmb.Cmb.parse(data)
         texture = model.textures[slot]
         if texture.format not in (etc1.ETC1, etc1.ETC1A4):
             raise ValueError(f"{texture.name}: format 0x{texture.format:X}, stone is made in ETC1 only")
         alpha = texture.format == etc1.ETC1A4
-        key = (texture.name, texture.width, texture.height, texture.format, texture.size, steps, image.size)
+        key = (texture.name, texture.width, texture.height, texture.format, texture.size, rect, image.size)
         if key not in self._made:
             levels = []
             width, height = texture.width, texture.height
             while sum(len(level) for level in levels) < texture.size:
-                small = self._composite(image, steps, width, height)
+                small = self._composite(image, rect, width, height)
                 levels.append(etc1.encode(list(small.getdata()), width, height, alpha))
                 width, height = width // 2, height // 2
             pixels = b"".join(levels)
@@ -453,7 +529,7 @@ class StoneTextures:
                 raise ValueError(f"{texture.name}: {len(pixels)} bytes of levels for a texture of {texture.size}")
             self._made[key] = pixels
             if self._pack is not None:
-                large = self._composite(image, steps, max(image.width, texture.width), max(image.height, texture.height))
+                large = self._composite(image, rect, max(image.width, texture.width), max(image.height, texture.height))
                 first = pixels[:pica_texture.level_size(texture.width, texture.height, texture.format)]
                 decoded = pica_texture.decode(first, texture.width, texture.height, texture.format)
                 png = io.BytesIO()

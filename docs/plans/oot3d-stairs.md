@@ -79,12 +79,24 @@ now. User, same day: the curbs keep the game's painted curb, not the stone.
 - Collision: the treads, risers, fronts and curb tops, cut at each sloped collision piece over the
   ramp (`stairs.collision`, as for the painted fold). Nothing opens under the ramp, so walls and
   ceilings are not cut.
-- Triangles of a stair shape that are not ramps keep their own coordinates.
+- Triangles of a stair shape that are not ramps keep their own coordinates and the game's paint
+  under them: the stone goes in the widest run of step columns the flights paint, and across it in
+  the widest band of rows no other triangle of those shapes samples (`stone_rect`). Hyrule Castle's
+  `s15_kaidan_01` is an atlas: the stone takes u 0.52 to 0.93 and v 0.09 to 0.98, so the gate
+  pillars' faces and the balustrade feet keep their blocks. Desert Colossus's landings sample a
+  strip at v 0.88 to 0.98, so its stone sits in v 0.03 to 0.84. MM3D: the Observatory room 1's
+  flight sides take v 0.25 to 1 of `tenmon_step_02`, leaving the stone a quarter of the rows;
+  the Milk Bar half, the Oceanside Spider House 0.39. A triangle over a whole tile of rows (South
+  Clock Town's tower sides) meets the stone in any band and shows it. A shape with no flight
+  (Desert Colossus's `s11_kaidan_02`) is left as it is, its texture too.
 - Stair textures are found in the pack by their first level only: MM3D's pack is named by the
   texture's bytes and Azahar hashes level 0. Until this, MM3D's painted profiles were read from
   the ROM's texture, never the pack's; nine changed, the Stock Pot Inn's and Observatory room 1's
-  most. Re-walked: South Clock Town's tower flight on Painted medium, 0 to 100 in 8s
-  (`painted-mm-1`). The Inn and the Observatory were not walked again.
+  most. Re-walked on Painted medium: South Clock Town's tower flight, 0 to 100 in 8s
+  (`painted-mm-1`); 2026-11-18 (`painted-mm-inn`) the Stock Pot Inn's flight, 0 to 210 in steps
+  of 8.1 (`respawn:0xBC00,0,250,0,-90,49152`), and the Observatory room 1's four flights, -480 to
+  -133 in 8s (`respawn:0x4C00,1,265,-480,-156,32768`); the frames show lit treads and shaded
+  risers on both.
 
 Seen 2026-11-17, on the installed layers (`z3dmods run --harness --resolution 3`):
 - Kakariko's well flights, Stone medium (`stone-well-3`): from each foot to its top, the first
@@ -102,6 +114,23 @@ Seen 2026-11-17, on the installed layers (`z3dmods run --harness --resolution 3`
   walked foot to top on seven treads, 0, 11, 23, 34, 46, 57, 69, 80. Budget at 11: Kakariko 23622
   nodes (36%; Painted large 23567), Ganon's Castle 18809 (28%); MM3D Woodfall Temple 20115 of
   56080 (35%), the rest under 29%.
+
+Seen 2026-11-18:
+- Stone small at 5 (`stone-small-well`, `--option stair_steps=1`): Kakariko's first well flight
+  walked foot to top, 0, 10, 15, 25 ... 75, 80, every height a multiple of 5.
+- Stone medium elsewhere in OoT3D (`stone-tour`, `stone-tour2`; `off-tour` with the option off):
+  Hyrule Castle's gate flight (child Link is caught by the guards there, so frames are taken right
+  after a teleport, no walk), Desert Colossus's two flights walked to the temple door, Death
+  Mountain Trail's three steps, Zora's Domain's 61-step tunnel walked. Hyrule Castle's balustrade
+  copings are ramps painted with the step columns, so they step too. Ganon's Castle's flights are
+  in room 1, which a warp does not load; only its budget is checked. Temple of Time and Goron City
+  have no stair-textured ramps.
+- Hyrule Castle before `stone_rect`: the gate pillars and the balustrade feet showed stone where
+  the game paints blocks. After: they match the frame with the option off.
+- MM3D Observatory room 1 on Stone medium with the stone in a quarter of the rows
+  (`stone-mm-obs`): the four flights walked -480 to -129 in 8s, the landings keep the game's wood.
+- Not right yet: the stone has one colour for every flight, so a dark or wooden flight (Desert
+  Colossus, the Observatory) turns pale stone under its vertex colour.
 
 ## Built (2026-11-13)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine

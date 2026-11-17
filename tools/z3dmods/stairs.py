@@ -644,6 +644,9 @@ class Shape:
     extras: list[str]
     indices: list[int]
     steps: Profile
+    # The model before any shape or texture changed, and the shape's texture slot in it.
+    source: cmb.Cmb
+    texture: int
 
     def slot(self, name: str) -> int | None:
         """Where attribute `name` starts in a packed tuple; None when the shape has none."""
@@ -665,7 +668,7 @@ class Painted:
         packed = [extra[:uv_slot + 1] + (uv[1],) + extra[uv_slot + 2:] for extra, uv in zip(shape.packed, uvs)]
         return Stairs(shape.positions, packed, uvs, shape.indices, shape.steps, uv_slot).triangles()
 
-    def retexture(self, data: bytes, slot: int, steps: Profile, image: Image.Image) -> bytes:
+    def retexture(self, data: bytes, source: cmb.Cmb, slot: int, steps: Profile, image: Image.Image) -> bytes:
         return data
 
     def floor(self, pieces: list[tuple[int, list, Ramp]], drawn: list[Ramp]) -> list[tuple[int, list]]:
@@ -690,8 +693,8 @@ class Painted:
 
 def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None, style) -> tuple[bytes, list[str]]:
     """The model with every stair-textured shape drawn in `style` (Painted, or stairs_stone.Stone),
-    and the textures it stepped. `named` is the game's pattern for a stair texture's name (a set's
-    "stairs")."""
+    and the textures it stepped; a shape the style leaves as it is (triangles None) keeps its
+    texture too. `named` is the game's pattern for a stair texture's name (a set's "stairs")."""
     data = model.data
     stepped = []
     found = _stair_shapes(model, named)
@@ -712,13 +715,15 @@ def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None, style) -> tupl
         positions = current.vertices(shape, "position")[:count]
         packed = [tuple(v for column in columns for v in column[i]) for i in range(count)]
         triangles = style.triangles(Shape(current, shape_index, positions, packed, extras, current.indices(shape),
-                                          profiles[slot]))
+                                          profiles[slot], model, slot))
+        if triangles is None:
+            continue
         vertices, indices = _flat(triangles, extras)
         data = current.with_shape(shape_index, vertices, indices)
-        stepped.append(texture.name)
-    for slot in sorted({slot for _, slot in found}):
-        data = style.retexture(data, slot, profiles[slot], images[slot])
-    return data, stepped
+        stepped.append((texture.name, slot))
+    for slot in sorted({slot for _, slot in stepped}):
+        data = style.retexture(data, model, slot, profiles[slot], images[slot])
+    return data, [name for name, _ in stepped]
 
 
 def _turn(polygon) -> float:
