@@ -33,3 +33,11 @@ skeleton_draw_arg = [1]
 skeleton_model = ["SkelAnime.model"]
 skeleton_limb_count = ["SkelAnime.limbCount"]
 skeleton_joint_table = ["SkelAnime.jointTable"]
+# The fade track: the scene transition's instance while its draw is TransitionFade_Draw, the fade
+# flash, and the fill colour TransitionFade_Draw reads.
+transition = ["PlayState.transitionCtx"]
+transition_draw = ["PlayState.transitionCtx", "TransitionContext.draw"]
+fade_flash = ["PlayState.transitionFadeFlash"]
+fade_draw = ["TransitionFade_Draw"]
+fade_type = ["TransitionFade.type"]
+fade_color = ["TransitionFade.a"]

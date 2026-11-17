@@ -82,6 +82,15 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .jointTable = field(*table, "skeleton_joint_table"),
           .jointSize = field(*table, "joint_size"),
       }),
+      .fades = FadeTrack(FadeAddresses{
+          .play = field(*table, "play"),
+          .transition = field(*table, "transition"),
+          .transitionDraw = field(*table, "transition_draw"),
+          .flash = field(*table, "fade_flash"),
+          .fadeDraw = field(*table, "fade_draw"),
+          .type = field(*table, "fade_type"),
+          .color = field(*table, "fade_color"),
+      }),
   });
 }
 
@@ -148,6 +157,7 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   section.camera.sample(replay);
   section.actors.sample(replay);
   section.skeletons.sample(replay);
+  section.fades.sample(replay);
   auto inputs = section.camera.inputs(kHalfway);
   if (!inputs) {
     ++totals_.cuts;
@@ -159,6 +169,9 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   const SkeletonTrack::Counts skeletons = section.skeletons.inputs(kHalfway, *inputs);
   totals_.skeletonsPaired += skeletons.paired;
   totals_.skeletonsUnpaired += skeletons.unpaired;
+  const FadeTrack::Counts fades = section.fades.inputs(kHalfway, *inputs);
+  totals_.fadesPaired += fades.paired;
+  totals_.fadesUnpaired += fades.unpaired;
   VideoCore::GPU &gpu = emulator_.gpu();
   const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
     totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
@@ -257,7 +270,8 @@ std::string FrameInterpolation::takeReport() {
   report << " actors_paired=" << totals_.actorsPaired
          << " actors_unpaired=" << totals_.actorsUnpaired
          << " skeletons_paired=" << totals_.skeletonsPaired
-         << " skeletons_unpaired=" << totals_.skeletonsUnpaired;
+         << " skeletons_unpaired=" << totals_.skeletonsUnpaired
+         << " fades_paired=" << totals_.fadesPaired << " fades_unpaired=" << totals_.fadesUnpaired;
   if (!totals_.firstGxDifference.empty()) {
     report << " gx_first=" << totals_.firstGxDifference;
   }

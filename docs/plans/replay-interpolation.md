@@ -112,6 +112,13 @@ cuts.
   camera. A warp from Kokiri Forest to Link's house cut once and fades in cleanly
   (scratch/runs/interp-cut-1, `cut-112-117.png`). Not found yet in this build: door cuts
   (Shipwright's `Camera_Special9` timer) and cutscene shot changes (`Camera_SetCSParams`).
+- Step 4, fades: built (`app/src/fade_track`). The scene's fade-in is the transition's screen
+  fill (decomp/oot3d `docs/frame.md` "Fades"): while `transitionCtx.draw` is
+  `TransitionFade_Draw`, its fill colour is blended, and the fade flash's always; a fade pairs by
+  address and type. Warping into Link's house, the room brightens on every present (mean
+  luminance 5.0, 7.7, 10.4, 12.8 ... 46.6, 49.3, 53.6) where interpolation off holds each step
+  for two (scratch/runs/interp-fade-on `fade-54-75.png`). The first step out of black has no
+  in-between: the play state's frame count is not yet consecutive there, which cuts.
 - What still moves at 30 Hz, seen by diffing consecutive presents with the camera and Link
   still: in Link's house only the scene's fade-in (the whole room brightens on tick presents;
   after it, only Navi), in Kokiri Forest the waterfall's texture scroll and the floating light

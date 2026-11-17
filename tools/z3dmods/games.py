@@ -170,15 +170,17 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
 
 
 def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int] | None:
-    """interpolation.toml resolved: the sites are a function and a define of its offset, the rest
+    """interpolation.toml resolved: the sites are a function and a define of its offset, the functions a function, the rest
     addresses and offsets as in aim.toml, with the play state's pointer and the sizes of a GX request, an actor list's entry and a joint."""
     path = repo / "patch" / game / "interpolation.toml"
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
     sites = ("open_site", "close_site", "skeleton_draw_call")
+    functions = ("fade_draw",)
     return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites} | {
-        key: _guest_address(d, terms) for key, terms in table.items() if key not in sites} | {
+        key: symbols.function(d, table[key][0]) for key in functions} | {
+        key: _guest_address(d, terms) for key, terms in table.items() if key not in sites + functions} | {
         "play": symbols.global_(d, "gPlayState"), "request_size": symbols.size(d, "GxRequest"),
         "actor_list_size": symbols.size(d, "ActorListEntry"), "joint_size": symbols.size(d, "SkelJoint")}
 
