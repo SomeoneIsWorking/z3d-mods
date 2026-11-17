@@ -13,6 +13,7 @@
 #include "core/hle/service/cfg/cfg.h"
 #include "core/loader/loader.h"
 #include "core/memory.h"
+#include "core/section_replay.h"
 #include "video_core/gpu.h"
 #include "video_core/renderer_base.h"
 
@@ -223,7 +224,8 @@ void Emulator::codeChanged() {
 
 bool Emulator::drainAsync() {
   const auto start = std::chrono::steady_clock::now();
-  while (system_.KernelRunning() && system_.Kernel().AreAsyncOperationsPending()) {
+  while (system_.KernelRunning() &&
+         (system_.Kernel().AreAsyncOperationsPending() || system_.Replay().WindowOpen())) {
     if (std::chrono::steady_clock::now() - start > kAsyncDrainLimit) {
       lucent::warn("emulator", "guest file I/O still pending after {}s", kAsyncDrainLimit.count());
       return false;
@@ -258,6 +260,10 @@ bool Emulator::loadState(std::vector<uint8_t> state) {
     lucent::warn("emulator", "loadstate failed: {}", error.what());
     return false;
   }
+}
+
+Core::SectionReplay &Emulator::sectionReplay() {
+  return system_.Replay();
 }
 
 bool Emulator::watchWrites(uint32_t address, uint32_t size) {

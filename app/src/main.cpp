@@ -6,6 +6,7 @@
 #include "core_settings.hpp"
 #include "emulator.hpp"
 #include "folder_setup.hpp"
+#include "frame_interpolation.hpp"
 #include "game_library.hpp"
 #include "game_options.hpp"
 #include "game_window.hpp"
@@ -71,8 +72,9 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
                 config.userDir / game.options);
   ModSwap mods(emulator, (config.userDir / game.options).parent_path(), options.blockAddress());
   MouseAim aim(window, emulator, pad, link, config.userDir / game.options);
+  FrameInterpolation interpolation(emulator, config.userDir / game.options);
   if (config.hidden) {
-    Repl repl(emulator, window, pad, options, mods, aim);
+    Repl repl(emulator, window, pad, options, mods, aim, interpolation);
     std::cout << "ready\n" << std::flush;
     repl.serve(std::cin, std::cout);
     return 0;

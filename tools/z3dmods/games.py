@@ -49,6 +49,8 @@ class Layout:
     hud: dict[str, object] | None = None
     # aim.toml as the app reads it (app/src/mouse_aim.hpp): guest addresses and offsets.
     aim: dict[str, int] | None = None
+    # interpolation.toml as the app reads it (app/src/frame_interpolation.hpp): the draw section.
+    interpolation: dict[str, int] | None = None
     # CommonData.hudVisibility and its values that leave the main touch screen blank or dimmed.
     hud_visibility: int | None = None
     hud_hidden: tuple[int, ...] | None = None
@@ -84,6 +86,7 @@ def _oot3d(repo: Path, d: symbols.Decomp) -> Layout:
         camera_eye=symbols.offset(d, "PlayState.mainCamera") + symbols.offset(d, "Camera.eye"),
         hud=_hud(repo, "oot3d", d),
         aim=_aim(repo, "oot3d", d),
+        interpolation=_interpolation(repo, "oot3d", d),
     )
 
 
@@ -164,6 +167,15 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
     table = tomllib.loads((repo / "patch" / game / "aim.toml").read_text())
     return {key: _guest_address(d, terms) for key, terms in table.items()} | {
         "play": symbols.global_(d, "gPlayState"), "player": _player_list_head(d)}
+
+
+def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int] | None:
+    """interpolation.toml resolved: `call_site` is a function and a define of its offset."""
+    path = repo / "patch" / game / "interpolation.toml"
+    if not path.exists():
+        return None
+    function, offset = tomllib.loads(path.read_text())["call_site"]
+    return {"call_site": symbols.function(d, function) + d.define(offset)}
 
 
 # hud.toml's tables every button shares: the counts and when each is full, the statuses, the

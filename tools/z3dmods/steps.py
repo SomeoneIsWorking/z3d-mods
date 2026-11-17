@@ -270,7 +270,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
         elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick", "cstick", "gyro", "mouse", "device", "slot", "slotdown", "slotup", "chord",
-                      "record", "stoprecord", "option", "touch", "patch", "textures"):
+                      "record", "stoprecord", "option", "touch", "patch", "textures", "interp"):
             extra = getattr(session, kind, None)
             if extra is None:
                 raise RuntimeError(f"{kind} is not available on this backend")

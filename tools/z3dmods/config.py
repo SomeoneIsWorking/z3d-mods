@@ -92,6 +92,8 @@ UI_FONT = Path("app") / "fonts" / "OpenSans-Bold.ttf"
 APP_DATA_ENV = "Z3D_APP_DATA"
 # Names another folder of mod downloads for a test run.
 MOD_SOURCES_ENV = "Z3D_MOD_SOURCES"
+# Runs an app built elsewhere, such as against a core checkout with uncommitted changes.
+APP_BINARY_ENV = "Z3D_APP_BINARY"
 SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")
 
 
@@ -163,7 +165,7 @@ def load() -> Config:
         roms={tid: Path(path) for tid, path in local["roms"].items()},
         azahar_source=Path(local["azahar_source"]) if "azahar_source" in local else None,
         dependencies=home / "dev",
-        app_binary=REPO / "build" / "app" / "z3d",
+        app_binary=Path(os.environ.get(APP_BINARY_ENV) or REPO / "build" / "app" / "z3d"),
         app_data=Path(os.environ.get(APP_DATA_ENV) or data_home / "z3d-mods"),
         session_env=_session_env(),
         port_assets=Path(os.environ.get("PORT_ASSETS_DIR") or REPO.parent.parent / "shared" / "port-assets"),

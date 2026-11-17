@@ -1,6 +1,7 @@
 #include "repl.hpp"
 
 #include "emulator.hpp"
+#include "frame_interpolation.hpp"
 #include "game_options.hpp"
 #include "game_window.hpp"
 #include "mod_swap.hpp"
@@ -13,6 +14,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -247,6 +249,27 @@ std::string Repl::execute(const std::string &line) {
             << hit.lr;
     }
     return reply.str();
+  }
+  if (command == "interp") {
+    std::string what;
+    args >> what;
+    if (what == "report") {
+      return "ok " + interpolation_.takeReport();
+    }
+    if (what == "site") {
+      uint32_t site = 0;
+      args >> std::hex >> site;
+      return interpolation_.setCallSite(site) ? "ok" : "err interp off first";
+    }
+    const std::map<std::string, FrameInterpolation::Mode> modes = {
+        {"off", FrameInterpolation::Mode::Off},
+        {"census", FrameInterpolation::Mode::Census},
+        {"probe", FrameInterpolation::Mode::Probe}};
+    const auto mode = modes.find(what);
+    if (mode == modes.end()) {
+      return "err interp off|census|probe|report|site <address>";
+    }
+    return interpolation_.setMode(mode->second) ? "ok" : "err the game has no draw section to hook";
   }
   if (command == "frames") {
     return "ok " + std::to_string(emulator_.framesRun());

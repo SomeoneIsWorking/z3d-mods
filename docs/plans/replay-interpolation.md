@@ -14,8 +14,10 @@ cuts.
 ## What is known
 
 - OoT3D: decomp/oot3d `docs/frame.md`. `Gameplay_Update` runs the tick's logic and then
-  `Gameplay_Draw`, which builds the tick's PICA command list; the frame end waits two vblanks and
-  runs the list, and the lists are double-buffered.
+  `Gameplay_Draw`, which records the tick's draws without SVCs; the list build after it on the
+  game thread (`bl 0x418B88` in `Graph_ThreadEntry`) turns them and the HUD into the PICA list
+  and submits it as it goes (six GSP TriggerCmdReqQueue and eight ArbitrateAddress per tick); the
+  frame end waits two vblanks and runs the list, and the lists are double-buffered.
 - MM3D: not traced yet; the same engine shape is expected (`Play_Update` is named).
 
 ## Design
@@ -31,10 +33,15 @@ cuts.
    takes the list it wrote, and restores. An SVC, a GSP or HW register access inside the replay
    refuses that in-between.
 3. **The sandbox.** Every guest store during a replay is journalled and undone. Azahar's dynarmic
-   uses a fastmem page table, so stores do not pass a callback; the candidates are marking the
-   game's writable pages as special (the rasterizer-cache path, which already routes accesses
-   through the slow path) for the replay's duration, or write-protecting host pages and
-   journalling on the fault. Measured before choosing.
+   has no fastmem arena: it reads a page table of host pointers, and a null entry sends the access
+   to the slow path. The store journal (`core/store_journal`) nulls the pointers of the process's
+   writable pages; the first store to each saves the page and restores its pointer, so later
+   stores run at full speed. Cost per OoT3D tick: about 65 page copies and 8.7k loads that pass
+   the slow path before their page is first stored to; the draw runs in about 300 us of host time
+   with the journal armed, a replay with its rollback in about 480 us. The other candidate,
+   write-protecting host pages and journalling on the fault, was not built: it would also journal
+   and roll back the HLE services, DSP and GPU stores into the same memory, which a replay must
+   leave alone, and the core has no fault handler to host it.
 4. **The GPU.** The replay's list runs through the same PICA command processor into its own
    render target, then the transfer the frame end does for a real list (render target to display
    buffer) into the in-between's own present image. The display buffers the game swaps are not
@@ -63,4 +70,16 @@ cuts.
 
 ## Status
 
-Not started beyond the RE above (2026-11-17).
+- Step 1 (OoT3D census): done, decomp/oot3d `docs/frame.md` "What the draw section touches".
+- Step 2: the store journal and the replay owner (`core/section_replay`) are in the fork; the app's
+  `interp census|probe|report|site` (docs/app.md) drives them. Replaying `Gameplay_Draw` at t = 1
+  leaves every page it writes equal to the real run's in 178 of 180 ticks (the two others differ in
+  the pointer at 0x5BE20C, frame.md); from one savestate, a 6 s walk with a replay every tick ends
+  with the RNG seed, `PlayState` and the player actor byte for byte equal to the walk without.
+  The PICA list itself is not compared yet: it is written by the list build, not the draw.
+- Step 3 is blocked on the section's extent. A replay must run the draw and the list build
+  together (from `Gameplay_Update` +0xA8 to the return of `bl 0x418B88`, with the state code
+  between them), and the list build reaches the device: the sandbox has to answer its
+  ArbitrateAddress calls without the kernel and take its GSP TriggerCmdReqQueue requests (the GX
+  commands it queued in the GSP shared page) for the replay's own GPU run instead of the GPU's.
+  Neither is built. (2026-11-17)

@@ -15,6 +15,7 @@
 #include <vector>
 
 namespace Core {
+class SectionReplay;
 class System;
 }
 
@@ -76,6 +77,9 @@ public:
     return frame_;
   }
 
+  // The core's draw-section replay owner (frame_interpolation.hpp).
+  [[nodiscard]] Core::SectionReplay &sectionReplay();
+
   [[nodiscard]] bool watchWrites(uint32_t address, uint32_t size);
   void clearWatches();
   // Hits since the last call, oldest first.
@@ -85,7 +89,8 @@ private:
   // The core reaches the system it works on through Core::System::GetInstance.
   void makeCurrent();
   void step();
-  // Savestates are unsafe while kernel async operations (file I/O) are in flight.
+  // Savestates are unsafe while kernel async operations (file I/O) are in flight or a draw section
+  // runs inside a replay window.
   [[nodiscard]] bool drainAsync();
 
   std::unique_ptr<Core::System> owned_;

@@ -7,6 +7,7 @@
 namespace z3d::app {
 
 class Emulator;
+class FrameInterpolation;
 class GameWindow;
 class GameOptions;
 class ModSwap;
@@ -21,11 +22,14 @@ class PadInput;
 //   touch <x> <y> | touch off (the stylus on the 320x240 touch screen)
 //   mouse <dx> <dy> (mouse counts for the aim, mouse_aim.hpp)
 //   patch on|off | textures on|off (mod_swap.hpp)
+//   interp off|census|probe | interp report (frame_interpolation.hpp)
 class Repl {
 public:
   // `stick` values are signed 16-bit, y growing downward.
-  Repl(Emulator &emulator, GameWindow &window, PadInput &pad, GameOptions &options, ModSwap &mods, MouseAim &aim)
-      : emulator_(emulator), window_(window), pad_(pad), options_(options), mods_(mods), aim_(aim) {
+  Repl(Emulator &emulator, GameWindow &window, PadInput &pad, GameOptions &options, ModSwap &mods, MouseAim &aim,
+       FrameInterpolation &interpolation)
+      : emulator_(emulator), window_(window), pad_(pad), options_(options), mods_(mods), aim_(aim),
+        interpolation_(interpolation) {
   }
 
   void serve(std::istream &in, std::ostream &out);
@@ -40,6 +44,7 @@ private:
   GameOptions &options_;
   ModSwap &mods_;
   MouseAim &aim_;
+  FrameInterpolation &interpolation_;
   bool done_ = false;
 };
 

@@ -232,6 +232,11 @@ class HarnessSession:
         """Turns the texture pack on or off in the running game."""
         return self._send(f"textures {state}")
 
+    def interp(self, what: str, address: str = "") -> str:
+        """Frame interpolation's mode (off, census, probe), its report since the last one, or
+        `site,<address>`: a candidate section's call to hook instead of the manifest's."""
+        return self._send(f"interp {what} {int(address, 0):x}" if address else f"interp {what}")
+
     def watch(self, address: str, size: str) -> str:
         return self._send(f"watch {int(address, 0):x} {int(size, 0):x}")
 

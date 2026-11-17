@@ -1,0 +1,3 @@
+# The draw section the app replays between ticks (app/src/frame_interpolation.hpp), by the decomp's
+# names (decomp/oot3d docs/frame.md): Gameplay_Update's branch to Gameplay_Draw.
+call_site = ["Gameplay_Update", "GAMEPLAY_UPDATE_DRAW_CALL"]

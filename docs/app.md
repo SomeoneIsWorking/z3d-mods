@@ -32,6 +32,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
+| `interp off\|census\|probe\|report` / `interp site <va>` | frame interpolation's draw section (docs/plans/replay-interpolation.md): census reports its pages, SVCs and host time each tick; probe also replays it at t = 1 and compares what it wrote with the real run; `site` hooks another call while off |
 | `touch <x> <y>` / `touch off` | the stylus held at a pixel of the 320x240 touch screen, wherever the layout draws it, or lifted |
 | `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
 | `patch on` / `patch off` / `textures on` / `textures off` | swaps the running game's mods (Hotswap below) |
