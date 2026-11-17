@@ -1,4 +1,4 @@
-"""3DS ETC1 and ETC1A4 textures to RGBA rows.
+"""3DS ETC1 and ETC1A4 textures to RGBA rows, and back.
 
 PICA200 stores 4x4 ETC1 blocks as little-endian 64-bit words, ordered in 8x8 tiles of four blocks
 (left to right, top to bottom); ETC1A4 puts a 64-bit word of 4-bit alphas before each block.
@@ -63,3 +63,49 @@ def decode(data: bytes, width: int, height: int, alpha: bool) -> list[list[tuple
                     a = ((alphas >> (index * 4)) & 0xF) * 17
                     rows[by + y][bx + x] = (*rgb, a)
     return rows
+
+
+def _encode_block(texels: list[tuple[int, int, int]]) -> int:
+    """Sixteen RGB texels, index x * 4 + y, as one ETC1 word in individual mode: for each split,
+    each half's mean in 4 bits and the table that fits it best."""
+    best = None
+    for flip in (0, 1):
+        word = flip << 32
+        error = 0
+        for sub in (0, 1):
+            members = [i for i in range(16) if ((i % 4 >= 2) if flip else (i // 4 >= 2)) == bool(sub)]
+            base = [min(15, max(0, round(sum(texels[i][c] for i in members) / len(members) / 17))) for c in range(3)]
+            for c, shift in enumerate((60, 52, 44) if sub == 0 else (56, 48, 40)):
+                word |= base[c] << shift
+            base = [b * 17 for b in base]
+            choice = None
+            for table, (small, large) in enumerate(MODIFIERS):
+                options = ((small, 0, 0), (large, 1, 0), (-small, 0, 1), (-large, 1, 1))
+                bits = 0
+                total = 0
+                for i in members:
+                    found = min(options, key=lambda o: sum((_clamp(b + o[0]) - t) ** 2 for b, t in zip(base, texels[i])))
+                    total += sum((_clamp(b + found[0]) - t) ** 2 for b, t in zip(base, texels[i]))
+                    bits |= found[1] << i | found[2] << (i + 16)
+                if choice is None or total < choice[0]:
+                    choice = (total, table, bits)
+            error += choice[0]
+            word |= choice[1] << (37 if sub == 0 else 34) | choice[2]
+        if best is None or error < best[0]:
+            best = (error, word)
+    return best[1]
+
+
+def encode(pixels: list[tuple[int, int, int, int]], width: int, height: int, alpha: bool) -> bytes:
+    """RGBA texels, rows top first, as an ETC1 texture, or ETC1A4 with each alpha in 4 bits."""
+    out = bytearray()
+    for tile_y in range(0, height, 8):
+        for tile_x in range(0, width, 8):
+            for block in range(4):
+                bx = tile_x + (block & 1) * 4
+                by = tile_y + (block >> 1) * 4
+                texels = [pixels[(by + index % 4) * width + bx + index // 4] for index in range(16)]
+                if alpha:
+                    out += struct.pack("<Q", sum(((t[3] + 8) // 17) << (index * 4) for index, t in enumerate(texels)))
+                out += struct.pack("<Q", _encode_block([t[:3] for t in texels]))
+    return bytes(out)

@@ -7,7 +7,7 @@
 - `tools/z3dmods/zsi.py`: OoT3D and MM3D room files: header commands, their CMB models, replacing a model and moving what follows. Scene files: the collision's vertices and triangles, read and written.
 - `tools/z3dmods/cmb.py`: CMB models, OoT3D's version 6 and MM3D's 10: textures, materials, meshes, vertices; rewriting one shape's geometry.
 - `tools/z3dmods/lzs.py`: unpacks MM3D's LzS-wrapped game files.
-- `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding.
+- `tools/z3dmods/etc1.py`: 3DS ETC1/ETC1A4 texture decoding and encoding.
 - `tools/z3dmods/pica_texture.py`: PICA texture decoding (RGBA4444, 4-bit alpha, ETC1, ETC1A4), 4-bit alpha encoding and Azahar's custom-texture file name, by either of its hashes.
 - `tools/z3dmods/cityhash.py`: CityHash64, the hash under Azahar's texture names.
 - `tools/z3dmods/source_check.py`: a set's third-party files found among the player's mod downloads by the set's hashes (archives unpacked first), and the refusal that names a missing or different one and where to get it.
@@ -22,7 +22,8 @@
 - `tools/z3dmods/gzf.py`: MM3D's GZFX font, read and written.
 - `tools/z3dmods/qm.py`: OoT3D's QM message file, read and written, and a message's text as markup.
 - `tools/z3dmods/gmsg.py`: MM3D's GMSG message file, read and written, and a message's text as markup.
-- `tools/z3dmods/stairs.py`: folds stair-textured ramps in a game's rooms into risers and treads, and the scene's collision triangles on them the same way.
+- `tools/z3dmods/stairs.py`: stair-textured ramps in a game's rooms and the scene's collision on them, drawn in a style: `Painted` folds the painted steps into risers and treads.
+- `tools/z3dmods/stairs_stone.py`: the `Stone` style: each flight rebuilt as square steps of a chosen rise in our stone (`sets/stairs/stone.svg`), the painted curbs kept as walls, and the stone drawn into the stair texture's step columns.
 - `tools/z3dmods/bgcheck.py`: the room a scene's collision has in the game: the grid and memory `BgCheck_Allocate` gives a scene (its tables read from the code at the decomp's addresses), the list nodes the triangles take, and the limits `install` refuses a stepped scene over.
 - `tools/z3dmods/ips.py`: IPS parse, apply and build.
 - `tools/z3dmods/bps.py`: BPS info and apply, with source and target CRC checks.

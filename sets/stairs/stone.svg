@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- One stone step, tiled across in u. Top row is the riser's foot (v 1), the nose is at row 97
+       (v 0.62), the bottom row is the tread's back (v 0). -->
+  <defs>
+    <filter id="grain" x="0" y="0" width="256" height="256" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.125 0.25" numOctaves="3" seed="7" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.4 0 0 0 -0.15"/>
+    </filter>
+    <linearGradient id="riser" x1="0" y1="0" x2="0" y2="97" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7f8a7d"/>
+      <stop offset="0.12" stop-color="#9ea898"/>
+      <stop offset="1" stop-color="#aab3a3"/>
+    </linearGradient>
+    <linearGradient id="tread" x1="0" y1="97" x2="0" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dde3d5"/>
+      <stop offset="0.07" stop-color="#ccd3c4"/>
+      <stop offset="0.12" stop-color="#bfc7b7"/>
+      <stop offset="0.9" stop-color="#b9c1b1"/>
+      <stop offset="1" stop-color="#a7b09f"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="256" height="97" fill="url(#riser)"/>
+  <rect x="0" y="97" width="256" height="159" fill="url(#tread)"/>
+  <!-- Joints: the riser's blocks sit half a block off the tread's slabs. -->
+  <g fill="#6f786b">
+    <rect x="63" y="0" width="2" height="97"/>
+    <rect x="191" y="0" width="2" height="97"/>
+    <rect x="127" y="120" width="2" height="136"/>
+    <rect x="0" y="0" width="256" height="2"/>
+  </g>
+  <g fill="#8d9688">
+    <rect x="127" y="97" width="2" height="23"/>
+  </g>
+  <rect x="0" y="96" width="256" height="1.5" fill="#eef2e8"/>
+  <rect x="0" y="0" width="256" height="256" filter="url(#grain)" fill="#000"/>
+</svg>

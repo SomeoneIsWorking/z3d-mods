@@ -43,9 +43,60 @@ fix (zelda3d c90e3fb2) made it draw again; compared live at Kakariko's well flig
 (eye 403.7,224.2,780.8, at 493,139,660), zelda3d `stairsize 8`/`14` beside our Medium/Large.
 
 The painted steps run 4.5 to 13.4 units across the flights measured below, most near 8. The size
-option (`stair_size`: Off, Small 5, Medium 8, Large 14) keeps the game's own texture: `stairs.resized`
+option's Painted rows (`stair_steps`: Painted small 5, medium 8, large 14) keep the game's own texture: `stairs.resized`
 scales each flight's v about its top corner so that one painted step rises the chosen size, and the
 fold, the paint and the collision follow it. Each size is its own layer folder, built at install.
+
+## Stone steps (2026-11-17)
+User: zelda3d's stone stairs ("my babies") are the ones wanted from the start; the painted fold was
+a substitute. So the option is `stair_steps` in both games' `options.toml`: Off, Stone small 5,
+Stone medium 8 (the default), Stone large 14, Painted small, medium, large. It took a new id
+because the app keeps a choice by its index, and an old `stair_size` index would name another row
+now. User, same day: the curbs keep the game's painted curb, not the stone.
+
+`tools/z3dmods/stairs_stone.py`, written fresh from zelda3d's description (nothing copied):
+- A flight is one shape's ramp triangles that share a corner and lie in one plane (normals within
+  0.98). Its frame: uphill from the summed normal, the extent along it, across it and in height;
+  N = round(height / rise) steps. Tread k sits at the ramp's height at its front plus one step, so
+  its back meets the ramp and the last is level with the landing; a riser at the back of each tread
+  but the last; a front of one step at the foot; side caps from tread down to the ramp where the
+  flight's edge is open.
+- Across the flight, u is read from the ramp triangle under each of 256 samples along the middle
+  (strips carry their own, often mirrored, u): columns outside the texture's painted steps
+  (`Profile.first`, `last`) are curbs. A curb is a wall whose top runs on the step noses (ramp plus
+  a step, at most the landing), with an outer face down to the ramp at the flight's edge and a
+  stepped inner face above the treads beside it. It wears the game's texture at the ramp's own
+  (not resized) coordinates, continued up its sides.
+- The stone is `sets/stairs/stone.svg`, our own: one step a tile in v (tread from v 0 at its back
+  to the nose at 0.62, riser from the nose to 1 at its foot), 44 units a tile across. One texture
+  and material carry both: `StoneTextures` draws the stone into the stair texture's step columns,
+  the curb columns kept, encodes it in the texture's own ETC1 or ETC1A4 size and levels
+  (`etc1.encode`), and writes a large copy for the pack under Azahar's name for the new pixels
+  (`load/textures/<title id>/z3dmods-stairs/`). Stone faces are cut at each tile across so u stays
+  inside the step columns, two texels clear of the curbs. Vertex colour is the flight's averaged
+  colour times a shade: treads 1, risers and curb sides 0.72, side caps 0.55.
+- Collision: the treads, risers, fronts and curb tops, cut at each sloped collision piece over the
+  ramp (`stairs.collision`, as for the painted fold). Nothing opens under the ramp, so walls and
+  ceilings are not cut.
+- Triangles of a stair shape that are not ramps keep their own coordinates.
+- Stair textures are found in the pack by their first level only: MM3D's pack is named by the
+  texture's bytes and Azahar hashes level 0. Until this, MM3D's painted profiles were read from
+  the ROM's texture, never the pack's; nine changed, the Stock Pot Inn's and Observatory room 1's
+  most. Re-walked: South Clock Town's tower flight on Painted medium, 0 to 100 in 8s
+  (`painted-mm-1`). The Inn and the Observatory were not walked again.
+
+Seen 2026-11-17, on the installed layers (`z3dmods run --harness --resolution 3`):
+- Kakariko's well flights, Stone medium (`stone-well-3`): from each foot to its top, the first
+  0, 8, 16 ... 80 and the second 80, 88 ... 160, a tread level at each, no stop; the frames show
+  stone treads with the painted curb walls each side and Link on a tread. By day (`stone-well-day`,
+  `poke:0x587964,0080` before the warp sets `gSaveContext.dayTime` to noon) beside zelda3d's
+  frames: `scratch/stairs-compare/stone-vs-zelda3d.png`.
+- MM3D South Clock Town, the flight beside the tower (`stone-mm-3`): a new game in the harness's
+  copy, `respawn:0xD800,0,113,0,-660,32768` into the arrival cutscene, the same respawn again after
+  it; walked from the foot, 0, 8, 17, 25 ... 92, 100, twelve treads of 8.3.
+- Collision budget, Stone medium (printed by `install`): Kakariko 26748 of 65535 nodes (40%,
+  5079 triangles; Painted medium 27642), Ganon's Castle 20519 (31%), every other OoT3D scene
+  under 24%; MM3D Woodfall Temple 20606 of 56034 (36%), the rest under 29%.
 
 ## Built (2026-11-13)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine
@@ -172,7 +223,7 @@ fold, the paint and the collision follow it. Each size is its own layer folder, 
 ## Majora's Mask 3D (2026-11-14)
 Same owner and switch as OoT3D: `"stairs": "kaidan|step"` in `sets/mm3d.json` is the pattern a
 stair texture's name matches (OoT3D's is `kaidan`; its `*step*` textures are left alone), the
-install writes each size's stepped files to its `romfs_stairs_<size>/`, and "Stepped stairs" is in
+install writes each style and size's stepped files to its `romfs_stairs_[stone_]<size>/`, and "Stepped stairs" is in
 MM3D's options. Sizes seen 2026-11-17 (`mmsize-0`/`mmsize-3`, `respawn:0xD800,0,560,0,-180,16384`
 after the arrival cutscene): the tower flight is the flat painted ramp at Off and eight full steps
 at Large, a painted step on each.

@@ -27,6 +27,8 @@ class Layer:
     folder: str
     # Stepped stairs: how high each step rises (N64 units).
     rise: float
+    # Stepped stairs: "painted" folds the game's painted steps, "stone" builds our stone steps.
+    style: str = "painted"
 
 
 @dataclass(frozen=True)
@@ -111,6 +113,8 @@ def manifest(repo: Path, game: str, address: int, layers: set[str], link: int | 
         document["hud"] = layout.hud
     if layout.aim is not None:
         document["aim"] = layout.aim
+    if layout.interpolation is not None:
+        document["interpolation"] = layout.interpolation
     if link is not None:
         document["link"] = slot_link.manifest(link)
     return json.dumps(document, indent=2) + "\n"

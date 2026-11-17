@@ -1,4 +1,5 @@
-"""port-assets' pad glyphs as images: each SVG drawn once, large, by ImageMagick. A checkout
+"""port-assets' pad glyphs, and our stone stairs' stone (sets/stairs/), as images: each SVG drawn
+once, large, by ImageMagick. A checkout
 draws one when it first needs it; `z3dmods package` draws the whole set into the package, so a
 setup from a package needs no ImageMagick.
 """

@@ -113,7 +113,7 @@ def main() -> None:
     run.add_argument("--dump-textures", action="store_true",
                      help="harness only: every texture the game uploads, as PNG under scratch/harness/<game>/Azahar/dump/textures/")
     run.add_argument("--option", action="append", metavar="ID=VALUE",
-                     help="harness only: a game option set before boot (repeatable), e.g. stair_size=0")
+                     help="harness only: a game option set before boot (repeatable), e.g. stair_steps=0")
     run.add_argument("--language", choices=sorted(system_config.LANGUAGES),
                      help="harness only: the system language the game boots in (default: the player's)")
     run.add_argument("--resolution", type=int, default=harness.RESOLUTION,

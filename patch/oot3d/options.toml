@@ -45,13 +45,17 @@ label = "Mouse sensitivity"
 scales = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
 default = 1.0
 
-# Each size's rise in N64 units: Medium is about the painted steps' own.
+# Each size's rise in N64 units: Medium is about the painted steps' own. The stone layers are our
+# own square steps in our stone texture; the others fold the game's painted steps.
 [[option]]
-id = "stair_size"
+id = "stair_steps"
 label = "Stepped stairs"
-default = "Medium"
+default = "Stone medium"
 layers = [
-  { label = "Small", folder = "romfs_stairs_small", rise = 5.0 },
-  { label = "Medium", folder = "romfs_stairs_medium", rise = 8.0 },
-  { label = "Large", folder = "romfs_stairs_large", rise = 14.0 },
+  { label = "Stone small", folder = "romfs_stairs_stone_small", rise = 5.0, style = "stone" },
+  { label = "Stone medium", folder = "romfs_stairs_stone_medium", rise = 8.0, style = "stone" },
+  { label = "Stone large", folder = "romfs_stairs_stone_large", rise = 14.0, style = "stone" },
+  { label = "Painted small", folder = "romfs_stairs_small", rise = 5.0 },
+  { label = "Painted medium", folder = "romfs_stairs_medium", rise = 8.0 },
+  { label = "Painted large", folder = "romfs_stairs_large", rise = 14.0 },
 ]

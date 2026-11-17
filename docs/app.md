@@ -187,7 +187,7 @@ is the row that asks for the folders again (Setup above). `GameOptions` owns the
   the set's `romfs/` (`load/mods/<title id>/<folder>/`, each written by the install), by label;
   `default` names the label it starts on. The picked folder goes in the core's
   `Settings::values.romfs_layers` and the core stacks it over `romfs/` when the game loads (both
-  games' `stair_size`: Small, Medium, Large stepped stairs). The manifest leaves the option out
+  games' `stair_steps`: stone or painted stepped stairs in three sizes). The manifest leaves the option out
   unless the install wrote all its folders. Standalone Azahar never loads a layer.
 - The app's own rows follow: the screen layout, the HUD's size and opacity when the set has a
   HUD (`GameOptions::hudLook`, read by `Hud` every frame: size grows each element about the top
@@ -196,7 +196,7 @@ is the row that asks for the folders again (Setup above). `GameOptions` owns the
 - Choices are kept per game in `<user>/options/<rom name>.json`. The tools (`--hidden`) keep none
   and run every game on its defaults; a run changes one with the `option` command
   (`option:<id>,<value>` step), or before boot with `--option <id>=<value>`
-  (`z3dmods run ... --harness --option stair_size=0`), which is the only way for one that takes
+  (`z3dmods run ... --harness --option stair_steps=0`), which is the only way for one that takes
   effect at boot (a layer, the layout, the textures).
 - At boot the app applies layout and textures through `applyGameSettings` and writes the block once
   the game is loaded; `loadstate` writes it again, since a state carries the block of the run that

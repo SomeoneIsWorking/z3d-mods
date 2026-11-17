@@ -12,7 +12,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, set_inputs, source_check, stairs, symbols, text, zsi
+from z3dmods import azahar_config, bgcheck, bps, ctr, games, hud, hud_icons, ips, lzs, options, patch_build, set_inputs, source_check, stairs, stairs_stone, symbols, text, zsi
 from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.texture_pack import TexturePack
@@ -21,12 +21,13 @@ RECORD = "z3dmods-install.json"
 PAGE = 0x1000
 EXHEADER_BSS_SIZE = 0x3C
 HUD_FOLDER = "z3dmods-hud"
+STAIRS_FOLDER = "z3dmods-stairs"
 TEXT_FOLDER = "z3dmods-text"
 # The pack's variant the core shows while the player last used the keyboard (app/src/hud.cpp).
 KEYBOARD_VARIANT = Path("variants") / "keyboard"
 STAGING = ".z3dmods-new"
-# The layer option in the patch's options.toml that picks the stepped stairs' size.
-STAIRS_OPTION = "stair_size"
+# The layer option in the patch's options.toml that picks the stepped stairs' style and size.
+STAIRS_OPTION = "stair_steps"
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ class GameSet:
     # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
     screen_layout: str
     # Fold the ramps drawn with a texture whose name matches this into steps, in the folder of
-    # the patch's "stair_size" layer option.
+    # the patch's "stair_steps" layer option.
     stairs: str | None
     # The menu-texture edit table (sets/hud/): the base mod's edits redone on the texture pack's
     # copies, and the pad glyphs drawn over the game's button prompts.
@@ -168,10 +169,10 @@ def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: TexturePack | None,
                    rules: bgcheck.Rules, style) -> tuple[dict[str, bytes], dict[str, bgcheck.Use]]:
-    """Every room with stair ramps drawn in `style` (stairs.Painted), and its scene with the
-    collision on those ramps stepped; a file the base mod replaces is stepped from its copy. With
-    them, what each stepped scene's collision takes of the game's room for it; a scene over that is
-    refused."""
+    """Every room with stair ramps drawn in `style` (stairs.Painted or stairs_stone.Stone), and its
+    scene with the collision on those ramps stepped; a file the base mod replaces is stepped from
+    its copy. With them, what each stepped scene's collision takes of the game's room for it; a
+    scene over that is refused."""
     files = rom.romfs()
 
     def read(path: str) -> bytes:
@@ -227,8 +228,11 @@ def install(cfg: Config, game: GameSet) -> Path:
     # Each size of steps is a layer of its own.
     rooms: dict[str, dict[str, bytes]] = {}
     rules = bgcheck.Rules(game.patch, symbols.load(cfg.repo, game.patch), code) if game.stairs else None
+    # Every stone size wears the same stone textures.
+    stone = stairs_stone.StoneTextures(pack)
     for layer in stairs_layers:
-        rooms[layer.folder], uses = _stepped_rooms(rom, base_romfs, game.stairs, pack, rules, stairs.Painted(layer.rise))
+        style = stairs_stone.Stone(layer.rise, stone) if layer.style == "stone" else stairs.Painted(layer.rise)
+        rooms[layer.folder], uses = _stepped_rooms(rom, base_romfs, game.stairs, pack, rules, style)
         for scene, use in uses.items():
             print(f"{layer.label} {scene}: {use}")
     menus, keyboard = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
@@ -238,12 +242,12 @@ def install(cfg: Config, game: GameSet) -> Path:
     words, letters = _text(cfg, game, rom, base_romfs, pack)
 
     mods = cfg.mods_dir(game.title_id)
-    textures = cfg.textures_dir(game.title_id) if game.textures or menus or letters else None
+    textures = cfg.textures_dir(game.title_id) if game.textures or menus or letters or stone.pack_images else None
     staged = [(folder, _staging(folder)) for folder in (mods, textures) if folder is not None]
     try:
         _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], rooms, words)
         if textures is not None:
-            _build_textures(game, texture_root, menus, keyboard, letters, staged[1][1])
+            _build_textures(game, texture_root, menus, keyboard, letters, stone.pack_images, staged[1][1])
         # Every refusal comes before the first file is taken out.
         recorded = [_recorded(folder) for folder, _ in staged]
         for (folder, staging), files in zip(staged, recorded):
@@ -302,8 +306,9 @@ def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | N
 
 
 def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, bytes],
-                    keyboard: dict[str, bytes], letters: dict[str, bytes], textures: Path) -> None:
-    """The game's textures folder, whole, with its record."""
+                    keyboard: dict[str, bytes], letters: dict[str, bytes], steps: dict[str, bytes],
+                    textures: Path) -> None:
+    """The game's textures folder, whole, with its record. `steps` are the stone stairs' textures."""
     if texture_root:
         # Azahar keeps one texture per hash: ours stand in for the pack's copies of the same name.
         _copy_tree(texture_root, textures, frozenset(menus))
@@ -317,6 +322,10 @@ def _build_textures(game: GameSet, texture_root: Path | None, menus: dict[str, b
         target.write_bytes(png)
     for name, png in letters.items():
         target = textures / TEXT_FOLDER / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(png)
+    for name, png in steps.items():
+        target = textures / STAIRS_FOLDER / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(png)
     _write_record(textures, {"textures": game.textures["name"] if game.textures else "",

@@ -160,6 +160,10 @@ Each ships as the `code.ips` that rides on the set's baked `code.bin`.
   |---|---|---|---|
   | OoT3D | Arimo (variable, weight 500) | github.com/google/fonts `ofl/arimo`, `Arimo-OFL.txt` | The game's font is a plain grotesque of Helvetica's shapes; Arimo has Helvetica's metrics and Latin-1 with Œ, œ, Ÿ and € |
   | MM3D | Jost (variable, weight 600) | github.com/google/fonts `ofl/jost`, `Jost-OFL.txt` | The game's font is a geometric sans in Futura's manner (round o, pointed W, two-storey a), semi-bold; Jost is that |
+- Stepped stairs, both games, as replacement room and scene files (no code): "Stepped stairs" in
+  the options picks Stone small, medium (the default) or large, our own square steps in our own
+  stone (`sets/stairs/stone.svg`) with the painted curbs kept as walls, or Painted small, medium or
+  large, the game's painted steps folded into treads and risers: [plans/oot3d-stairs.md](plans/oot3d-stairs.md).
 - MM3D single screen: [plans/mm3d-single-screen.md](plans/mm3d-single-screen.md).
 - Fallback if The One Screen cannot be used: our own OoT3D single screen in the same patch, built from
   the Randomizer's loader and the CC0 decompilation (same plan file as MM3D's, OoT3D section).
