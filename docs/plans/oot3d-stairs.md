@@ -36,9 +36,16 @@ painted steps' own.
 User, 2026-11-17: its Medium was too big; Medium should be Large, and Small the new Medium. So
 the sizes the player wants are Medium 8 and Large 14, with a Small below 8.
 
-Ours follows each texture's painted steps (4.5 to 13.4 units across the flights measured below,
-most near 8), which matches the wanted Medium, and has no size choice. A size choice needs fixed
-rises that no longer follow the paint, so it needs the old mod's approach of its own stair texture.
+It does not build from GitHub: its ZAPDTR and StormLib submodule forks are gone (the user will not
+restore them) and its pinned Lucent commit is on no branch; it builds with those taken from upstream
+(environment-only `insteadOf`) and the Lucent commit fetched from a local checkout. Its fog-uniform
+fix (zelda3d c90e3fb2) made it draw again; compared live at Kakariko's well flight with our camera
+(eye 403.7,224.2,780.8, at 493,139,660), zelda3d `stairsize 8`/`14` beside our Medium/Large.
+
+The painted steps run 4.5 to 13.4 units across the flights measured below, most near 8. The size
+option (`stair_size`: Off, Small 5, Medium 8, Large 14) keeps the game's own texture: `stairs.resized`
+scales each flight's v about its top corner so that one painted step rises the chosen size, and the
+fold, the paint and the collision follow it. Each size is its own layer folder, built at install.
 
 ## Built (2026-11-13)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine
@@ -165,7 +172,10 @@ rises that no longer follow the paint, so it needs the old mod's approach of its
 ## Majora's Mask 3D (2026-11-14)
 Same owner and switch as OoT3D: `"stairs": "kaidan|step"` in `sets/mm3d.json` is the pattern a
 stair texture's name matches (OoT3D's is `kaidan`; its `*step*` textures are left alone), the
-install writes the stepped files to `romfs_stairs/`, and "Stepped stairs" is in MM3D's options.
+install writes each size's stepped files to its `romfs_stairs_<size>/`, and "Stepped stairs" is in
+MM3D's options. Sizes seen 2026-11-17 (`mmsize-0`/`mmsize-3`, `respawn:0xD800,0,560,0,-180,16384`
+after the arrival cutscene): the tower flight is the flat painted ramp at Off and eight full steps
+at Large, a painted step on each.
 File facts (LzS wrapping, CMB version 10, the collision header) are in decomp/mm3d
 `docs/formats/scene_files.md`.
 

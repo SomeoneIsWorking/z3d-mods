@@ -26,8 +26,9 @@ struct Option {
   std::string pad;
   // What each choice is, for an option that picks a scale (mouse_scale); empty for a switch.
   std::vector<double> scales;
-  // A folder of replacement game files the app layers in while the switch is on; empty for the others.
-  std::string layer;
+  // Folders of replacement game files: choice n + 1 layers in the nth, choice 0 none; empty for
+  // the others.
+  std::vector<std::string> layers;
 };
 
 // How our play HUD is drawn: its elements' size about their nearest corner of the top screen, and

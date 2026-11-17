@@ -25,8 +25,8 @@ TEXT_FOLDER = "z3dmods-text"
 # The pack's variant the core shows while the player last used the keyboard (app/src/hud.cpp).
 KEYBOARD_VARIANT = Path("variants") / "keyboard"
 STAGING = ".z3dmods-new"
-# The layer switch in the patch's options.toml that turns the stepped stairs on.
-STAIRS_OPTION = "stairs"
+# The layer option in the patch's options.toml that picks the stepped stairs' size.
+STAIRS_OPTION = "stair_size"
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ class GameSet:
     # The screen layout the set is made for: "single_screen" when the mod draws everything on top.
     screen_layout: str
     # Fold the ramps drawn with a texture whose name matches this into steps, in the folder of
-    # the patch's "stairs" layer switch.
+    # the patch's "stair_size" layer option.
     stairs: str | None
     # The menu-texture edit table (sets/hud/): the base mod's edits redone on the texture pack's
     # copies, and the pad glyphs drawn over the game's button prompts.
@@ -167,8 +167,8 @@ def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: 
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: TexturePack | None,
-                   rules: bgcheck.Rules) -> tuple[dict[str, bytes], dict[str, bgcheck.Use]]:
-    """Every room with stair ramps, stepped, and its scene with the collision on those ramps
+                   rules: bgcheck.Rules, rise: float) -> tuple[dict[str, bytes], dict[str, bgcheck.Use]]:
+    """Every room with stair ramps, stepped `rise` units a step, and its scene with the collision on those ramps
     stepped; a file the base mod replaces is stepped from its copy. With them, what each
     stepped scene's collision takes of the game's room for it; a scene over that is refused."""
     files = rom.romfs()
@@ -183,10 +183,10 @@ def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: Tex
         scene = stairs.scene_of(path)
         if scene is None:
             continue
-        data, stepped = stairs.room(read(path), named, pack)
+        data, stepped = stairs.room(read(path), named, pack, rise)
         if stepped:
             out[path] = data
-            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), named, pack))
+            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), named, pack, rise))
     ids = rules.scene_ids()
     uses = {}
     for scene, ramps in drawn.items():
@@ -221,13 +221,15 @@ def install(cfg: Config, game: GameSet) -> Path:
         raise RuntimeError(f"{game.title_id}: the menu textures are built on a texture pack, and the set has none")
     if game.stairs and not game.patch:
         raise RuntimeError(f"{game.title_id}: stairs want the patch whose options.toml switches them")
-    stairs_layer = options.layer(cfg.repo, game.patch, STAIRS_OPTION) if game.stairs else None
+    stairs_layers = options.layers(cfg.repo, game.patch, STAIRS_OPTION) if game.stairs else ()
     code = _apply(game.base["code_patch"], code_patch.read_bytes(), vanilla) if game.patch else vanilla
-    rooms, uses = (_stepped_rooms(rom, base_romfs, game.stairs, pack,
-                                  bgcheck.Rules(game.patch, symbols.load(cfg.repo, game.patch), code))
-                   if game.stairs else ({}, {}))
-    for scene, use in uses.items():
-        print(f"{scene}: {use}")
+    # Each size of steps is a layer of its own.
+    rooms: dict[str, dict[str, bytes]] = {}
+    rules = bgcheck.Rules(game.patch, symbols.load(cfg.repo, game.patch), code) if game.stairs else None
+    for layer in stairs_layers:
+        rooms[layer.folder], uses = _stepped_rooms(rom, base_romfs, game.stairs, pack, rules, layer.rise)
+        for scene, use in uses.items():
+            print(f"{layer.label} {scene}: {use}")
     menus, keyboard = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),
                                  cfg.glyph_set(), AppKeys(cfg))
                        if game.hud else ({}, {}))
@@ -238,7 +240,7 @@ def install(cfg: Config, game: GameSet) -> Path:
     textures = cfg.textures_dir(game.title_id) if game.textures or menus or letters else None
     staged = [(folder, _staging(folder)) for folder in (mods, textures) if folder is not None]
     try:
-        _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], stairs_layer, rooms, words)
+        _build_mods(cfg, game, rom, pack, code, root, base_romfs, staged[0][1], rooms, words)
         if textures is not None:
             _build_textures(game, texture_root, menus, keyboard, letters, staged[1][1])
         # Every refusal comes before the first file is taken out.
@@ -271,12 +273,11 @@ def _text(cfg: Config, game: GameSet, rom: ctr.Ncch, base_romfs: Path | None,
 
 
 def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | None, code: bytes, root: Path,
-                base_romfs: Path | None, mods: Path, stairs_layer: str | None, rooms: dict[str, bytes],
+                base_romfs: Path | None, mods: Path, rooms: dict[str, dict[str, bytes]],
                 words: dict[str, bytes]) -> None:
-    """The game's mods folder, whole, with its record."""
+    """The game's mods folder, whole, with its record. `rooms` are the stepped files by layer folder."""
     if game.patch:
-        _layer(cfg, game, code, (root / game.base["exheader"]).read_bytes(),
-               mods, {stairs_layer} if stairs_layer else set())
+        _layer(cfg, game, code, (root / game.base["exheader"]).read_bytes(), mods, set(rooms))
     else:
         shutil.copyfile(root / game.base["code_patch"], mods / Path(game.base["code_patch"]).name)
         shutil.copyfile(root / game.base["exheader"], mods / "exheader.bin")
@@ -290,10 +291,11 @@ def _build_mods(cfg: Config, game: GameSet, rom: ctr.Ncch, pack: TexturePack | N
         target = mods / games.HUD_ICONS / f"{item}.png"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(png)
-    for path, data in rooms.items():
-        target = mods / stairs_layer / path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(data)
+    for folder, files in rooms.items():
+        for path, data in files.items():
+            target = mods / folder / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
     _write_record(mods, {"base": game.base["name"], "patch": game.patch or "",
                          "stairs": "yes" if game.stairs else "no"})
 

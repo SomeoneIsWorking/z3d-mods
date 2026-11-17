@@ -76,6 +76,7 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
       // A switch is on or off by default; a choice of scales starts on one of them.
       std::vector<std::string> choices = switchChoices();
       std::vector<double> scales;
+      std::vector<std::string> layers;
       std::optional<int64_t> value;
       if (const lucent::json::Value *list = entry.find("scales");
           list != nullptr && list->array() != nullptr) {
@@ -89,6 +90,22 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
           choices.push_back(std::format("{}x", scales.back()));
         }
         value = fallback->integer();
+      } else if (const lucent::json::Value *list = entry.find("layers");
+                 list != nullptr && list->array() != nullptr) {
+        // Off, then each layer by its label.
+        choices.resize(1);
+        for (const lucent::json::Value &layer : *list->array()) {
+          const lucent::json::Value *name = layer.find("label");
+          const lucent::json::Value *folder = layer.find("folder");
+          if (name == nullptr || name->string() == nullptr || folder == nullptr ||
+              folder->string() == nullptr) {
+            throw std::runtime_error(manifest.string() + ": " + *id->string() +
+                                     "'s layers want a label and a folder");
+          }
+          choices.push_back(*name->string());
+          layers.push_back(*folder->string());
+        }
+        value = fallback->integer();
       } else if (fallback->boolean() != nullptr) {
         value = *fallback->boolean() ? 1 : 0;
       }
@@ -97,16 +114,14 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
                                  "'s default is not one of its choices");
       }
       const lucent::json::Value *pad = entry.find("pad");
-      const lucent::json::Value *layer = entry.find("layer");
       const bool onPad = pad != nullptr && pad->string() != nullptr;
-      const bool isLayer = layer != nullptr && layer->string() != nullptr;
-      const bool inBlock = !onPad && !isLayer;
+      const bool inBlock = !onPad && layers.empty();
       if (inBlock && blockCount_ != items_.size()) {
         throw std::runtime_error(manifest.string() + ": the patch's options come before the app's");
       }
       items_.push_back({*id->string(), *label->string(), std::move(choices),
                         static_cast<uint8_t>(*value), onPad ? *pad->string() : std::string(),
-                        std::move(scales), isLayer ? *layer->string() : std::string()});
+                        std::move(scales), std::move(layers)});
       blockCount_ += inBlock ? 1 : 0;
     }
   }
@@ -179,8 +194,8 @@ GameSetup GameOptions::setup() const {
       result.layout = static_cast<ScreenLayout>(item.value);
     } else if (item.id == kTexturesId) {
       result.customTextures = item.value != 0;
-    } else if (!item.layer.empty() && item.value != 0) {
-      result.romfsLayers.push_back(item.layer);
+    } else if (!item.layers.empty() && item.value != 0) {
+      result.romfsLayers.push_back(item.layers.at(item.value - 1));
     }
   }
   return result;

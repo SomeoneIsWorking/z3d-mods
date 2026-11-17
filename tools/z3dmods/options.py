@@ -1,9 +1,9 @@
 """A game's switches (patch/<game>/options.toml). Those with a `field` are the patch's: one byte
 each, in file order, in a block at the start of the patch's payload. Those with a `pad` are the
 app's, applied to the pad it feeds the game (app/src/pad_input.hpp); one with `scales` is a
-choice of those instead of on or off, its `default` one of them. Those with a `layer` name a
-folder of replacement game files beside the installed `romfs/`, which the app layers in while the
-switch is on. Generates the patch's `options.hpp` and the manifest the app's options
+choice of those instead of on or off, its `default` one of them. Those with `layers` are a
+choice of Off or one of their folders of replacement game files beside the installed `romfs/`,
+which the app layers in; `default` names the one it starts on. Generates the patch's `options.hpp` and the manifest the app's options
 menu reads and writes guest memory from (docs/app.md, "Options").
 """
 
@@ -21,17 +21,26 @@ MANIFEST = "z3d-options.json"
 
 
 @dataclass(frozen=True)
+class Layer:
+    label: str
+    # The folder beside the installed romfs/.
+    folder: str
+    # Stepped stairs: how high each step rises (N64 units).
+    rise: float
+
+
+@dataclass(frozen=True)
 class Option:
     id: str
     label: str
-    # On or off; for an option with scales, the scale it starts on.
-    default: bool | float
+    # On or off; for an option with scales, the scale it starts on; for one with layers, its label.
+    default: bool | float | str
     # The member of the patch's Options struct, or None for an app switch.
     field: str | None
     # What the app does to the pad for it: cstick_invert_x or cstick_invert_y.
     pad: str | None
-    # The folder in the installed mod that holds the game files it switches.
-    layer: str | None
+    # The folders in the installed mod it picks from, or empty.
+    layers: tuple[Layer, ...]
     # What the option picks from (mouse_scale: times the mouse's degrees a count), or None for a switch.
     scales: tuple[float, ...] | None = None
 
@@ -39,22 +48,25 @@ class Option:
 def load(repo: Path, game: str) -> list[Option]:
     path = repo / "patch" / game / "options.toml"
     entries = tomllib.loads(path.read_text())["option"]
-    options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad"), e.get("layer"),
+    options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad"),
+                      tuple(Layer(**layer) for layer in e.get("layers", ())),
                       tuple(e["scales"]) if "scales" in e else None)
                for e in entries]
     for option in options:
-        if sum(kind is not None for kind in (option.field, option.pad, option.layer)) != 1:
-            raise ValueError(f"{path}: {option.id} wants one of field, pad and layer")
+        if sum((option.field is not None, option.pad is not None, bool(option.layers))) != 1:
+            raise ValueError(f"{path}: {option.id} wants one of field, pad and layers")
+        if option.layers and option.default not in [layer.label for layer in option.layers]:
+            raise ValueError(f"{path}: {option.id}'s default is one of its layers' labels")
         if option.scales is not None and (option.pad is None or option.default not in option.scales):
             raise ValueError(f"{path}: {option.id}'s scales are the pad's, its default one of them")
     return options
 
 
-def layer(repo: Path, game: str, option_id: str) -> str:
-    """The folder the layer switch `option_id` turns on."""
+def layers(repo: Path, game: str, option_id: str) -> tuple[Layer, ...]:
+    """The folders the layer option `option_id` picks from."""
     for option in load(repo, game):
-        if option.id == option_id and option.layer is not None:
-            return option.layer
+        if option.id == option_id and option.layers:
+            return option.layers
     raise ValueError(f"patch/{game}/options.toml has no layer option {option_id}")
 
 
@@ -77,14 +89,16 @@ def generate(repo: Path, game: str, out: Path) -> Path:
 
 def manifest(repo: Path, game: str, address: int, layers: set[str], link: int | None, inputs: str) -> str:
     """`address` is the block's guest address: the payload's start. `layers` are the layer folders
-    this install wrote; a layer switch without its folder is left out. "screens" tells the app's
+    this install wrote; a layer option without all of its folders is left out. "screens" tells the app's
     overlay layout (app/src/screen_overlay.hpp) which touch screen is up; "inputs" is `inputs`, what
     the set was made from (set_inputs.py). `link` is where the patch keeps the item slots' block
     (slot_link.py)."""
+    # A layer option's choices are Off and its layers, in order.
     items = [{"id": o.id, "label": o.label, "default": o.default} | ({"pad": o.pad} if o.pad else {})
-             | ({"layer": o.layer} if o.layer else {})
+             | ({"layers": [{"label": layer.label, "folder": layer.folder} for layer in o.layers],
+                 "default": 1 + [layer.label for layer in o.layers].index(o.default)} if o.layers else {})
              | ({"scales": list(o.scales), "default": o.scales.index(o.default)} if o.scales else {})
-             for o in load(repo, game) if o.layer is None or o.layer in layers]
+             for o in load(repo, game) if all(layer.folder in layers for layer in o.layers)]
     document: dict[str, object] = {"address": address, "options": items,
                                    set_inputs.KEY: inputs}
     layout = games.layout(repo, game)

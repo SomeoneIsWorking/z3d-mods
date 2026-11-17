@@ -41,8 +41,13 @@ label = "Mouse sensitivity"
 scales = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
 default = 1.0
 
+# Each size's rise in N64 units: Medium is about the painted steps' own.
 [[option]]
-id = "stairs"
+id = "stair_size"
 label = "Stepped stairs"
-default = true
-layer = "romfs_stairs"
+default = "Medium"
+layers = [
+  { label = "Small", folder = "romfs_stairs_small", rise = 5.0 },
+  { label = "Medium", folder = "romfs_stairs_medium", rise = 8.0 },
+  { label = "Large", folder = "romfs_stairs_large", rise = 14.0 },
+]
