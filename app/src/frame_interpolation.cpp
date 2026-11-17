@@ -3,6 +3,7 @@
 #include "emulator.hpp"
 
 #include "core/section_replay.h"
+#include "video_core/gpu.h"
 
 #include <lucent/json.h>
 #include <lucent/log.h>
@@ -11,8 +12,24 @@
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
 namespace z3d::app {
+namespace {
+
+// The in-between's place between the previous tick and this one.
+constexpr float kHalfway = 0.5F;
+
+uint32_t field(const lucent::json::Value &table, const char *name) {
+  const lucent::json::Value *value = table.find(name);
+  const auto integer = value != nullptr ? value->integer() : std::nullopt;
+  if (!integer) {
+    throw std::runtime_error(std::string("\"interpolation\" wants \"") + name + '"');
+  }
+  return static_cast<uint32_t>(*integer);
+}
+
+} // namespace
 
 FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem::path &manifest)
     : emulator_(emulator) {
@@ -24,11 +41,28 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
   if (table == nullptr) {
     return;
   }
-  const lucent::json::Value *site = table->find("call_site");
-  if (site == nullptr || !site->integer()) {
-    throw std::runtime_error("\"interpolation\" wants \"call_site\"");
-  }
-  callSite_ = static_cast<uint32_t>(*site->integer());
+  section_.emplace(Section{
+      .open = field(*table, "open_site"),
+      .close = field(*table, "close_site"),
+      .cmdlist = GxCmdlist(emulator_,
+                           {
+                               .boundCmdlist = field(*table, "bound_cmdlist"),
+                               .requests = field(*table, "cmdlist_requests"),
+                               .requestCount = field(*table, "cmdlist_request_count"),
+                               .requestSize = field(*table, "request_size"),
+                           }),
+      .camera = CameraTrack(CameraAddresses{
+          .play = field(*table, "play"),
+          .viewEye = field(*table, "view_eye"),
+          .viewAt = field(*table, "view_at"),
+          .viewUp = field(*table, "view_up"),
+          .viewFovy = field(*table, "view_fovy"),
+          .cameras = field(*table, "cameras"),
+          .activeCamera = field(*table, "active_camera"),
+          .cameraEye = field(*table, "camera_eye"),
+          .cameraAt = field(*table, "camera_at"),
+      }),
+  });
 }
 
 FrameInterpolation::~FrameInterpolation() {
@@ -36,14 +70,16 @@ FrameInterpolation::~FrameInterpolation() {
 }
 
 bool FrameInterpolation::setMode(Mode mode) {
-  if (!callSite_) {
+  if (!section_) {
     return mode == Mode::Off;
   }
+  Section &section = *section_;
   Core::SectionReplay &replay = emulator_.sectionReplay();
   if (mode == Mode::Off) {
     replay.Uninstall();
-  } else if (mode_ == Mode::Off && !replay.Install(*callSite_, [this](Core::SectionReplay &) {
-               onSection();
+  } else if (mode_ == Mode::Off &&
+             !replay.Install(section.open, section.close, [this, &section](Core::SectionReplay &) {
+               onSection(section);
              })) {
     return false;
   }
@@ -51,16 +87,17 @@ bool FrameInterpolation::setMode(Mode mode) {
   return true;
 }
 
-bool FrameInterpolation::setCallSite(uint32_t site) {
-  if (mode_ != Mode::Off) {
-    return false;
+void FrameInterpolation::onSection(Section &section) {
+  Core::SectionReplay &replay = emulator_.sectionReplay();
+  census(replay, section);
+  if (mode_ == Mode::Probe) {
+    probe(replay, section);
+  } else if (mode_ == Mode::On) {
+    interpolate(replay, section);
   }
-  callSite_ = site;
-  return true;
 }
 
-void FrameInterpolation::onSection() {
-  Core::SectionReplay &replay = emulator_.sectionReplay();
+void FrameInterpolation::census(Core::SectionReplay &replay, Section &section) {
   const Core::SectionReplay::Census &census = replay.SectionCensus();
   ++totals_.sections;
   totals_.sectionPages += census.pages;
@@ -68,21 +105,55 @@ void FrameInterpolation::onSection() {
   totals_.sectionHeldReads += census.held_reads;
   for (const Core::SectionReplay::Svc &svc : census.svcs) {
     std::ostringstream key;
-    key << std::hex << svc.number << '@' << svc.pc;
+    key << std::hex << (svc.other_thread ? "other:" : "") << svc.number << '@' << svc.pc;
     if (!svc.service.empty()) {
-      key << ':' << svc.service << ':' << svc.header;
+      key << ':' << svc.service << ':' << svc.detail;
+    } else if (svc.address != 0) {
+      key << ':' << svc.address << ':' << svc.detail;
     }
     ++totals_.svcs[key.str()];
+  }
+  real_ = section.cmdlist.read();
+  for (const Service::GSP::Command &command : real_.commands) {
+    ++totals_.gx[static_cast<uint32_t>(command.id.Value())];
   }
   for (const VAddr page : replay.SectionPages()) {
     ++totals_.pageRegions[page >> 20];
   }
-  if (mode_ != Mode::Probe) {
+}
+
+void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &section) {
+  section.camera.sample(replay);
+  const auto inputs = section.camera.inputs(kHalfway);
+  if (!inputs) {
+    ++totals_.cuts;
     return;
   }
+  VideoCore::GPU &gpu = emulator_.gpu();
+  const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
+    totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
+  });
+  ++totals_.replays;
+  totals_.replayMicroseconds += result.host_microseconds;
+  if (!result.done) {
+    ++totals_.refused;
+    totals_.lastRefusal = result.refusal;
+    return;
+  }
+  totals_.instructions += result.instructions;
+  totals_.replayPages += result.pages;
+}
+
+void FrameInterpolation::probe(Core::SectionReplay &replay, Section &section) {
   std::vector<Core::SectionReplay::Difference> differences;
+  std::string gxDifference;
   const Core::SectionReplay::Result result = replay.Replay({}, [&] {
     differences = replay.DiffWithSection();
+    const GxOutput replayed = section.cmdlist.read();
+    gxDifference = compareGx(real_, replayed);
+    for (const std::vector<uint8_t> &list : replayed.lists) {
+      totals_.listBytes += list.size();
+    }
   });
   ++totals_.replays;
   totals_.replayMicroseconds += result.host_microseconds;
@@ -94,6 +165,11 @@ void FrameInterpolation::onSection() {
   totals_.instructions += result.instructions;
   totals_.replayPages += result.pages;
   totals_.replayHeldReads += result.held_reads;
+  if (gxDifference.empty()) {
+    ++totals_.gxIdentical;
+  } else if (totals_.firstGxDifference.empty()) {
+    totals_.firstGxDifference = gxDifference;
+  }
   bool identical = true;
   for (const Core::SectionReplay::Difference &difference : differences) {
     if (!difference.replayed) {
@@ -127,6 +203,10 @@ std::string FrameInterpolation::takeReport() {
   for (const auto &[svc, count] : totals_.svcs) {
     report << svc << '=' << count << ',';
   }
+  report << " gx=";
+  for (const auto &[id, count] : totals_.gx) {
+    report << id << ':' << count << ',';
+  }
   report << " regions=";
   for (const auto &[megabyte, count] : totals_.pageRegions) {
     report << std::hex << (megabyte << 20) << std::dec << ':' << count << ',';
@@ -141,7 +221,12 @@ std::string FrameInterpolation::takeReport() {
   }
   report << " instructions=" << totals_.instructions << " replay_pages=" << totals_.replayPages
          << " identical=" << totals_.identical << " different_pages=" << totals_.differentPages
-         << " different_bytes=" << totals_.differentBytes;
+         << " different_bytes=" << totals_.differentBytes << " gx_identical=" << totals_.gxIdentical
+         << " list_bytes=" << totals_.listBytes << " cuts=" << totals_.cuts
+         << " in_betweens=" << totals_.inBetweens;
+  if (!totals_.firstGxDifference.empty()) {
+    report << " gx_first=" << totals_.firstGxDifference;
+  }
   if (!totals_.firstDifference.empty()) {
     report << " first=" << totals_.firstDifference << " pages=";
     for (const auto &[page, bytes] : totals_.differentByPage) {

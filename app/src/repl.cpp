@@ -256,18 +256,14 @@ std::string Repl::execute(const std::string &line) {
     if (what == "report") {
       return "ok " + interpolation_.takeReport();
     }
-    if (what == "site") {
-      uint32_t site = 0;
-      args >> std::hex >> site;
-      return interpolation_.setCallSite(site) ? "ok" : "err interp off first";
-    }
     const std::map<std::string, FrameInterpolation::Mode> modes = {
         {"off", FrameInterpolation::Mode::Off},
         {"census", FrameInterpolation::Mode::Census},
-        {"probe", FrameInterpolation::Mode::Probe}};
+        {"probe", FrameInterpolation::Mode::Probe},
+        {"on", FrameInterpolation::Mode::On}};
     const auto mode = modes.find(what);
     if (mode == modes.end()) {
-      return "err interp off|census|probe|report|site <address>";
+      return "err interp off|census|probe|on|report";
     }
     return interpolation_.setMode(mode->second) ? "ok" : "err the game has no draw section to hook";
   }

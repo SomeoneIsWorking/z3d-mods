@@ -87,7 +87,9 @@
   - `pad_input`: the core's `z3d` input engine: the pad, keyboard and mouse tables (verbs and item slots in play, 3DS buttons by name elsewhere) and tool commands; the menus' pad (`MenuPad`), read by the host's button names.
   - `term_signal`: SIGTERM and SIGINT: SDL's quit event for the window's loop, and the process ended when the loop cannot take it.
   - `slot_link`: the item slots' block in the running game's patch: the held slots written in, the pad table the game wants and each slot's content read out.
-  - `frame_interpolation`: the game's draw section hooked through the core's `SectionReplay` (`patch/<game>/interpolation.toml`): census and t = 1 replay probes; the presenter is not built.
+  - `frame_interpolation`: the game's draw section hooked through the core's `SectionReplay` (`patch/<game>/interpolation.toml`): census, t = 1 probes and the in-betweens, run through the core's `GPU::RunDetached`.
+  - `camera_track`: the camera's motion track for an in-between: `View_LookAt`'s eye, at, up and fovy blended unshaken between two ticks, with the newer tick's quake, and the cuts.
+  - `gx_cmdlist`: the bound nn::gx command list's requests and PICA lists, the draw section's output, read and compared.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`), and as the camera's turn through the link block in the rest of play.
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.

@@ -266,6 +266,10 @@ Core::SectionReplay &Emulator::sectionReplay() {
   return system_.Replay();
 }
 
+VideoCore::GPU &Emulator::gpu() {
+  return system_.GPU();
+}
+
 bool Emulator::watchWrites(uint32_t address, uint32_t size) {
   return watches_->add(address, size);
 }

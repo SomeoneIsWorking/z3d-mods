@@ -14,19 +14,19 @@ cuts.
 ## What is known
 
 - OoT3D: decomp/oot3d `docs/frame.md`. `Gameplay_Update` runs the tick's logic and then
-  `Gameplay_Draw`, which records the tick's draws without SVCs; the list build after it on the
-  game thread (`bl 0x418B88` in `Graph_ThreadEntry`) turns them and the HUD into the PICA list
-  and submits it as it goes (six GSP TriggerCmdReqQueue and eight ArbitrateAddress per tick); the
-  frame end waits two vblanks and runs the list, and the lists are double-buffered.
+  `Gameplay_Draw`, which records the tick's draws without SVCs; `Graph_DrawFrame` after it on the
+  game thread turns them and the HUD into the PICA list and the bound command list's requests
+  (four lists and the two screens' display transfers); its last call, the frame end, waits the
+  vsyncs and hands the requests to the GSP. A tick's frame shows after the next tick's draw.
 - MM3D: not traced yet; the same engine shape is expected (`Play_Update` is named).
 
 ## Design
 
-1. **The draw section.** OoT3D: `Gameplay_Draw(play)` (0x2E25F0) from its call in `Gameplay_Update`; the list
-   it appends to is the bound command list, so a replay's output is the list's contents from the
-   section's start offset to its end. Still to RE: whether the section rebuilds everything it
-   draws (no append across ticks), which calls reach a device (nngx locks, GX syncs, SVCs) inside
-   it, and the HUD and the touch screen's share of the list.
+1. **The draw section.** OoT3D: from `Gameplay_Update`'s branch to `Gameplay_Draw` (+0xA8) to
+   `Graph_DrawFrame`'s call of the frame end (+0xD40), not run (`patch/oot3d/interpolation.toml`).
+   Its output is the bound command list's requests and the PICA lists they name
+   (`app/src/gx_cmdlist`). It reaches no device; its only SVCs are ArbitrateAddress signals,
+   which a replay answers without the kernel.
 2. **Running it in Azahar.** The core gets a replay owner beside the CPU: after the real tick's
    draw returns and before the frame end runs the list, it saves the ARM11 context, writes the
    blended tracks, calls the section on the game's thread with interrupts and guest time held,
@@ -42,12 +42,16 @@ cuts.
    write-protecting host pages and journalling on the fault, was not built: it would also journal
    and roll back the HLE services, DSP and GPU stores into the same memory, which a replay must
    leave alone, and the core has no fault handler to host it.
-4. **The GPU.** The replay's list runs through the same PICA command processor into its own
-   render target, then the transfer the frame end does for a real list (render target to display
-   buffer) into the in-between's own present image. The display buffers the game swaps are not
-   touched.
-5. **Pacing.** The frame end waits two vblanks per tick; the app presents the real frame on one
-   and the in-between at t = 0.5 on the other, then more at higher refresh.
+4. **The GPU.** `GPU::RunDetached` runs the replay's requests: its lists through the same PICA
+   command processor with interrupts muted and the PICA state saved and put back around them,
+   and each display transfer to a screen's display buffer into that screen's in-between image
+   (`RasterizerCache::DisplayTransferInto`), not guest memory. The display buffers the game
+   swaps are not touched. The lists draw into the game's own render target surfaces, which the
+   real lists draw over next; a render target of the replay's own is not built.
+5. **Pacing.** Each tick's frame shows on two vblanks. The in-between made from tick k's section
+   goes to the display buffer tick k will show in; the renderer shows it on the second vblank of
+   tick k - 1's frame and drops it when tick k's frame shows (`RasterizerVulkan::TakeInBetween`),
+   so the presents run k - 1, in-between, k at 60 Hz. Higher refresh is not built.
 6. **Motion tracks.** Camera from the inputs `View_LookAt` (0x2D77DC) takes (eye, at, up) and the
    fov, blended unshaken with the new tick's quake added; actors by world position and rotation
    keyed by their address and the actor list's liveness; skeletons by joint matrices after the
@@ -72,14 +76,21 @@ cuts.
 
 - Step 1 (OoT3D census): done, decomp/oot3d `docs/frame.md` "What the draw section touches".
 - Step 2: the store journal and the replay owner (`core/section_replay`) are in the fork; the app's
-  `interp census|probe|report|site` (docs/app.md) drives them. Replaying `Gameplay_Draw` at t = 1
-  leaves every page it writes equal to the real run's in 178 of 180 ticks (the two others differ in
-  the pointer at 0x5BE20C, frame.md); from one savestate, a 6 s walk with a replay every tick ends
-  with the RNG seed, `PlayState` and the player actor byte for byte equal to the walk without.
-  The PICA list itself is not compared yet: it is written by the list build, not the draw.
-- Step 3 is blocked on the section's extent. A replay must run the draw and the list build
-  together (from `Gameplay_Update` +0xA8 to the return of `bl 0x418B88`, with the state code
-  between them), and the list build reaches the device: the sandbox has to answer its
-  ArbitrateAddress calls without the kernel and take its GSP TriggerCmdReqQueue requests (the GX
-  commands it queued in the GSP shared page) for the replay's own GPU run instead of the GPU's.
-  Neither is built. (2026-11-17)
+  `interp census|probe|on|report` (docs/app.md) drives them. From one savestate, a 6 s walk with a
+  replay every tick ends with the RNG seed, `PlayState` and the player actor byte for byte equal
+  to the walk without (measured when the section ended at `Gameplay_Draw`'s return).
+- Step 3 (OoT3D): done. The section runs to the frame end call. At t = 1 the replay's requests
+  and PICA lists equal the real ones byte for byte in 180 of 180 ticks of a Kokiri Forest walk
+  (35.9 MB of lists, run `interp-probe-kf`). Its memory differs from the real run's in three
+  places: the DSP parameter counter at 0x54AB60 (written by SendParameterToDsp about 160 times a
+  second, the sound thread's), the pool head at 0x5BE20C (frame.md) and the page at 0x15A0A3C8
+  (FUN_00407518, about 200 writes a second). The last two are put down to other threads by their
+  write rate, not proven; the comparison is per page, not per byte. With `interp on` in Kokiri Forest with the camera turning
+  (C-stick, free camera), every present differs from the one before, and the in-betweens sit
+  halfway: the far wall moves 3.5, 3.5, 5.5, 5.5 pixels per present where interpolation off
+  moves 0, 10.5 (scratch/runs/interp-kf-4 `on/`, `off1/`, crops `on-crops-6-10.png` and
+  `off-crops-6-10.png`). The logic rate is unchanged: `PlayState.state.frames` advances 120 in
+  4 s off and 120 in 4 s on. Cost in Kokiri Forest: a replay is about 0.9M instructions and
+  about 2 ms of host time with the list run. Actors and skeletons still move at 30 Hz, and the
+  replay draws into the game's own render target surfaces (Design 4).
+  (2026-11-18)

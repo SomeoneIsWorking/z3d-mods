@@ -170,12 +170,16 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
 
 
 def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int] | None:
-    """interpolation.toml resolved: `call_site` is a function and a define of its offset."""
+    """interpolation.toml resolved: the sites are a function and a define of its offset, the rest
+    addresses and offsets as in aim.toml, with the play state's pointer and a GX request's size."""
     path = repo / "patch" / game / "interpolation.toml"
     if not path.exists():
         return None
-    function, offset = tomllib.loads(path.read_text())["call_site"]
-    return {"call_site": symbols.function(d, function) + d.define(offset)}
+    table = tomllib.loads(path.read_text())
+    sites = ("open_site", "close_site")
+    return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites} | {
+        key: _guest_address(d, terms) for key, terms in table.items() if key not in sites} | {
+        "play": symbols.global_(d, "gPlayState"), "request_size": symbols.size(d, "GxRequest")}
 
 
 # hud.toml's tables every button shares: the counts and when each is full, the statuses, the

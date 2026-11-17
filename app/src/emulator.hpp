@@ -18,6 +18,9 @@ namespace Core {
 class SectionReplay;
 class System;
 }
+namespace VideoCore {
+class GPU;
+}
 
 namespace z3d::app {
 
@@ -79,6 +82,7 @@ public:
 
   // The core's draw-section replay owner (frame_interpolation.hpp).
   [[nodiscard]] Core::SectionReplay &sectionReplay();
+  [[nodiscard]] VideoCore::GPU &gpu();
 
   [[nodiscard]] bool watchWrites(uint32_t address, uint32_t size);
   void clearWatches();

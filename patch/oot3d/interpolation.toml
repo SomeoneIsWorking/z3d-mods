@@ -1,3 +1,19 @@
-# The draw section the app replays between ticks (app/src/frame_interpolation.hpp), by the decomp's
-# names (decomp/oot3d docs/frame.md): Gameplay_Update's branch to Gameplay_Draw.
-call_site = ["Gameplay_Update", "GAMEPLAY_UPDATE_DRAW_CALL"]
+# The draw section the app replays (docs/plans/replay-interpolation.md), from Gameplay_Update's
+# branch to Gameplay_Draw to Graph_DrawFrame's call of the frame end (decomp/oot3d docs/frame.md),
+# each a function and a define of its offset.
+open_site = ["Gameplay_Update", "GAMEPLAY_UPDATE_DRAW_CALL"]
+close_site = ["Graph_DrawFrame", "GRAPH_DRAW_FRAME_END_CALL"]
+# The section's output: the requests of the bound nn::gx command list, which the frame end runs.
+bound_cmdlist = ["gNngxState", "NngxState.boundCmdlist"]
+cmdlist_requests = ["GxCmdlist.requests"]
+cmdlist_request_count = ["GxCmdlist.requestCount"]
+# The camera track: View_LookAt's inputs in the play state's view, and the active camera's eye and
+# at, which carry no quake offset.
+view_eye = ["PlayState.view", "View.eye"]
+view_at = ["PlayState.view", "View.lookAt"]
+view_up = ["PlayState.view", "View.up"]
+view_fovy = ["PlayState.view", "View.fovy"]
+cameras = ["PlayState.cameraPtrs"]
+active_camera = ["PlayState.activeCamera"]
+camera_eye = ["Camera.eye"]
+camera_at = ["Camera.at"]
