@@ -112,6 +112,12 @@ cuts.
   camera. A warp from Kokiri Forest to Link's house cut once and fades in cleanly
   (scratch/runs/interp-cut-1, `cut-112-117.png`). Not found yet in this build: door cuts
   (Shipwright's `Camera_Special9` timer) and cutscene shot changes (`Camera_SetCSParams`).
+- What still moves at 30 Hz, seen by diffing consecutive presents with the camera and Link
+  still: in Link's house only the scene's fade-in (the whole room brightens on tick presents;
+  after it, only Navi), in Kokiri Forest the waterfall's texture scroll and the floating light
+  motes (scratch/runs/interp-idle-1 `idle-diff.png`: tick-to-in-between change on the left,
+  in-between-to-tick on the right). Their owners in this build (the fade's state, the room
+  model's texture animation, the motes' actor or effect pool) are not traced yet.
   Not built: pools, texture
   scroll, the remaining declared cuts, the replay's
   own render target, MM3D and the option. (2026-11-18)
