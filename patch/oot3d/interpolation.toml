@@ -7,6 +7,8 @@ close_site = ["Graph_DrawFrame", "GRAPH_DRAW_FRAME_END_CALL"]
 bound_cmdlist = ["gNngxState", "NngxState.boundCmdlist"]
 cmdlist_requests = ["GxCmdlist.requests"]
 cmdlist_request_count = ["GxCmdlist.requestCount"]
+# A play state started again (scene change, warp, respawn) restarts its frame count: a cut.
+play_frames = ["PlayState.state", "GameState.frames"]
 # The camera track: View_LookAt's inputs in the play state's view, and the active camera's eye and
 # at, which carry no quake offset.
 view_eye = ["PlayState.view", "View.eye"]
@@ -25,3 +27,9 @@ actor_next = ["Actor.next"]
 actor_id = ["Actor.id"]
 actor_position = ["Actor.world", "PosRot.pos"]
 actor_shape_rotation = ["Actor.shape", "ActorShape.rot"]
+# The skeleton track: the skeletons SkelAnime_DrawOpa queues (its r1), and their joint tables.
+skeleton_draw_call = ["SkelAnime_DrawOpa", "SKELANIME_DRAW_OPA_QUEUE_CALL"]
+skeleton_draw_arg = [1]
+skeleton_model = ["SkelAnime.model"]
+skeleton_limb_count = ["SkelAnime.limbCount"]
+skeleton_joint_table = ["SkelAnime.jointTable"]

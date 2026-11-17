@@ -53,6 +53,7 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
                            }),
       .camera = CameraTrack(CameraAddresses{
           .play = field(*table, "play"),
+          .frames = field(*table, "play_frames"),
           .viewEye = field(*table, "view_eye"),
           .viewAt = field(*table, "view_at"),
           .viewUp = field(*table, "view_up"),
@@ -73,6 +74,14 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .position = field(*table, "actor_position"),
           .shapeRotation = field(*table, "actor_shape_rotation"),
       }),
+      .skeletons = SkeletonTrack(SkeletonAddresses{
+          .drawCall = field(*table, "skeleton_draw_call"),
+          .drawArg = field(*table, "skeleton_draw_arg"),
+          .model = field(*table, "skeleton_model"),
+          .limbCount = field(*table, "skeleton_limb_count"),
+          .jointTable = field(*table, "skeleton_joint_table"),
+          .jointSize = field(*table, "joint_size"),
+      }),
   });
 }
 
@@ -88,10 +97,12 @@ bool FrameInterpolation::setMode(Mode mode) {
   Core::SectionReplay &replay = emulator_.sectionReplay();
   if (mode == Mode::Off) {
     replay.Uninstall();
-  } else if (mode_ == Mode::Off &&
-             !replay.Install(section.open, section.close, [this, &section](Core::SectionReplay &) {
-               onSection(section);
-             })) {
+  } else if (mode_ == Mode::Off && (!replay.Install(section.open, section.close,
+                                                    [this, &section](Core::SectionReplay &) {
+                                                      onSection(section);
+                                                    }) ||
+                                    !replay.Observe(section.skeletons.drawCall()))) {
+    replay.Uninstall();
     return false;
   }
   mode_ = mode;
@@ -136,6 +147,7 @@ void FrameInterpolation::census(Core::SectionReplay &replay, Section &section) {
 void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &section) {
   section.camera.sample(replay);
   section.actors.sample(replay);
+  section.skeletons.sample(replay);
   auto inputs = section.camera.inputs(kHalfway);
   if (!inputs) {
     ++totals_.cuts;
@@ -144,6 +156,9 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   const ActorTrack::Counts actors = section.actors.inputs(kHalfway, *inputs);
   totals_.actorsPaired += actors.paired;
   totals_.actorsUnpaired += actors.unpaired;
+  const SkeletonTrack::Counts skeletons = section.skeletons.inputs(kHalfway, *inputs);
+  totals_.skeletonsPaired += skeletons.paired;
+  totals_.skeletonsUnpaired += skeletons.unpaired;
   VideoCore::GPU &gpu = emulator_.gpu();
   const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
     totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
@@ -240,7 +255,9 @@ std::string FrameInterpolation::takeReport() {
          << " list_bytes=" << totals_.listBytes << " cuts=" << totals_.cuts
          << " in_betweens=" << totals_.inBetweens;
   report << " actors_paired=" << totals_.actorsPaired
-         << " actors_unpaired=" << totals_.actorsUnpaired;
+         << " actors_unpaired=" << totals_.actorsUnpaired
+         << " skeletons_paired=" << totals_.skeletonsPaired
+         << " skeletons_unpaired=" << totals_.skeletonsUnpaired;
   if (!totals_.firstGxDifference.empty()) {
     report << " gx_first=" << totals_.firstGxDifference;
   }

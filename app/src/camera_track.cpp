@@ -15,6 +15,7 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
     current_.reset();
     return;
   }
+  sample.frames = readStart<uint32_t>(replay, sample.play + addresses_.frames);
   const auto active = readStart<int16_t>(replay, sample.play + addresses_.activeCamera);
   if (active < 0 || active >= 4) {
     previous_.reset();
@@ -37,7 +38,8 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
 
 std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float t) const {
   if (!previous_ || !current_ || previous_->play != current_->play ||
-      previous_->camera != current_->camera || current_->camera == 0) {
+      previous_->frames + 1 != current_->frames || previous_->camera != current_->camera ||
+      current_->camera == 0) {
     return std::nullopt;
   }
   const Sample &from = *previous_;

@@ -100,7 +100,18 @@ cuts.
   unpaired actor draws as it is. In Kokiri Forest about 95 actors pair a tick, none unpaired.
   Link turning from facing right to facing the camera shows a three-quarter view on the
   in-between where interpolation off jumps straight across (scratch/runs/interp-actors-2,
-  `turn-zoom-0-4.png` against `off-zoom-0-4.png`). Not built: skeletons (posed in the update into
-  `SkelAnime.jointTable`, whose format is not traced; limbs still move at 30 Hz), pools, texture
-  scroll, the game's declared cuts (only a play state or camera change cuts now), the replay's
+  `turn-zoom-0-4.png` against `off-zoom-0-4.png`).
+- Step 4, skeletons: built (`app/src/skeleton_track`). The core records the real section's calls
+  through `SkelAnime_DrawOpa`'s queue call (`SectionReplay::Observe`); each skeleton drawn in
+  both ticks, paired by address, model, joint table and limb count, has its joints blended as a
+  unit (rotation slerped, translation straight). About 6 skeletons a tick in Kokiri Forest, none
+  unpaired. Link walking: every present has its own leg pose, where interpolation off repeats each
+  pose twice (scratch/runs/interp-skel-1, `walk-zoom-20-25.png` against `off-zoom-20-25.png`).
+- Step 4, cuts: a play state started again (`GameState.frames` not one on from the previous
+  tick's: a scene change, warp or respawn) holds the interval, as do another play state or
+  camera. A warp from Kokiri Forest to Link's house cut once and fades in cleanly
+  (scratch/runs/interp-cut-1, `cut-112-117.png`). Not found yet in this build: door cuts
+  (Shipwright's `Camera_Special9` timer) and cutscene shot changes (`Camera_SetCSParams`).
+  Not built: pools, texture
+  scroll, the remaining declared cuts, the replay's
   own render target, MM3D and the option. (2026-11-18)

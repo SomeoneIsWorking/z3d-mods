@@ -7,6 +7,7 @@
 
 #include "actor_track.hpp"
 #include "camera_track.hpp"
+#include "skeleton_track.hpp"
 #include "gx_cmdlist.hpp"
 
 #include <cstdint>
@@ -49,6 +50,7 @@ private:
     GxCmdlist cmdlist;
     CameraTrack camera;
     ActorTrack actors;
+    SkeletonTrack skeletons;
   };
 
   void onSection(Section &section);
@@ -96,6 +98,8 @@ private:
     uint64_t inBetweens = 0;
     uint64_t actorsPaired = 0;
     uint64_t actorsUnpaired = 0;
+    uint64_t skeletonsPaired = 0;
+    uint64_t skeletonsUnpaired = 0;
   };
   Totals totals_;
 };

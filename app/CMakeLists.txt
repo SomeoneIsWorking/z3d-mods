@@ -40,6 +40,7 @@ add_executable(z3d
   src/emulator.cpp
   src/actor_track.cpp
   src/camera_track.cpp
+  src/skeleton_track.cpp
   src/frame_interpolation.cpp
   src/gx_cmdlist.cpp
   src/frame.cpp
