@@ -1,26 +1,11 @@
 #include "camera_track.hpp"
 
+#include "motion_blend.hpp"
+#include "section_memory.hpp"
+
 #include <cmath>
-#include <cstring>
 
 namespace z3d::app {
-namespace {
-
-template <class T> T readStart(Core::SectionReplay &replay, uint32_t address) {
-  T value{};
-  std::array<uint8_t, sizeof(T)> bytes{};
-  replay.ReadStart(address, bytes);
-  std::memcpy(&value, bytes.data(), sizeof(T));
-  return value;
-}
-
-template <class T> Core::SectionReplay::Input input(uint32_t address, const T &value) {
-  std::vector<uint8_t> bytes(sizeof(T));
-  std::memcpy(bytes.data(), &value, sizeof(T));
-  return {address, std::move(bytes)};
-}
-
-} // namespace
 
 void CameraTrack::sample(Core::SectionReplay &replay) {
   Sample sample;
@@ -57,34 +42,26 @@ std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float
   }
   const Sample &from = *previous_;
   const Sample &to = *current_;
-  const auto lerp = [t](float a, float b) {
-    return a + (b - a) * t;
-  };
   // The unshaken point between the ticks, shaken by the newer tick's quake offset.
   const auto shaken = [&](const Vec3 &fromCamera, const Vec3 &toCamera, const Vec3 &toView) {
-    Vec3 out{};
-    for (std::size_t i = 0; i < 3; ++i) {
-      out[i] = lerp(fromCamera[i], toCamera[i]) + (toView[i] - toCamera[i]);
+    Vec3 out = lerp(fromCamera, toCamera, t);
+    for (std::size_t i = 0; i < out.size(); ++i) {
+      out[i] += toView[i] - toCamera[i];
     }
     return out;
   };
-  Vec3 up{};
-  float length = 0.0F;
-  for (std::size_t i = 0; i < 3; ++i) {
-    up[i] = lerp(from.viewUp[i], to.viewUp[i]);
-    length += up[i] * up[i];
-  }
-  length = std::sqrt(length);
+  Vec3 up = lerp(from.viewUp, to.viewUp, t);
+  const float length = std::sqrt(up[0] * up[0] + up[1] * up[1] + up[2] * up[2]);
   if (length > 0.0F) {
     for (float &component : up) {
       component /= length;
     }
   }
   return std::vector<Core::SectionReplay::Input>{
-      input(to.play + addresses_.viewEye, shaken(from.cameraEye, to.cameraEye, to.viewEye)),
-      input(to.play + addresses_.viewAt, shaken(from.cameraAt, to.cameraAt, to.viewAt)),
-      input(to.play + addresses_.viewUp, up),
-      input(to.play + addresses_.viewFovy, lerp(from.fovy, to.fovy)),
+      replayInput(to.play + addresses_.viewEye, shaken(from.cameraEye, to.cameraEye, to.viewEye)),
+      replayInput(to.play + addresses_.viewAt, shaken(from.cameraAt, to.cameraAt, to.viewAt)),
+      replayInput(to.play + addresses_.viewUp, up),
+      replayInput(to.play + addresses_.viewFovy, lerp(from.fovy, to.fovy, t)),
   };
 }
 

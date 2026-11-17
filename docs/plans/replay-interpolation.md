@@ -94,3 +94,13 @@ cuts.
   about 2 ms of host time with the list run. Actors and skeletons still move at 30 Hz, and the
   replay draws into the game's own render target surfaces (Design 4).
   (2026-11-18)
+- Step 4 (OoT3D), actors: built (`app/src/actor_track`). Each live actor in the 12 actor lists
+  pairs by address and id across two ticks and its `world.pos` and `shape.rot`, which
+  `Actor_Draw` builds the model matrix from (frame.md "Actors in the draw"), are blended; an
+  unpaired actor draws as it is. In Kokiri Forest about 95 actors pair a tick, none unpaired.
+  Link turning from facing right to facing the camera shows a three-quarter view on the
+  in-between where interpolation off jumps straight across (scratch/runs/interp-actors-2,
+  `turn-zoom-0-4.png` against `off-zoom-0-4.png`). Not built: skeletons (posed in the update into
+  `SkelAnime.jointTable`, whose format is not traced; limbs still move at 30 Hz), pools, texture
+  scroll, the game's declared cuts (only a play state or camera change cuts now), the replay's
+  own render target, MM3D and the option. (2026-11-18)

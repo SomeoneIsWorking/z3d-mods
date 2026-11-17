@@ -62,6 +62,17 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .cameraEye = field(*table, "camera_eye"),
           .cameraAt = field(*table, "camera_at"),
       }),
+      .actors = ActorTrack(ActorAddresses{
+          .play = field(*table, "play"),
+          .lists = field(*table, "actor_lists"),
+          .listCount = field(*table, "actor_list_count"),
+          .listSize = field(*table, "actor_list_size"),
+          .listHead = field(*table, "actor_list_head"),
+          .next = field(*table, "actor_next"),
+          .id = field(*table, "actor_id"),
+          .position = field(*table, "actor_position"),
+          .shapeRotation = field(*table, "actor_shape_rotation"),
+      }),
   });
 }
 
@@ -124,11 +135,15 @@ void FrameInterpolation::census(Core::SectionReplay &replay, Section &section) {
 
 void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &section) {
   section.camera.sample(replay);
-  const auto inputs = section.camera.inputs(kHalfway);
+  section.actors.sample(replay);
+  auto inputs = section.camera.inputs(kHalfway);
   if (!inputs) {
     ++totals_.cuts;
     return;
   }
+  const ActorTrack::Counts actors = section.actors.inputs(kHalfway, *inputs);
+  totals_.actorsPaired += actors.paired;
+  totals_.actorsUnpaired += actors.unpaired;
   VideoCore::GPU &gpu = emulator_.gpu();
   const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
     totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
@@ -224,6 +239,8 @@ std::string FrameInterpolation::takeReport() {
          << " different_bytes=" << totals_.differentBytes << " gx_identical=" << totals_.gxIdentical
          << " list_bytes=" << totals_.listBytes << " cuts=" << totals_.cuts
          << " in_betweens=" << totals_.inBetweens;
+  report << " actors_paired=" << totals_.actorsPaired
+         << " actors_unpaired=" << totals_.actorsUnpaired;
   if (!totals_.firstGxDifference.empty()) {
     report << " gx_first=" << totals_.firstGxDifference;
   }

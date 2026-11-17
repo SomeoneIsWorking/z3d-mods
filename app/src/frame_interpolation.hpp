@@ -5,6 +5,7 @@
 // shows on the vblank before the tick's own frame.
 #pragma once
 
+#include "actor_track.hpp"
 #include "camera_track.hpp"
 #include "gx_cmdlist.hpp"
 
@@ -47,6 +48,7 @@ private:
     uint32_t close;
     GxCmdlist cmdlist;
     CameraTrack camera;
+    ActorTrack actors;
   };
 
   void onSection(Section &section);
@@ -92,6 +94,8 @@ private:
     std::string firstGxDifference;
     uint64_t cuts = 0;
     uint64_t inBetweens = 0;
+    uint64_t actorsPaired = 0;
+    uint64_t actorsUnpaired = 0;
   };
   Totals totals_;
 };

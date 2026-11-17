@@ -4,6 +4,7 @@
 #pragma once
 
 #include "core/section_replay.h"
+#include "motion_blend.hpp"
 
 #include <array>
 #include <cstdint>
@@ -37,7 +38,6 @@ public:
   [[nodiscard]] std::optional<std::vector<Core::SectionReplay::Input>> inputs(float t) const;
 
 private:
-  using Vec3 = std::array<float, 3>;
   struct Sample {
     uint32_t play = 0;
     uint32_t camera = 0;
