@@ -167,10 +167,11 @@ def _layer(cfg: Config, game: GameSet, code: bytes, base_exheader: bytes, mods: 
 
 
 def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: TexturePack | None,
-                   rules: bgcheck.Rules, rise: float) -> tuple[dict[str, bytes], dict[str, bgcheck.Use]]:
-    """Every room with stair ramps, stepped `rise` units a step, and its scene with the collision on those ramps
-    stepped; a file the base mod replaces is stepped from its copy. With them, what each
-    stepped scene's collision takes of the game's room for it; a scene over that is refused."""
+                   rules: bgcheck.Rules, style) -> tuple[dict[str, bytes], dict[str, bgcheck.Use]]:
+    """Every room with stair ramps drawn in `style` (stairs.Painted), and its scene with the
+    collision on those ramps stepped; a file the base mod replaces is stepped from its copy. With
+    them, what each stepped scene's collision takes of the game's room for it; a scene over that is
+    refused."""
     files = rom.romfs()
 
     def read(path: str) -> bytes:
@@ -183,14 +184,14 @@ def _stepped_rooms(rom: ctr.Ncch, base_romfs: Path | None, named: str, pack: Tex
         scene = stairs.scene_of(path)
         if scene is None:
             continue
-        data, stepped = stairs.room(read(path), named, pack, rise)
+        data, stepped = stairs.room(read(path), named, pack, style)
         if stepped:
             out[path] = data
-            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), named, pack, rise))
+            drawn.setdefault(scene, []).extend(stairs.room_ramps(read(path), named, pack, style.rise))
     ids = rules.scene_ids()
     uses = {}
     for scene, ramps in drawn.items():
-        data = stairs.collision(zsi.Scene.parse(read(scene)), ramps)
+        data = stairs.collision(zsi.Scene.parse(read(scene)), ramps, style)
         if data is None:
             continue
         if scene not in ids:
@@ -227,7 +228,7 @@ def install(cfg: Config, game: GameSet) -> Path:
     rooms: dict[str, dict[str, bytes]] = {}
     rules = bgcheck.Rules(game.patch, symbols.load(cfg.repo, game.patch), code) if game.stairs else None
     for layer in stairs_layers:
-        rooms[layer.folder], uses = _stepped_rooms(rom, base_romfs, game.stairs, pack, rules, layer.rise)
+        rooms[layer.folder], uses = _stepped_rooms(rom, base_romfs, game.stairs, pack, rules, stairs.Painted(layer.rise))
         for scene, use in uses.items():
             print(f"{layer.label} {scene}: {use}")
     menus, keyboard = (hud.build(rom.romfs(), base_romfs, pack, cfg.repo / "sets" / game.hud, cfg.key_font(),

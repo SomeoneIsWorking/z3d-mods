@@ -531,6 +531,8 @@ class Ramp:
     # The convex piece of the ramp this triangle's plane and texture frame hold for, seen from
     # above: the triangle itself, or it joined with its neighbours.
     outline: tuple[tuple[float, float, float], ...] = ()
+    # The model and shape it is drawn in: a flight never spans two shapes.
+    shape: tuple[str, int] = ("", 0)
 
     def edge(self) -> tuple[tuple[float, float, float], ...]:
         return self.outline or self.positions
@@ -607,29 +609,96 @@ class Ramp:
         return min(xs), min(zs), max(xs), max(zs)
 
 
-def ramps(model: cmb.Cmb, named: str, pack: TexturePack | None, rise: float) -> list[Ramp]:
-    """Every ramp triangle `rebuild` steps, its painted steps `rise` units high."""
+def shape_ramps(model: cmb.Cmb, shape_index: int, steps: Profile, rise: float) -> list[tuple[list[int], Ramp]]:
+    """A stair shape's ramp triangles, each with its corners' indices, its painted steps `rise`
+    units high."""
+    shape = model.shapes[shape_index]
+    positions = model.vertices(shape, "position")
+    indices = model.indices(shape)
+    uvs = resized(positions, model.vertices(shape, "tex0"), indices, steps, rise)
     out = []
-    for shape_index, slot in _stair_shapes(model, named):
-        shape = model.shapes[shape_index]
-        steps = profile(texture_image(model, model.textures[slot], pack))
-        positions = model.vertices(shape, "position")
-        indices = model.indices(shape)
-        uvs = resized(positions, model.vertices(shape, "tex0"), indices, steps, rise)
-        for i in range(0, len(indices) - 2, 3):
-            corners = tuple(positions[j] for j in indices[i:i + 3])
-            coordinates = tuple(uvs[j] for j in indices[i:i + 3])
-            if _climb(list(corners), [uv[1] for uv in coordinates], steps) is not None:
-                out.append(Ramp(corners, coordinates, steps))
+    for i in range(0, len(indices) - 2, 3):
+        tri = indices[i:i + 3]
+        corners = tuple(positions[j] for j in tri)
+        coordinates = tuple(uvs[j] for j in tri)
+        if _climb(list(corners), [uv[1] for uv in coordinates], steps) is not None:
+            out.append((tri, Ramp(corners, coordinates, steps, shape=(model.name, shape_index))))
     return out
 
 
-def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None, rise: float) -> tuple[bytes, list[str]]:
-    """The model with every stair-textured shape stepped `rise` units a step, and the textures it
-    stepped. `named` is the game's pattern for a stair texture's name (a set's "stairs")."""
+def ramps(model: cmb.Cmb, named: str, pack: TexturePack | None, rise: float) -> list[Ramp]:
+    """Every ramp triangle `rebuild` steps, its painted steps `rise` units high."""
+    return [ramp for shape_index, slot in _stair_shapes(model, named)
+            for _, ramp in shape_ramps(model, shape_index, profile(texture_image(model, model.textures[slot], pack)), rise)]
+
+
+@dataclass(frozen=True)
+class Shape:
+    """One stair shape as `rebuild` reads it, for a style to draw anew."""
+
+    model: cmb.Cmb
+    index: int
+    positions: list[tuple[float, float, float]]
+    # Every attribute but position and normal, flattened per vertex in `extras` order.
+    packed: list[tuple[float, ...]]
+    extras: list[str]
+    indices: list[int]
+    steps: Profile
+
+    def slot(self, name: str) -> int | None:
+        """Where attribute `name` starts in a packed tuple; None when the shape has none."""
+        return sum(cmb.WIDTHS[n] for n in self.extras[:self.extras.index(name)]) if name in self.extras else None
+
+
+class Painted:
+    """The game's painted steps folded below the ramp, each painted step `rise` units high."""
+
+    clears_under = True
+
+    def __init__(self, rise: float) -> None:
+        self.rise = rise
+
+    def triangles(self, shape: Shape) -> list:
+        uv_slot = shape.slot("tex0")
+        uvs = resized(shape.positions, [extra[uv_slot:uv_slot + 2] for extra in shape.packed], shape.indices,
+                      shape.steps, self.rise)
+        packed = [extra[:uv_slot + 1] + (uv[1],) + extra[uv_slot + 2:] for extra, uv in zip(shape.packed, uvs)]
+        return Stairs(shape.positions, packed, uvs, shape.indices, shape.steps, uv_slot).triangles()
+
+    def retexture(self, data: bytes, slot: int, steps: Profile, image: Image.Image) -> bytes:
+        return data
+
+    def floor(self, pieces: list[tuple[int, list, Ramp]], drawn: list[Ramp]) -> list[tuple[int, list]]:
+        """The step faces over the collision `pieces` (source triangle, part over a ramp, the ramp),
+        each with its source triangle's index."""
+        groups: dict[Profile, list[tuple[int, list, Ramp]]] = {}
+        for piece in pieces:
+            groups.setdefault(piece[2].profile, []).append(piece)
+        out = []
+        for steps, group in groups.items():
+            positions, sources, uvs = [], [], []
+            for index, over, ramp in group:
+                for triangle in _fan(over):
+                    for x, y, z in triangle:
+                        positions.append((x, y, z))
+                        sources.append((float(index),))
+                        uvs.append(ramp.uv(x, z))
+            for triangle in Stairs(positions, sources, uvs, list(range(len(positions))), steps).floor():
+                out.append((round(triangle[0][1][0]), [position for position, _ in triangle]))
+        return out
+
+
+def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None, style) -> tuple[bytes, list[str]]:
+    """The model with every stair-textured shape drawn in `style` (Painted, or stairs_stone.Stone),
+    and the textures it stepped. `named` is the game's pattern for a stair texture's name (a set's
+    "stairs")."""
     data = model.data
     stepped = []
-    for shape_index, slot in _stair_shapes(model, named):
+    found = _stair_shapes(model, named)
+    # Read before any shape or texture changes: two shapes can share one texture.
+    images = {slot: texture_image(model, model.textures[slot], pack) for _, slot in found}
+    profiles = {slot: profile(image) for slot, image in images.items()}
+    for shape_index, slot in found:
         current = cmb.Cmb.parse(data)
         texture = current.textures[slot]
         shape = current.shapes[shape_index]
@@ -642,15 +711,13 @@ def rebuild(model: cmb.Cmb, named: str, pack: TexturePack | None, rise: float) -
         count = min(len(column) for column in [current.vertices(shape, "position"), *columns])
         positions = current.vertices(shape, "position")[:count]
         packed = [tuple(v for column in columns for v in column[i]) for i in range(count)]
-        uv_slot = sum(cmb.WIDTHS[name] for name in extras[:extras.index("tex0")])
-        steps = profile(texture_image(current, texture, pack))
-        indices = current.indices(shape)
-        uvs = resized(positions, current.vertices(shape, "tex0")[:count], indices, steps, rise)
-        packed = [extra[:uv_slot + 1] + (uv[1],) + extra[uv_slot + 2:] for extra, uv in zip(packed, uvs)]
-        stairs = Stairs(positions, packed, uvs, indices, steps, uv_slot)
-        vertices, indices = _flat(stairs.triangles(), extras)
+        triangles = style.triangles(Shape(current, shape_index, positions, packed, extras, current.indices(shape),
+                                          profiles[slot]))
+        vertices, indices = _flat(triangles, extras)
         data = current.with_shape(shape_index, vertices, indices)
         stepped.append(texture.name)
+    for slot in sorted({slot for _, slot in found}):
+        data = style.retexture(data, slot, profiles[slot], images[slot])
     return data, stepped
 
 
@@ -820,17 +887,17 @@ def _clear_of_steps(corners: list[tuple[float, float, float]], drawn: list[tuple
     return pieces if cleared else None
 
 
-def collision(scene: zsi.Scene, drawn: list[Ramp]) -> bytes | None:
-    """The scene with the collision over stepped ramps folded into the same steps: each sloped
+def collision(scene: zsi.Scene, drawn: list[Ramp], style) -> bytes | None:
+    """The scene with the collision over stepped ramps made the steps `style` draws: each sloped
     floor triangle is cut at the drawn ramps' outlines, the parts over a ramp become its treads and
-    risers, and the parts beside it stay; walls and ceilings lose their parts just under a ramp.
-    None when no triangle lies on a ramp."""
+    risers, and the parts beside it stay; for a style whose steps fold below the ramp, walls and
+    ceilings lose their parts just under it. None when no triangle lies on a ramp."""
     whole = _joined([list(ramp.positions) for ramp in drawn], lambda i, j: drawn[i].continues(drawn[j]))
     boxed = [(ramp.box(), ramp) for ramp in (replace(drawn[i[0]], outline=tuple(outline)) for outline, i in whole)]
     vertices = list(scene.vertices)
     named = {vertex: i for i, vertex in enumerate(vertices)}
     polygons = []
-    groups: dict[Profile, list[tuple[int, list, Ramp]]] = {}
+    pieces: list[tuple[int, list, Ramp]] = []
 
     def add(triangle: list[tuple[float, float, float]], source: zsi.Polygon, step: bool = False) -> None:
         corners = []
@@ -878,44 +945,36 @@ def collision(scene: zsi.Scene, drawn: list[Ramp]) -> bytes | None:
         for piece in rest:
             for triangle in _fan(piece):
                 add(triangle, polygon)
-        for over, ramp in on:
-            groups.setdefault(ramp.profile, []).append((index, over, ramp))
-    if not groups:
+        pieces.extend((index, over, ramp) for over, ramp in on)
+    if not pieces:
         return None
-    stepped = [(ramp.box(), ramp) for ramp in {id(ramp): ramp for group in groups.values() for _, _, ramp in group}.values()]
+    stepped = [(ramp.box(), ramp) for ramp in {id(ramp): ramp for _, _, ramp in pieces}.values()]
     for index in others:
         polygon = scene.polygons[index]
-        pieces = _clear_of_steps([tuple(float(v) for v in scene.vertices[i]) for i in polygon.vertices()], stepped)
-        if pieces is None:
+        cleared = _clear_of_steps([tuple(float(v) for v in scene.vertices[i]) for i in polygon.vertices()],
+                                  stepped) if style.clears_under else None
+        if cleared is None:
             polygons.append(polygon)
             continue
-        for piece in pieces:
+        for piece in cleared:
             for triangle in _fan(piece):
                 add(triangle, polygon)
-    for steps, group in groups.items():
-        positions, sources, uvs = [], [], []
-        for index, over, ramp in group:
-            for triangle in _fan(over):
-                for x, y, z in triangle:
-                    positions.append((x, y, z))
-                    sources.append((float(index),))
-                    uvs.append(ramp.uv(x, z))
-        faces: dict[int, list[list[tuple[float, float, float]]]] = {}
-        for triangle in Stairs(positions, sources, uvs, list(range(len(positions))), steps).floor():
-            faces.setdefault(round(triangle[0][1][0]), []).append([position for position, _ in triangle])
-        for index, triangles in faces.items():
-            for polygon in _whole_faces(triangles):
-                for triangle in _fan(polygon):
-                    add(triangle, scene.polygons[index], step=True)
+    faces: dict[int, list[list[tuple[float, float, float]]]] = {}
+    for index, triangle in style.floor(pieces, drawn):
+        faces.setdefault(index, []).append(triangle)
+    for index, triangles in faces.items():
+        for polygon in _whole_faces(triangles):
+            for triangle in _fan(polygon):
+                add(triangle, scene.polygons[index], step=True)
     return scene.with_collision(vertices, polygons)
 
 
-def room(data: bytes, named: str, pack: TexturePack | None, rise: float) -> tuple[bytes, list[str]]:
-    """A room file with its stair ramps stepped `rise` units a step; unchanged when it has none."""
+def room(data: bytes, named: str, pack: TexturePack | None, style) -> tuple[bytes, list[str]]:
+    """A room file with its stair ramps drawn in `style`; unchanged when it has none."""
     room_ = zsi.Room.parse(data)
     stepped: list[str] = []
     for model in reversed(room_.models()):
-        cmb_bytes, names = rebuild(cmb.Cmb.parse(data[model:]), named, pack, rise)
+        cmb_bytes, names = rebuild(cmb.Cmb.parse(data[model:]), named, pack, style)
         if names:
             data = zsi.Room.parse(data).with_model(model, cmb_bytes)
             stepped.extend(names)
