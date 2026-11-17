@@ -1,5 +1,6 @@
-// Azahar's core as the app runs it (settings: core_settings.hpp): the game loaded on the window,
-// frames run on this thread, and the tools' reach into guest memory, savestates and frames.
+// Azahar's core as the app runs it (settings: core_settings.hpp): a game loaded on the window in an
+// emulated system of its own (two are loaded on the title stage), frames run on this thread, and
+// the tools' reach into guest memory, savestates and frames.
 #pragma once
 
 #include "app_config.hpp"
@@ -41,8 +42,11 @@ public:
   Emulator(Emulator &&) = delete;
   Emulator &operator=(Emulator &&) = delete;
 
-  // Runs until the renderer has ended `count` more frames; `capture` keeps the last one in frame().
-  void runFrames(uint64_t count, bool capture);
+  // What runFrames keeps of the last frame in frame(): nothing, both screens at the render scale,
+  // or the top screen alone.
+  enum class Capture : uint8_t { None, Screens, Top };
+  // Runs until the renderer has ended `count` more frames.
+  void runFrames(uint64_t count, Capture capture);
   [[nodiscard]] uint64_t framesRun() const;
   // Each is called as runFrames goes, at least once a frame, in the order they were added.
   void onFrame(std::function<void()> observer) {
@@ -78,10 +82,13 @@ public:
   [[nodiscard]] std::vector<WriteHit> takeHits();
 
 private:
+  // The core reaches the system it works on through Core::System::GetInstance.
+  void makeCurrent();
   void step();
   // Savestates are unsafe while kernel async operations (file I/O) are in flight.
   [[nodiscard]] bool drainAsync();
 
+  std::unique_ptr<Core::System> owned_;
   Core::System &system_;
   GameWindow &window_;
   uint32_t resolution_;

@@ -5,6 +5,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_mouse.h>
+#include <lucent/log.h>
 
 #include <algorithm>
 #include <bit>
@@ -338,6 +339,7 @@ void PadInput::handle(const SDL_Event &event) {
   if (event.type == SDL_EVENT_GAMEPAD_ADDED) {
     if (SDL_Gamepad *pad = SDL_OpenGamepad(event.gdevice.which)) {
       pads_.push_back(pad);
+      lucent::info("pad", "opened {}", SDL_GetGamepadName(pad));
     }
   } else if (event.type == SDL_EVENT_GAMEPAD_REMOVED) {
     SDL_Gamepad *gone = SDL_GetGamepadFromID(event.gdevice.which);
@@ -488,6 +490,12 @@ void PadInput::readHost() {
   }
   if (fire && lastSlot_) {
     slots |= static_cast<uint16_t>(1U << *lastSlot_);
+  }
+  if (mode_ == PadMode::None) {
+    state.buttons = {};
+    state.sticks = {};
+    slots = 0;
+    chord = false;
   }
   menu_ = menu;
   slots_ = slots;

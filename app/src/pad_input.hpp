@@ -56,8 +56,9 @@ inline constexpr size_t kSlotCount = 11;
 
 // Which table the host's inputs go through, as the game's patch asks (tools/z3dmods/slot_link.py):
 // by name outside play (the 3DS button of the same name: menus, the ocarina), the play layout,
-// or the play layout with the mouse left as the stylus (a screen that assigns slots).
-enum class PadMode : uint8_t { ByName, Play, Assign };
+// the play layout with the mouse left as the stylus (a screen that assigns slots), or none: the
+// host's inputs are the app's menus' alone while the games play themselves (the title stage).
+enum class PadMode : uint8_t { ByName, Play, Assign, None };
 
 // What a host input does in play, the same in every game.
 enum class Verb : uint8_t { Action, Sword, Shield, Target, FirstPerson, Pause, Map, ItemScreen, Ocarina };

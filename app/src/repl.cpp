@@ -65,7 +65,7 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> frames)) {
       return "err run <frames>";
     }
-    emulator_.runFrames(frames, true);
+    emulator_.runFrames(frames, Emulator::Capture::Screens);
     return "ok " + std::to_string(emulator_.framesRun());
   }
   if (command == "input") {

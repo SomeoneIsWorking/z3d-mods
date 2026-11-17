@@ -9,10 +9,14 @@ Azahar's core without qt".
 only. It links the core's shared library, so it is GPL-2.0-or-later as linked. Two modes:
 
 - Windowed (`z3dmods play [game]`): an SDL3 window on the player's session, sound, keyboard,
-  gamepads and the mouse as the touch screen. Without a game it opens the title picker: each
-  game's icon and title read from the player's own dump (its SMDH), chosen with left/right and A
-  or Start on the pad or keyboard, or a click; X opens the selected game's options. F10 or the gamepad's guide button in a game shuts
-  it down and returns to the picker; closing the window quits.
+  gamepads and the mouse as the touch screen. Without a game it opens the title picker, a stage of
+  both games running side by side (`plans/title-stage.md`): a slanted edge splits the window, the
+  selected game's side is wider and only it runs, the other is held and grey; left/right on the
+  pad or keyboard, or a click on the other side, move the edge; A, Start or a click on the selected
+  side picks it, the edge slides out and the game plays on while the other is unloaded. A game not
+  set up yet shows the icon and title from the player's dump (its SMDH). X opens the selected
+  game's options. F10 or the gamepad's guide button in a game shuts it down and returns to the
+  picker; closing the window quits.
 - `--hidden` (the tools): the window is never mapped, there is no sound and no pacing, and custom
   textures load before the frame that needs them (asynchronous loading falls behind an unpaced run); the game
   runs frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
@@ -417,11 +421,17 @@ objects. Rebuild the app: `ninja -C build/app`.
   `CoreLog`, `PadInput` (the core's `z3d` input engine), `GameWindow` (the core's
   `EmuWindow`), `Emulator` (load, frames, memory, states, watches), `ModSwap`, then `Player` or
   `Repl`. With the picker: `GameLibrary` and a `GameOptions` per game, then per game `TitlePicker`
-  (and its `OptionsMenu`), `applyGameSettings`, `GameWindow::boot` (title and the layout's window
-  shape), a new `Emulator`, `GameOptions::apply` and `Player`.
+  (an `Emulator` for each game that is set up, and its `OptionsMenu`), `applyGameSettings`,
+  `GameWindow::boot` (title and the layout's window shape), the picked game's `Emulator` (a new
+  one for a game set up just now), `GameOptions::apply` and `Player`.
+- Each `Emulator` owns a `Core::System` and makes it current (`System::MakeCurrent`, the fork)
+  before it loads, steps, saves or shuts it down: the picker holds two at once and steps one.
 - The picker and its screens draw with an SDL renderer (Vulkan driver) and SDL3_ttf text on the
-  game window (`MenuCanvas`), which is destroyed before the core's renderer takes the window; the core shuts down
-  (`System::Shutdown`) before the picker opens again.
+  game window (`MenuCanvas`). Meanwhile `Settings::values.present_to_window` is off: the core
+  renders without presenting or holding a swapchain, and the picker shows the stepped game's top
+  screen read back each frame. It is turned on as the picker closes and the core takes the window
+  on its next frame, after the canvas is gone; the cores shut down (`System::Shutdown`) before the
+  picker opens again.
 - Rendering: the core's own Vulkan renderer presents to the window's native surface (Wayland or
   X11, from SDL3's window properties). A frame ends when the renderer calls
   `GameWindow::PollEvents`, which counts it, pumps SDL events and reads the host pad. `shot` frames

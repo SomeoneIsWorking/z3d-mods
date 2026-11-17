@@ -104,7 +104,9 @@ GameWindow::~GameWindow() {
 
 void GameWindow::PollEvents() {
   ++frames_;
-  pump(true, {});
+  if (!menuPumps_) {
+    pump(true, {});
+  }
 }
 
 std::vector<SDL_FPoint> GameWindow::pollMenu(const std::function<void(const SDL_Event &)> &each) {

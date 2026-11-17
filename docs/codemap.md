@@ -80,7 +80,7 @@
   - `folder_browser`: the in-window folder chooser, by pad, keys or mouse.
   - `mod_swap`: the running game's patch put in, taken out or read again from disk, and its texture pack turned on and off.
   - `options_menu`: the picker's options screen for one game.
-  - `title_picker`: the in-window title picker (SDL3_ttf outline text on the menu canvas), pad and click.
+  - `title_picker`: the in-window title picker, both games running side by side on a slanted stage (menu canvas), pad and click.
   - `game_window`: the SDL3 window as the core's `EmuWindow`: native Vulkan surface, per-frame event pump, mouse touch, the menu request, fullscreen; the picker's pump.
   - `window_mode`: the player's fullscreen choice, saved in `<user>/window.json`.
   - `pad_input`: the core's `z3d` input engine: the pad, keyboard and mouse tables (verbs and item slots in play, 3DS buttons by name elsewhere) and tool commands; the menus' pad (`MenuPad`), read by the host's button names.

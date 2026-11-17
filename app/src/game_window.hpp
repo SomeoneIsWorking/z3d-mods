@@ -61,8 +61,12 @@ public:
   GameWindow(GameWindow &&) = delete;
   GameWindow &operator=(GameWindow &&) = delete;
 
-  // Called by the renderer at the end of every emulated frame.
+  // Called by the renderer at the end of every emulated frame; it pumps the events unless a menu
+  // pumps them itself (pollMenu) while it runs a game.
   void PollEvents() override;
+  void setMenuPumps(bool menuPumps) {
+    menuPumps_ = menuPumps;
+  }
   // The picker's pump: no touch; left clicks come back in window pixels. `each` is also given
   // every event, for a screen that reads them itself.
   [[nodiscard]] std::vector<SDL_FPoint>
@@ -131,6 +135,7 @@ private:
   // macOS only: the view of the window's CAMetalLayer (SDL_MetalView).
   void *metalView_ = nullptr;
   uint64_t frames_ = 0;
+  bool menuPumps_ = false;
   bool closeRequested_ = false;
   bool menuRequested_ = false;
   std::optional<ModKey> modKey_;

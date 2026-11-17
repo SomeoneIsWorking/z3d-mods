@@ -1229,6 +1229,35 @@ def _picker(session: Session, pad: Gamepad) -> None:
     session.shot("oot3d-from-click")
 
 
+def _stage(session: Session, pad: Gamepad) -> None:
+    """The picker's stage (docs/plans/title-stage.md) by keys: OoT3D runs wide, Right moves the edge
+    and runs MM3D with OoT3D held grey, Left brings OoT3D back where it stopped, Right and A pick
+    MM3D, whose edge slides out while it plays on."""
+    session.expect("picker: on Ocarina")
+    session.wait(8)
+    session.shot("oot3d-running")
+    session.key("menu", "right")
+    session.expect("picker: on Majora")
+    session.wait(0.1)
+    session.shot("edge-sliding")
+    session.wait(6)
+    session.shot("mm3d-running")
+    session.key("menu", "left")
+    session.expect("picker: on Ocarina")
+    session.wait(2)
+    session.shot("oot3d-again")
+    session.key("menu", "right")
+    session.expect("picker: on Majora")
+    session.wait(2)
+    session.key("menu", "a")
+    session.expect("picker: picked Majora")
+    session.wait(0.15)
+    session.shot("pick-sliding")
+    session.expect("booting")
+    session.wait(3)
+    session.shot("mm3d-playing")
+
+
 def _options(session: Session, pad: Gamepad) -> None:
     """The picker's options: X on MM3D opens them, A turns the cutscene skip off, Up scrolls to the
     Fullscreen row and A and the fullscreen key flip it, and Start then leaves the opening narration
@@ -1343,7 +1372,7 @@ PACKAGE_PROGRAM = {"first-run": lambda cfg: package.folder(cfg) / "z3d",
                    "appimage-older-desktop": lambda cfg: package.folder(cfg).with_name(package.APPIMAGE)}
 # The package scenarios that run in the older desktop's container.
 OLDER_DESKTOP = ("appimage-older-desktop",)
-SCENARIOS = {**DIRECT, **PICKER, **PACKAGE, "picker": _picker, "options": _options, "options-oot3d": _options_oot3d}
+SCENARIOS = {**DIRECT, **PICKER, **PACKAGE, "picker": _picker, "stage": _stage, "options": _options, "options-oot3d": _options_oot3d}
 
 
 def _session(cfg: Config, scenario: str, out: Path) -> Session:

@@ -25,8 +25,9 @@
 #include <lucent/log.h>
 
 #include <exception>
-#include <iostream>
 #include <filesystem>
+#include <iostream>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -100,7 +101,8 @@ int picker(const AppConfig &config, PadInput &pad) {
     std::optional<TitlePicker::Picked> picked;
     {
       const MenuCanvas canvas(window, config.font, config.assets);
-      TitlePicker picker(canvas, window, pad, library, options, install, !config.tools.empty());
+      TitlePicker picker(config, canvas, window, pad, library, options, install,
+                         !config.tools.empty());
       picked = picker.run();
     }
     if (!picked) {
@@ -124,7 +126,11 @@ int picker(const AppConfig &config, PadInput &pad) {
     applyGameSettings(options[*chosen].setup());
     window.boot(game.title);
     {
-      Emulator emulator(config, game.setup.rom, window);
+      // The picker's game plays on; one set up just now starts here.
+      const std::unique_ptr<Emulator> running =
+          picked->emulator ? std::move(picked->emulator)
+                           : std::make_unique<Emulator>(config, game.setup.rom, window);
+      Emulator &emulator = *running;
       options[*chosen].apply(emulator, pad);
       const ScreenOverlay overlay(window, emulator, options[*chosen].setup(),
                                   config.userDir / game.setup.options);

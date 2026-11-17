@@ -113,7 +113,9 @@ private:
 };
 
 Emulator::Emulator(const AppConfig &config, const std::filesystem::path &rom, GameWindow &window)
-    : system_(Core::System::GetInstance()), window_(window), resolution_(config.resolution) {
+    : owned_(std::make_unique<Core::System>()), system_(*owned_), window_(window),
+      resolution_(config.resolution) {
+  makeCurrent();
   Frontend::RegisterDefaultApplets(system_);
   system_.RegisterImageInterface(std::make_shared<Frontend::ImageInterface>());
   const Core::System::ResultStatus status = system_.Load(window_, rom.string());
@@ -131,8 +133,14 @@ uint8_t Emulator::systemLanguage() const {
 }
 
 Emulator::~Emulator() {
+  makeCurrent();
   watches_.reset();
   system_.Shutdown();
+  Core::System::MakeCurrent(nullptr);
+}
+
+void Emulator::makeCurrent() {
+  Core::System::MakeCurrent(&system_);
 }
 
 void Emulator::step() {
@@ -143,11 +151,16 @@ void Emulator::step() {
   }
 }
 
-void Emulator::runFrames(uint64_t count, bool capture) {
+void Emulator::runFrames(uint64_t count, Capture capture) {
+  makeCurrent();
   const uint64_t target = window_.framesShown() + count;
   while (window_.framesShown() < target) {
-    if (capture && window_.framesShown() + 1 == target) {
-      const Layout::FramebufferLayout layout = Layout::FrameLayoutFromResolutionScale(resolution_);
+    if (capture != Capture::None && window_.framesShown() + 1 == target) {
+      const Layout::FramebufferLayout layout =
+          capture == Capture::Top
+              ? Layout::SingleFrameLayout(Core::kScreenTopWidth * resolution_,
+                                          Core::kScreenTopHeight * resolution_, false, false)
+              : Layout::FrameLayoutFromResolutionScale(resolution_);
       captureRows_.assign(static_cast<size_t>(layout.width) * layout.height, 0);
       system_.GPU().Renderer().RequestScreenshot(
           captureRows_.data(),
@@ -155,7 +168,7 @@ void Emulator::runFrames(uint64_t count, bool capture) {
             frame_.storeRows(std::move(captureRows_), {layout.width, layout.height});
           },
           layout);
-      capture = false;
+      capture = Capture::None;
     }
     step();
     for (const std::function<void()> &observer : frameObservers_) {
@@ -221,6 +234,7 @@ bool Emulator::drainAsync() {
 }
 
 std::optional<std::vector<uint8_t>> Emulator::saveState() {
+  makeCurrent();
   if (!drainAsync()) {
     return std::nullopt;
   }
@@ -233,6 +247,7 @@ std::optional<std::vector<uint8_t>> Emulator::saveState() {
 }
 
 bool Emulator::loadState(std::vector<uint8_t> state) {
+  makeCurrent();
   if (!drainAsync()) {
     return false;
   }

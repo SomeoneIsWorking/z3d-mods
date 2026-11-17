@@ -23,6 +23,9 @@ public:
   [[nodiscard]] unsigned height() const {
     return height_;
   }
+  [[nodiscard]] const std::vector<uint32_t> &pixels() const {
+    return pixels_;
+  }
 
   // False if nothing was captured yet or the file cannot be written.
   [[nodiscard]] bool writePng(const std::filesystem::path &path) const;

@@ -24,6 +24,22 @@ scenes.
 A target from the old project's screenshots: Kakariko Village's main staircase below the windmill,
 a flat ramp drawn with a stair texture (SoH, 2026-06-17, before the stairs work).
 
+## The old mod, restored (2026-11-17)
+SomeoneIsWorking/zelda3d is back on GitHub (GPL-3.0: evidence only, nothing copied). Its stairs
+(`soh/src/zelda3d/scene/zelda3d_stairs.cpp`, `model/zelda3d_model.cpp`) replaced each `kaidan`
+ramp with N = round(rise / step) steps of a fixed rise, wearing its own tiled stone texture
+(`assets/zelda3d/stairs_stone.svg`), so the painted step lines no longer had to match. A menu
+cycle "Stair Step Size" picked the rise: Small 8, Medium 14 (the default), Large 22 units
+(`repl/repl_menu_sync.cpp` `SyncStairSize`). Its first, asset-derived rise was about 7.8, the
+painted steps' own.
+
+User, 2026-11-17: its Medium was too big; Medium should be Large, and Small the new Medium. So
+the sizes the player wants are Medium 8 and Large 14, with a Small below 8.
+
+Ours follows each texture's painted steps (4.5 to 13.4 units across the flights measured below,
+most near 8), which matches the wanted Medium, and has no size choice. A size choice needs fixed
+rises that no longer follow the paint, so it needs the old mod's approach of its own stair texture.
+
 ## Built (2026-11-13)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine
   rooms (Kakariko, Zora's Domain 0/1, Desert Colossus, Gerudo Valley, Hyrule Castle grounds, Death
