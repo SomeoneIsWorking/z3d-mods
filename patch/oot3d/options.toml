@@ -54,8 +54,8 @@ default = "Stone medium"
 layers = [
   { label = "Stone small", folder = "romfs_stairs_stone_small", rise = 5.0, style = "stone" },
   { label = "Stone medium", folder = "romfs_stairs_stone_medium", rise = 8.0, style = "stone" },
-  { label = "Stone large", folder = "romfs_stairs_stone_large", rise = 14.0, style = "stone" },
+  { label = "Stone large", folder = "romfs_stairs_stone_large", rise = 11.0, style = "stone" },
   { label = "Painted small", folder = "romfs_stairs_small", rise = 5.0 },
   { label = "Painted medium", folder = "romfs_stairs_medium", rise = 8.0 },
-  { label = "Painted large", folder = "romfs_stairs_large", rise = 14.0 },
+  { label = "Painted large", folder = "romfs_stairs_large", rise = 11.0 },
 ]

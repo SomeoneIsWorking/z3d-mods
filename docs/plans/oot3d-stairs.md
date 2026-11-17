@@ -34,7 +34,8 @@ cycle "Stair Step Size" picked the rise: Small 8, Medium 14 (the default), Large
 painted steps' own.
 
 User, 2026-11-17: its Medium was too big; Medium should be Large, and Small the new Medium. So
-the sizes the player wants are Medium 8 and Large 14, with a Small below 8.
+the sizes the player wants are Medium 8 and Large 14, with a Small below 8. Later the same day:
+"14 is too large for large", so Large is 11, for both styles.
 
 It does not build from GitHub: its ZAPDTR and StormLib submodule forks are gone (the user will not
 restore them) and its pinned Lucent commit is on no branch; it builds with those taken from upstream
@@ -43,14 +44,14 @@ fix (zelda3d c90e3fb2) made it draw again; compared live at Kakariko's well flig
 (eye 403.7,224.2,780.8, at 493,139,660), zelda3d `stairsize 8`/`14` beside our Medium/Large.
 
 The painted steps run 4.5 to 13.4 units across the flights measured below, most near 8. The size
-option's Painted rows (`stair_steps`: Painted small 5, medium 8, large 14) keep the game's own texture: `stairs.resized`
+option's Painted rows (`stair_steps`: Painted small 5, medium 8, large 11) keep the game's own texture: `stairs.resized`
 scales each flight's v about its top corner so that one painted step rises the chosen size, and the
 fold, the paint and the collision follow it. Each size is its own layer folder, built at install.
 
 ## Stone steps (2026-11-17)
 User: zelda3d's stone stairs ("my babies") are the ones wanted from the start; the painted fold was
 a substitute. So the option is `stair_steps` in both games' `options.toml`: Off, Stone small 5,
-Stone medium 8 (the default), Stone large 14, Painted small, medium, large. It took a new id
+Stone medium 8 (the default), Stone large 11, Painted small, medium, large. It took a new id
 because the app keeps a choice by its index, and an old `stair_size` index would name another row
 now. User, same day: the curbs keep the game's painted curb, not the stone.
 
@@ -97,6 +98,10 @@ Seen 2026-11-17, on the installed layers (`z3dmods run --harness --resolution 3`
 - Collision budget, Stone medium (printed by `install`): Kakariko 26748 of 65535 nodes (40%,
   5079 triangles; Painted medium 27642), Ganon's Castle 20519 (31%), every other OoT3D scene
   under 24%; MM3D Woodfall Temple 20606 of 56034 (36%), the rest under 29%.
+- Stone large at 11 (`stone-large-well`, `--option stair_steps=3`): Kakariko's first well flight
+  walked foot to top on seven treads, 0, 11, 23, 34, 46, 57, 69, 80. Budget at 11: Kakariko 23622
+  nodes (36%; Painted large 23567), Ganon's Castle 18809 (28%); MM3D Woodfall Temple 20115 of
+  56080 (35%), the rest under 29%.
 
 ## Built (2026-11-13)
 - The ramps are marked by their room CMB material: textures named `*kaidan*` ("stairs"), in nine
