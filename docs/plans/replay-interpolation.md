@@ -138,3 +138,14 @@ cuts.
   twinkle (`alpha`, stepped by the draw by conditions on `timer`, not blended) and Navi's
   sparkles (not traced). Not built: actors' own material animations and the time of day's list,
   the remaining declared cuts, the replay's own render target, MM3D and the option. (2026-11-18)
+- Step 4, declared cuts, in progress. Shipwright declares two camera cuts: `Camera_Special9` when
+  the door timer runs out and `animState` goes 1 to 2 (the eye jumps to the door's far side), and
+  `Camera_SetCSParams`. In this build (decomp/oot3d `docs/camera.md` "Fields past the view"):
+  `animState` is `Camera` +0x1A6, `Camera_Special9` is 0x25BF08 (function 0x46), run by the room
+  door setting 0x1D. The back alley's doors (warp 0xAD, savestate `alley` in the harness states,
+  door at -666, 0, 980 facing +x: `teleport:-600,0,980 walk:-640,980,3 a`) load a scene under
+  setting 0x21 and are already cut by the play state's restart. Next: run an in-scene door (a
+  dungeon's `EnDoor` or `DoorShutter`) to see setting 0x1D and the 1-to-2 step, then cut on it in
+  `camera_track` (the active camera's function from `sCameraSettings` at 0x516FF0 by setting and
+  mode, as `Camera_Update` picks it); find how Grezzo's spline commands (0x96, 0x97) start a shot,
+  since `Camera_SetCSParams`'s N64 stores are not in this build.
