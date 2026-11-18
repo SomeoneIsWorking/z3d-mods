@@ -275,6 +275,18 @@ cuts.
   50.3, 57.5), and the fade in from black after the load the same (7.2, 8.6, 9.6, 11.0 against
   7.2, 7.2, 9.6, 9.6); the first step out of black is cut by the play state's restart, as in
   OoT3D (`fade-out-3-8.png`, on above). 114 replays, 2 cuts, 2 refused (the load).
-- MM3D, where the work stands (2026-11-18). The scene's material animations, effect pools and the
-  door and shot cuts are not started. The "Frame interpolation" option stays OoT3D-only until
-  these pass.
+- MM3D, where the work stands (2026-11-18).
+  - Material animations: not found. OoT3D's `AnimPlayer_Update` (0x373BEC) has no match in MM3D's
+    code by its words (literals and branches masked), nor does its frame count read (`ldr
+    [anim+0x14]; add; ldr [+4]`), so MM3D's material player is laid out differently. The tower
+    base (`sct`) shows no scene texture scroll to trace it by; a scene with one (the clock town's
+    water) and a write watch on its texture coordinates is the next lead.
+  - What still steps at the tick rate standing in the tower base with interpolation on
+    (mm-still, `stepped.png`: pixels whose in-between equals the next tick): a spinning green
+    rupee near the owl statue (`top-10-15.png`), so its draw turns it by a field other than the
+    `shape.rot` the actor track blends; and edge pixels on Link, not traced.
+  - Effect pools, the door and cutscene shot cuts: not started. MM3D's door camera and
+    cutscene camera fields (the `Camera` setting, mode and step, the cutscene's shot) are not
+    laid out in decomp/mm3d yet; OoT3D's `Camera_Special9` and `Camera_SetCSParams` and
+    2 Ship 2 Harkinian's camera cut call sites are the leads.
+  - The "Frame interpolation" option stays OoT3D-only until these pass.
