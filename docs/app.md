@@ -470,6 +470,28 @@ objects. Rebuild the app: `ninja -C build/app`.
 - Watch PC and LR are the running core's at the start of the translated block under the JIT; LR is
   stale there.
 
+## Input tests
+`z3dmods inputtest <scenario>` (`tools/z3dmods/input_test.py`) runs the windowed app as the player
+starts it, in a headless Gamescope, and drives it with real platform events that reach this app
+alone: keys and the mouse as XTest events on that Gamescope's X server, and the gamepad as an SDL
+virtual pad inside the app (`src/test_pad`). No device is made on the machine, so no other
+program sees the test's presses.
+- `Z3D_TEST_PAD=1` in the app's environment (`AppConfig::testPad`, set by the test's session and
+  never otherwise) opens a loopback `lucent::http::Server` on a free port, logged as
+  `[pad] test pad: listening on port <n>`. Without it there is no channel and no test pad.
+- `POST /attach` attaches the virtual pad: an Xbox 360 pad's IDs (045E:028E), SDL's gamepad
+  buttons up to the D-pad and its six axes, so SDL's own virtual mapping applies and `PadInput`
+  opens it like any pad (`[pad] test pad: attached`, then `[pad] opened`).
+- `POST /button?name=<SDL button name>&down=0|1` and `POST /axis?name=<SDL axis name>&value=<-32768..32767>`
+  hold its controls (SDL's names: `a`, `leftshoulder`, `dpup`, `leftx`, ...; y grows downward).
+  The values reach the app at its next event pump, as a real pad's would.
+- `Gamepad` in the test attaches on first use and keeps `hold`, `button`, `dpad` and `stick`.
+- Seen 2026-11-18: every scenario that uses the pad (oot3d, slots, slots-small, slots-mm3d,
+  slots-mm3d-small, masks-mm3d, verbs-mm3d, gaps, notebook-mm3d, map-zoom-mm3d, menu-pad, picker,
+  setup, setup-wrong-dump, setup-missing-mod, setup-different-mod, setup-archive, first-run,
+  first-run-appimage) passed with the pad's presses in its shots, while `/dev/input/by-id` and
+  `/proc/bus/input/devices` listed no device that was not there before the run.
+
 ## Checking it
 `uv run --frozen z3dmods play` opens the picker (`play mm3d` one game); `z3dmods shortcut` adds the
 `z3d` desktop shortcut (this machine only: `~/.local/share/applications` and `~/Desktop`), which
@@ -515,7 +537,7 @@ run the package's launcher. Re-run it after a change.
   `z3d`, and a clean exit on SIGTERM.
 - Input, 2026-11-13, `z3dmods inputtest <game>` (the windowed app as `z3dmods play` runs it, in a
   headless Gamescope on a fresh copy of the player's data; XTest keys and mouse on its X server, a
-  uinput gamepad): OoT3D, keys reach file select and File 1, the arrow keys and then the pad's left
+  uinput gamepad, since replaced by the test pad): OoT3D, keys reach file select and File 1, the arrow keys and then the pad's left
   stick each move Link on the single screen; MM3D, keys reach file select, a click on slot 2 of the
   bottom screen makes a file there, and Start on the opening narration lands in the Lost Woods.
   Shots in `scratch/input-test/<game>/`. The steps are timed in real time, so a slow boot can

@@ -1,6 +1,7 @@
 #include "app_config.hpp"
 
 #include <array>
+#include <cstdlib>
 #include <stdexcept>
 #include <utility>
 
@@ -23,6 +24,8 @@ constexpr std::array kLayouts{
 };
 
 constexpr uint32_t kMaxResolution = 10;
+
+constexpr const char *kTestPadVariable = "Z3D_TEST_PAD";
 
 std::pair<std::string, uint8_t> parseOption(const std::string &text) {
   const size_t equals = text.find('=');
@@ -112,6 +115,8 @@ AppConfig AppConfig::parse(int argc, char **argv) {
   if (!game.rom.empty()) {
     config.game = game;
   }
+  const char *testPad = std::getenv(kTestPadVariable);
+  config.testPad = testPad != nullptr && std::string_view(testPad) == "1";
   const bool picker = !config.library.empty() && !config.font.empty() && !config.assets.empty() && !config.hidden;
   if (config.userDir.empty() || config.game.has_value() == picker) {
     throw std::invalid_argument(std::string(kUsage));

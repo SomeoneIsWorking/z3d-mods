@@ -2,8 +2,8 @@
 
 The app runs as `z3dmods play` runs it, on a fresh copy of the player's data, inside a headless
 Gamescope session; the picker scenario runs the installed desktop shortcut's Exec line itself. Keys and the mouse go in as XTest events on that session's X server, the
-gamepad is a uinput device the app finds like any other pad, and frames come from Gamescope's
-screenshots. Output: scratch/input-test/<game>/.
+gamepad is an SDL virtual pad inside the app alone, made and driven over its loopback channel
+(app/src/test_pad.hpp), and frames come from Gamescope's screenshots. Output: scratch/input-test/<game>/.
 """
 
 from __future__ import annotations
@@ -16,11 +16,11 @@ import signal
 import subprocess
 import threading
 import time
+import urllib.parse
+import urllib.request
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-
-from evdev import AbsInfo, UInput, ecodes
 
 from z3dmods import (
     app,
@@ -49,61 +49,13 @@ SMALL = (854, 480)
 SETUP_UI_CONFIRM = "Return"
 # The top screen, which the single-screen layouts fit into the window.
 TOP_SCREEN = (400, 240)
-# Every button of an Xbox 360 pad in the kernel's codes, so SDL numbers them as its mapping does.
-PAD_BUTTONS = {"a": ecodes.BTN_SOUTH, "b": ecodes.BTN_EAST, "x": ecodes.BTN_NORTH, "y": ecodes.BTN_WEST,
-               "lb": ecodes.BTN_TL, "rb": ecodes.BTN_TR,
-               "start": ecodes.BTN_START, "select": ecodes.BTN_SELECT, "guide": ecodes.BTN_MODE,
-               "ls": ecodes.BTN_THUMBL, "rs": ecodes.BTN_THUMBR}
-# The D-pad is a hat: its axis and the way each direction pushes it.
-PAD_DPAD = {"up": (ecodes.ABS_HAT0Y, -1), "down": (ecodes.ABS_HAT0Y, 1),
-            "left": (ecodes.ABS_HAT0X, -1), "right": (ecodes.ABS_HAT0X, 1)}
-HAT = AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)
-TRIGGER = AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)
+# Every button of an Xbox 360 pad by SDL's gamepad names, which the app's test pad takes.
+PAD_BUTTONS = {"a": "a", "b": "b", "x": "x", "y": "y", "lb": "leftshoulder", "rb": "rightshoulder",
+               "start": "start", "select": "back", "guide": "guide", "ls": "leftstick", "rs": "rightstick"}
+PAD_DPAD = {"up": "dpup", "down": "dpdown", "left": "dpleft", "right": "dpright"}
 # File select's second slot on MM3D's touch screen, which the overlay layout puts beside the top
 # screen there: the right two fifths of the window, half its height, centred.
 MM3D_SLOT_2 = (0.6 + 0.4 * 0.51, 0.25 + 0.5 * 0.54)
-AXIS = AbsInfo(value=0, min=-32768, max=32767, fuzz=16, flat=128, resolution=0)
-
-
-class Gamepad:
-    """A uinput gamepad with standard evdev codes, which SDL maps like a common pad."""
-
-    def __init__(self) -> None:
-        self._device = UInput(
-            {ecodes.EV_KEY: list(PAD_BUTTONS.values()),
-             ecodes.EV_ABS: [(ecodes.ABS_X, AXIS), (ecodes.ABS_Y, AXIS), (ecodes.ABS_Z, TRIGGER),
-                             (ecodes.ABS_RX, AXIS), (ecodes.ABS_RY, AXIS), (ecodes.ABS_RZ, TRIGGER),
-                             (ecodes.ABS_HAT0X, HAT), (ecodes.ABS_HAT0Y, HAT)]},
-            name="z3d input test pad", vendor=0x045E, product=0x028E, version=0x0110, bustype=ecodes.BUS_USB)
-
-    def close(self) -> None:
-        self._device.close()
-
-    def hold(self, name: str, down: bool) -> None:
-        self._device.write(ecodes.EV_KEY, PAD_BUTTONS[name], int(down))
-        self._device.syn()
-
-    def button(self, name: str, seconds: float = 0.15) -> None:
-        self.hold(name, True)
-        time.sleep(seconds)
-        self.hold(name, False)
-
-    def dpad(self, direction: str, seconds: float = 0.15) -> None:
-        axis, push = PAD_DPAD[direction]
-        for value in (push, 0):
-            self._device.write(ecodes.EV_ABS, axis, value)
-            self._device.syn()
-            if value:
-                time.sleep(seconds)
-
-    def stick(self, x: int, y: int, seconds: float) -> None:
-        """Left stick, evdev's range (y grows downward), held for `seconds`, then centred."""
-        for value in ((x, y), (0, 0)):
-            self._device.write(ecodes.EV_ABS, ecodes.ABS_X, value[0])
-            self._device.write(ecodes.EV_ABS, ecodes.ABS_Y, value[1])
-            self._device.syn()
-            if value != (0, 0):
-                time.sleep(seconds)
 
 
 class Session:
@@ -125,6 +77,7 @@ class Session:
     def __enter__(self) -> Session:
         args = self._args
         env = {k: v for k, v in os.environ.items() if k not in ("WAYLAND_DISPLAY", "DISPLAY")}
+        env[config.TEST_PAD_ENV] = "1"
         env.update(self._extra_env)
         self.out.mkdir(parents=True, exist_ok=True)
         log = (self.out / "gamescope.log").open("wb")
@@ -183,6 +136,22 @@ class Session:
                 self._log_read = end + 1
                 if text in line:
                     return line
+            if self._gamescope.poll() is not None:
+                raise RuntimeError(f"gamescope exited; see {log}")
+            time.sleep(0.05)
+        raise RuntimeError(f"the app did not log {text!r} within {seconds}s; see {log}")
+
+    def logged(self, text: str, seconds: float, start: int = 0) -> tuple[str, int]:
+        """Waits for a line holding `text` from byte `start` of the log on, apart from expect's
+        place in it; returns the line and the byte after it."""
+        assert self._gamescope
+        log = self.out / "gamescope.log"
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            data = log.read_bytes()
+            at = data.find(text.encode(), start)
+            if at >= 0 and (end := data.find(b"\n", at)) >= 0:
+                return data[data.rfind(b"\n", 0, at) + 1:end].decode(errors="replace"), end + 1
             if self._gamescope.poll() is not None:
                 raise RuntimeError(f"gamescope exited; see {log}")
             time.sleep(0.05)
@@ -256,6 +225,49 @@ class Session:
         subprocess.run(["xdotool", "mousedown", "1"], env=self._env, check=True)
         time.sleep(0.15)
         subprocess.run(["xdotool", "mouseup", "1"], env=self._env, check=True)
+
+
+class Gamepad:
+    """The app's test pad (app/src/test_pad.hpp), attached on first use: only the app sees it."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._url = ""
+
+    def _post(self, command: str, **query: str | int) -> None:
+        if not self._url:
+            line, _ = self._session.logged("test pad: listening on port", 60)
+            self._url = f"http://127.0.0.1:{int(line.rsplit(' ', 1)[1])}/"
+            self._send("attach")
+            _, attached = self._session.logged("test pad: attached", 10)
+            self._session.logged("[pad] opened", 10, attached)
+        self._send(command, **query)
+
+    def _send(self, command: str, **query: str | int) -> None:
+        url = self._url + command + ("?" + urllib.parse.urlencode(query) if query else "")
+        with urllib.request.urlopen(urllib.request.Request(url, method="POST"), timeout=10) as reply:
+            reply.read()
+
+    def hold(self, name: str, down: bool) -> None:
+        self._post("button", name=PAD_BUTTONS[name], down=int(down))
+
+    def button(self, name: str, seconds: float = 0.15) -> None:
+        self.hold(name, True)
+        time.sleep(seconds)
+        self.hold(name, False)
+
+    def dpad(self, direction: str, seconds: float = 0.15) -> None:
+        self._post("button", name=PAD_DPAD[direction], down=1)
+        time.sleep(seconds)
+        self._post("button", name=PAD_DPAD[direction], down=0)
+
+    def stick(self, x: int, y: int, seconds: float) -> None:
+        """Left stick, -32768..32767 with y growing downward, held for `seconds`, then centred."""
+        for value in ((x, y), (0, 0)):
+            self._post("axis", name="leftx", value=value[0])
+            self._post("axis", name="lefty", value=value[1])
+            if value != (0, 0):
+                time.sleep(seconds)
 
 
 def _oot3d(session: Session, pad: Gamepad) -> None:
@@ -1478,10 +1490,6 @@ def run(cfg: Config, scenario: str) -> Path:
     out = cfg.repo / "scratch" / "input-test" / scenario
     if out.exists():
         shutil.rmtree(out)
-    pad = Gamepad()
-    try:
-        with _session(cfg, scenario, out) as session:
-            SCENARIOS[scenario](session, pad)
-    finally:
-        pad.close()
+    with _session(cfg, scenario, out) as session:
+        SCENARIOS[scenario](session, Gamepad(session))
     return out

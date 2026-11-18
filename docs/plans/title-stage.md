@@ -54,5 +54,5 @@ Built 2026-11-17. Seen (`z3dmods inputtest stage`, keys, frames in `scratch/inpu
 OoT3D's title runs on the wide left side; Right slides the edge and MM3D runs while OoT3D holds
 grey at its last frame; Left brings OoT3D back moving on from where it stopped; Right and A pick
 MM3D, the edge slides out and MM3D plays on at its title screen, not booted again. `inputtest
-picker` picks OoT3D into play and returns. Open: the pad does not reach the app in the input
-tests, the stage's or HEAD's picker alike (`docs/issues/input-test-pad.md`).
+picker` picks OoT3D into play and returns, and on 2026-11-18 the test pad's stick selects MM3D,
+its A boots it and Guide returns.

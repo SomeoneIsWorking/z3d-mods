@@ -92,6 +92,8 @@ UI_FONT = Path("app") / "fonts" / "OpenSans-Bold.ttf"
 APP_DATA_ENV = "Z3D_APP_DATA"
 # Names another folder of mod downloads for a test run.
 MOD_SOURCES_ENV = "Z3D_MOD_SOURCES"
+# Opens the app's loopback channel for the input tests' gamepad (app/src/test_pad.hpp).
+TEST_PAD_ENV = "Z3D_TEST_PAD"
 # Runs an app built elsewhere, such as against a core checkout with uncommitted changes.
 APP_BINARY_ENV = "Z3D_APP_BINARY"
 SESSION_KEYS = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "XDG_SESSION_TYPE")

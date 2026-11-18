@@ -44,7 +44,7 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   ImageMagick has no librsvg); the core draws through MoltenVK on the window's
   CAMetalLayer. `z3dmods shortcut` there makes `~/Applications/z3d.app`. `run --harness` works there
   (hidden window, shots, watches, states); `inputtest` and `run` without `--harness` stay
-  Linux-only (Gamescope, XTest, uinput); `package` makes the Linux package only.
+  Linux-only (Gamescope, XTest); `package` makes the Linux package only.
 - `uv run --frozen z3dmods package`: the Linux package, `build/package/z3d` (a folder) and
   `build/package/z3d-x86_64.AppImage` ([docs/plans/packed-app.md](docs/plans/packed-app.md); "The release" there is how one is published).
 - `uv run --frozen z3dmods sources`: on a machine without them, clones the checkouts a package is

@@ -21,6 +21,7 @@
 #include "set_install.hpp"
 #include "slot_link.hpp"
 #include "term_signal.hpp"
+#include "test_pad.hpp"
 #include "title_picker.hpp"
 
 #include <lucent/log.h>
@@ -55,6 +56,11 @@ std::vector<GameOptions> loadAll(const AppConfig &config, const GameLibrary &lib
   return options;
 }
 
+// The input tests' pad, when they ask for its channel; after the window, which starts SDL.
+std::unique_ptr<TestPad> testPad(const AppConfig &config) {
+  return config.testPad ? std::make_unique<TestPad>() : nullptr;
+}
+
 int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   GameOptions options = loadOptions(config, game);
   for (const auto &[id, value] : config.options) {
@@ -64,6 +70,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
   }
   applyGameSettings(options.setup());
   GameWindow window(config, pad);
+  const std::unique_ptr<TestPad> test = testPad(config);
   Emulator emulator(config, game.rom, window);
   options.apply(emulator, pad);
   const ScreenOverlay overlay(window, emulator, options.setup(), config.userDir / game.options);
@@ -85,6 +92,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
 
 int picker(const AppConfig &config, PadInput &pad) {
   GameWindow window(config, pad);
+  const std::unique_ptr<TestPad> test = testPad(config);
   GameLibrary library = GameLibrary::load(config.library);
   if (library.games().empty()) {
     // The tools know no dump yet: the player says where theirs are, and the tools list them.

@@ -1,4 +1,4 @@
-// The app's typed command line; the one place flags are read.
+// The app's typed command line and environment; the one place flags and variables are read.
 #pragma once
 
 #include <cstdint>
@@ -58,11 +58,15 @@ struct AppConfig {
   bool dumpTextures = false;
   // --keys alone: print every key binding (PadInput::listKeys) and leave.
   bool listKeys = false;
+  // Z3D_TEST_PAD=1, the input tests alone: the loopback channel that makes and drives their
+  // gamepad (test_pad.hpp).
+  bool testPad = false;
 
   // z3d --keys
   // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... [--assets <dir>] | --library <json> --font <ttf> --assets <dir>)
   //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
   //     [--tools <program> [<argument>]...]
+  // Environment: Z3D_TEST_PAD.
   [[nodiscard]] static AppConfig parse(int argc, char **argv);
 };
 

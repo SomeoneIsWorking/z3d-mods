@@ -7,13 +7,7 @@ from pathlib import Path
 
 import json
 
-from z3dmods import azahar, config, ctr, games, harness, host_install, install, package, play, setup, shortcut, sources, steps, system_config
-
-try:
-    from z3dmods import input_test
-except ModuleNotFoundError:
-    # The input test drives a uinput pad through evdev, which is Linux's alone.
-    input_test = None
+from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, sources, steps, system_config
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -127,10 +121,9 @@ def main() -> None:
     packed.set_defaults(run=build_package)
     fetched = commands.add_parser("sources", help="clone the checkouts a package is built from that this machine lacks, each at its pinned revision")
     fetched.set_defaults(run=fetch_sources)
-    if input_test is not None:
-        probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key, mouse and pad events")
-        probe.add_argument("scenario", choices=sorted(input_test.SCENARIOS))
-        probe.set_defaults(run=input_check)
+    probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key and mouse events and the app's test pad")
+    probe.add_argument("scenario", choices=sorted(input_test.SCENARIOS))
+    probe.set_defaults(run=input_check)
     links = commands.add_parser("shortcut", help="add the desktop shortcut that opens the app's title picker")
     links.add_argument("--host", help="install the app, the sets and its saves on this ssh host instead, in Games/z3d of its home folder")
     links.set_defaults(run=install_shortcuts)
