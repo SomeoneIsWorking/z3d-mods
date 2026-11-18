@@ -50,4 +50,15 @@ ActorTrack::Counts ActorTrack::inputs(float t, std::vector<Core::SectionReplay::
   return counts;
 }
 
+std::vector<uint32_t> ActorTrack::pairedWithId(int16_t id) const {
+  std::vector<uint32_t> out;
+  for (const auto &[actor, to] : current_) {
+    const auto from = previous_.find(actor);
+    if (to.id == id && from != previous_.end() && from->second.id == id) {
+      out.push_back(actor);
+    }
+  }
+  return out;
+}
+
 } // namespace z3d::app

@@ -128,12 +128,13 @@ cuts.
   second (55 to 72, then 0) (scratch/runs/interp-mat-1 `on-waterfall-10-17.png` against
   `off-waterfall-10-17.png`). Not covered: the time of day's list (its frame is set from the time)
   and animations actors step in their own update or draw.
-- What still moves at 30 Hz, seen by diffing consecutive presents with the camera and Link
-  still: in Link's house only the scene's fade-in (the whole room brightens on tick presents;
-  after it, only Navi), in Kokiri Forest the waterfall's texture scroll and the floating light
-  motes (scratch/runs/interp-idle-1 `idle-diff.png`: tick-to-in-between change on the left,
-  in-between-to-tick on the right). Their owners in this build (the fade's state, the room
-  model's texture animation, the motes' actor or effect pool) are not traced yet.
-  Not built: pools, texture
-  scroll, the remaining declared cuts, the replay's
-  own render target, MM3D and the option. (2026-11-18)
+- Step 4, effect pools: built (`app/src/effect_pool_track`). Kokiri Forest's floating motes are
+  `ObjectKankyo`'s fairies (decomp/oot3d `docs/frame.md` "Effects"): in each ObjectKankyo with the
+  fairies' params that the actor track pairs, each effect in use with its `state` and `base`
+  unchanged has `pos` blended. About 64 pair a tick, a few unpaired (respawned). A mote moves on
+  every present (scratch/runs/interp-mote-on `on-mote-12-19.png`); with interpolation off the
+  picture is unchanged on every second present (273, 0, 273, 0 changed pixels).
+- What still moves at 30 Hz in Link's house and Kokiri Forest standing still: the fairies'
+  twinkle (`alpha`, stepped by the draw by conditions on `timer`, not blended) and Navi's
+  sparkles (not traced). Not built: actors' own material animations and the time of day's list,
+  the remaining declared cuts, the replay's own render target, MM3D and the option. (2026-11-18)

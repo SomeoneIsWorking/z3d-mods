@@ -171,7 +171,7 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
 
 def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | list[int]] | None:
     """interpolation.toml resolved: the sites are a function and a define of its offset (a site list, several), the functions a function, the rest
-    addresses and offsets as in aim.toml, with the play state's pointer and the sizes of a GX request, an actor list's entry and a joint."""
+    addresses and offsets as in aim.toml, with the play state's pointer and the sizes of a GX request, an actor list's entry, a joint and an effect."""
     path = repo / "patch" / game / "interpolation.toml"
     if not path.exists():
         return None
@@ -185,7 +185,8 @@ def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | 
         key: _guest_address(d, terms) for key, terms in table.items()
         if key not in sites + site_lists + functions} | {
         "play": symbols.global_(d, "gPlayState"), "request_size": symbols.size(d, "GxRequest"),
-        "actor_list_size": symbols.size(d, "ActorListEntry"), "joint_size": symbols.size(d, "SkelJoint")}
+        "actor_list_size": symbols.size(d, "ActorListEntry"), "joint_size": symbols.size(d, "SkelJoint"),
+        "effect_size": symbols.size(d, "ObjectKankyoEffect")}
 
 
 # hud.toml's tables every button shares: the counts and when each is full, the statuses, the

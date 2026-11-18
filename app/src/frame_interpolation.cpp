@@ -128,6 +128,18 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .animOffset = field(*table, "cmab_anim_offset"),
           .frameCount = field(*table, "cmab_frame_count"),
       }),
+      .effects = EffectPoolTrack(EffectPoolAddresses{
+          .play = field(*table, "play"),
+          .count = field(*table, "effect_count"),
+          .id = field(*table, "effect_actor"),
+          .params = field(*table, "actor_params"),
+          .paramsValue = field(*table, "effect_actor_params"),
+          .effects = field(*table, "effects"),
+          .effectSize = field(*table, "effect_size"),
+          .state = field(*table, "effect_state"),
+          .position = field(*table, "effect_position"),
+          .base = field(*table, "effect_base"),
+      }),
   });
 }
 
@@ -197,6 +209,7 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   section.skeletons.sample(replay);
   section.fades.sample(replay);
   section.materials.sample(replay);
+  section.effects.sample(replay, section.actors);
   auto inputs = section.camera.inputs(kHalfway);
   if (!inputs) {
     ++totals_.cuts;
@@ -214,6 +227,9 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   const MaterialTrack::Counts materials = section.materials.inputs(kHalfway, *inputs);
   totals_.materialsPaired += materials.paired;
   totals_.materialsUnpaired += materials.unpaired;
+  const EffectPoolTrack::Counts effects = section.effects.inputs(kHalfway, *inputs);
+  totals_.effectsPaired += effects.paired;
+  totals_.effectsUnpaired += effects.unpaired;
   VideoCore::GPU &gpu = emulator_.gpu();
   const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
     totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
@@ -315,7 +331,9 @@ std::string FrameInterpolation::takeReport() {
          << " skeletons_unpaired=" << totals_.skeletonsUnpaired
          << " fades_paired=" << totals_.fadesPaired << " fades_unpaired=" << totals_.fadesUnpaired
          << " materials_paired=" << totals_.materialsPaired
-         << " materials_unpaired=" << totals_.materialsUnpaired;
+         << " materials_unpaired=" << totals_.materialsUnpaired
+         << " effects_paired=" << totals_.effectsPaired
+         << " effects_unpaired=" << totals_.effectsUnpaired;
   if (!totals_.firstGxDifference.empty()) {
     report << " gx_first=" << totals_.firstGxDifference;
   }

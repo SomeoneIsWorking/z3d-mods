@@ -7,6 +7,7 @@
 
 #include "actor_track.hpp"
 #include "camera_track.hpp"
+#include "effect_pool_track.hpp"
 #include "fade_track.hpp"
 #include "material_track.hpp"
 #include "skeleton_track.hpp"
@@ -55,6 +56,7 @@ private:
     SkeletonTrack skeletons;
     FadeTrack fades;
     MaterialTrack materials;
+    EffectPoolTrack effects;
   };
 
   void onSection(Section &section);
@@ -108,6 +110,8 @@ private:
     uint64_t fadesUnpaired = 0;
     uint64_t materialsPaired = 0;
     uint64_t materialsUnpaired = 0;
+    uint64_t effectsPaired = 0;
+    uint64_t effectsUnpaired = 0;
   };
   Totals totals_;
 };

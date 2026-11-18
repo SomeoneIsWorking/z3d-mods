@@ -38,6 +38,8 @@ public:
   };
   // The paired actors' positions and rotations a fraction `t` of the way from the previous tick.
   Counts inputs(float t, std::vector<Core::SectionReplay::Input> &out) const;
+  // The live actors of this tick with that id, paired with the previous tick's.
+  [[nodiscard]] std::vector<uint32_t> pairedWithId(int16_t id) const;
 
 private:
   struct Sample {

@@ -40,6 +40,7 @@ add_executable(z3d
   src/emulator.cpp
   src/actor_track.cpp
   src/camera_track.cpp
+  src/effect_pool_track.cpp
   src/fade_track.cpp
   src/material_track.cpp
   src/skeleton_track.cpp

@@ -90,6 +90,7 @@
   - `frame_interpolation`: the game's draw section hooked through the core's `SectionReplay` (`patch/<game>/interpolation.toml`): census, t = 1 probes and the in-betweens, run through the core's `GPU::RunDetached`.
   - `actor_track`: the actors' motion track for an in-between: each live actor's `world.pos` and `shape.rot` blended, paired by address and id.
   - `skeleton_track`: the skeletons' motion track: the joint tables of the skeletons the section drew (calls the core observed), blended joint by joint.
+  - `effect_pool_track`: an actor's own effect array blended slot by slot (ObjectKankyo's fairies), in actors the actor track paired.
   - `fade_track`: the fades' motion track: the colour of the transition's fill while it is a fade, and of the fade flash, blended.
   - `material_track`: the material animations' track (texture scroll): each animation the draw steps started part of its step on, paired by address, animation and step.
   - `motion_blend`: the tracks' blends (floats, vectors, binary angles the short way, rigid 3x4 matrices); `section_memory`: typed reads of the section's start state and replay inputs.
