@@ -267,9 +267,14 @@ cuts.
   `on-vs-off-link-36-40.png`, on above). OoT3D after the change: Kokiri Forest walking, 318
   skeletons paired, poses between ticks (scratch/runs/oot-skel-kf `walk-vs-off-36-40.png`); the
   Fire Temple door run, 2 cuts and 2 refusals in 166 replays.
-- MM3D, where the work stands (2026-11-18). Fades: `Play_Draw` draws the transition through
-  `PlayState + 0xCA94` on the instance at `+0xC860` while `+0xC85A` is 3 or 11 (decomp/mm3d
-  `docs/frame.md`), then 0x172004 on `+0xCAAC`, by its disassembly OoT3D's `TransitionFade_Draw`
-  (type at +0, colour alpha first at +4, the fade flash); not yet in the decomp, and which draw a
-  scene fade installs is not read yet. The scene's material animations, effect pools and the door and shot cuts are not
-  started. The "Frame interpolation" option stays OoT3D-only until these pass.
+- Step 5, MM3D fades: built. A scene's fade is OoT3D's `TransitionFade` (decomp/mm3d
+  `docs/frame.md` "Fades"): the transition at `PlayState` +0xC860 with its draw at +0xCA94, and
+  the fade flash at +0xCAAC; the table names them and the fade track runs unchanged. A warp to
+  South Clock Town (mm-fade): the white fade out brightens on every present (mean luminance 44.0,
+  47.1, 50.3, 54.2, 57.5 ...) where interpolation off holds each step for two (44.0, 44.0, 50.3,
+  50.3, 57.5), and the fade in from black after the load the same (7.2, 8.6, 9.6, 11.0 against
+  7.2, 7.2, 9.6, 9.6); the first step out of black is cut by the play state's restart, as in
+  OoT3D (`fade-out-3-8.png`, on above). 114 replays, 2 cuts, 2 refused (the load).
+- MM3D, where the work stands (2026-11-18). The scene's material animations, effect pools and the
+  door and shot cuts are not started. The "Frame interpolation" option stays OoT3D-only until
+  these pass.
