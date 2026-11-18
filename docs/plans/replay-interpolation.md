@@ -18,7 +18,9 @@ cuts.
   game thread turns them and the HUD into the PICA list and the bound command list's requests
   (four lists and the two screens' display transfers); its last call, the frame end, waits the
   vsyncs and hands the requests to the GSP. A tick's frame shows after the next tick's draw.
-- MM3D: not traced yet; the same engine shape is expected (`Play_Update` is named).
+- MM3D: decomp/mm3d `docs/frame.md`. `Play_Main` runs `Play_Update`, then `Play_Draw` (at
+  +0x160); the game thread's `Graph_DrawFrame` ends with a direct call of the frame end (+0xA04),
+  which runs the bound command list. The engine's shape is OoT3D's.
 
 ## Design
 
@@ -218,4 +220,13 @@ cuts.
   game booted from the picker logging `frame interpolation on`. The windowed counts show which
   presents are in-betweens; that each sits halfway is shown by the harness crops above, through
   the same presenter (`RendererVulkan::PrepareRendertarget`).
-  Next: MM3D's frame loop and draw section (step 5), then its option.
+- Step 5 (MM3D): the draw section is found by disassembly, from `Play_Main` +0x160
+  (`PLAY_MAIN_DRAW_CALL`) to `Graph_DrawFrame` +0xA04 (`GRAPH_DRAW_FRAME_END_CALL`), neither site
+  touched by our patch. Not done: the census. `FrameInterpolation` reads every track's addresses
+  from the manifest's table, so `patch/mm3d/interpolation.toml` needs the command list object
+  (MM3D's `gNngxState.boundCmdlist`, not found yet) before a census can run, and the tracks'
+  fields (View's eye, at, up, fovy; the camera pointers and settings; `Actor.shape.rot`;
+  `SkelAnime`; the transition fade; the scene's material animations; effect pools) before an
+  in-between can. Next: find the bound command list (Graph_RunBoundCmdlist's argument), write
+  the table with the section and command list and let the census run without the tracks' fields,
+  then the tracks one by one.
