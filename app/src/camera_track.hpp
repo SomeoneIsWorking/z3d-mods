@@ -37,6 +37,11 @@ struct CameraAddresses {
   // Camera_Special9, and its animState once it has put the eye beyond the door.
   uint32_t doorFunction;
   uint32_t doorFarSide;
+  // Offsets in the play state: the cutscene's shot (the frames its eye and at point lists were
+  // handed to the camera, and command 0x97's segment), each changed only as a shot starts.
+  uint32_t cutsceneEyeShot;
+  uint32_t cutsceneAtShot;
+  uint32_t cutsceneShot;
 };
 
 class CameraTrack {
@@ -49,7 +54,7 @@ public:
   // The view's inputs a fraction `t` of the way from the previous tick to this one, or nothing at
   // a cut: no previous tick, another play state or camera, or a play state started again (its
   // frame count not one on from the previous tick's: a scene change, warp or respawn), or the
-  // door camera's step to the door's far side.
+  // door camera's step to the door's far side, or a new cutscene shot.
   [[nodiscard]] std::optional<std::vector<Core::SectionReplay::Input>> inputs(float t) const;
 
 private:
@@ -66,9 +71,13 @@ private:
     // The active camera's function index, and its animState.
     int16_t function = -1;
     int16_t animState = 0;
+    uint16_t cutsceneEyeShot = 0;
+    uint16_t cutsceneAtShot = 0;
+    int32_t cutsceneShot = 0;
   };
 
   [[nodiscard]] bool passedDoor() const;
+  [[nodiscard]] bool newShot() const;
 
   CameraAddresses addresses_;
   std::optional<Sample> previous_;

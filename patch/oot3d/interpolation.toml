@@ -29,6 +29,11 @@ camera_setting_modes = ["CameraSetting.cameraModes"]
 camera_mode_function = ["CameraMode.funcIdx"]
 door_camera_function = ["CAM_FUNC_SPEC9"]
 door_camera_far_side = ["CAM_SPEC9_ANIM_FAR_SIDE"]
+# The cutscene shot cut: the point lists' applied frames, which change only when
+# Camera_SetCSParams takes new lists, and command 0x97's segment (decomp/oot3d docs/cutscene.md).
+cutscene_eye_shot = ["PlayState.csCtx", "CutsceneContext.camEyeSplinePointsAppliedFrame"]
+cutscene_at_shot = ["PlayState.csCtx", "CutsceneContext.camAtSplinePointsAppliedFrame"]
+cutscene_shot = ["PlayState.csCtx", "CutsceneContext.camShot"]
 # The actor track: the actor lists, and what Actor_Draw builds an actor's model matrix from.
 actor_lists = ["PlayState.actorCtx", "ActorContext.actorLists"]
 actor_list_count = ["ACTORCAT_MAX"]

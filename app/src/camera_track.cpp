@@ -40,6 +40,9 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
                                                      addresses_.modeFunction);
     sample.animState = readStart<int16_t>(replay, sample.camera + addresses_.cameraAnimState);
   }
+  sample.cutsceneEyeShot = readStart<uint16_t>(replay, sample.play + addresses_.cutsceneEyeShot);
+  sample.cutsceneAtShot = readStart<uint16_t>(replay, sample.play + addresses_.cutsceneAtShot);
+  sample.cutsceneShot = readStart<int32_t>(replay, sample.play + addresses_.cutsceneShot);
   previous_ = current_;
   current_ = sample;
 }
@@ -47,7 +50,7 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
 std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float t) const {
   if (!previous_ || !current_ || previous_->play != current_->play ||
       previous_->frames + 1 != current_->frames || previous_->camera != current_->camera ||
-      current_->camera == 0 || passedDoor()) {
+      current_->camera == 0 || passedDoor() || newShot()) {
     return std::nullopt;
   }
   const Sample &from = *previous_;
@@ -81,6 +84,12 @@ bool CameraTrack::passedDoor() const {
            sample.animState == static_cast<int16_t>(addresses_.doorFarSide);
   };
   return atFarSide(*current_) && !atFarSide(*previous_);
+}
+
+bool CameraTrack::newShot() const {
+  return previous_->cutsceneEyeShot != current_->cutsceneEyeShot ||
+         previous_->cutsceneAtShot != current_->cutsceneAtShot ||
+         previous_->cutsceneShot != current_->cutsceneShot;
 }
 
 } // namespace z3d::app

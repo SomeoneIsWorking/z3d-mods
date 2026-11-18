@@ -150,6 +150,21 @@ cuts.
   pixels) and the next shows the far side whole; the presents after it blend again
   (scratch/runs/door-cut-1 `cut-112-119.png`). Two in-betweens there are refused (svc 0x22 at
   0x335248, the room behind the door loading), as the sandbox should. The back alley's doors load
-  a scene under setting 0x21 and are cut by the play state's restart. Next: the cutscene shot cut,
-  how Grezzo's spline commands (0x96, 0x97) start a shot, since `Camera_SetCSParams`'s N64 stores
-  are not in this build. (2026-11-18)
+  a scene under setting 0x21 and are cut by the play state's restart.
+  Cutscene shot cut: built. `Camera_SetCSParams` is 0x2C4130, called by the N64 point-list
+  commands, and Grezzo's spline command 0x97 picks the segment covering the frame into
+  `csCtx.camShot` (decomp/oot3d `docs/cutscene.md` "The camera's shots"); a shot starts exactly
+  when `camShot` or a point list's applied frame changes, and `camera_track` cuts there. In the
+  Kakariko intro (savestate `kak`, saved two seconds after warp 0xDB from `kf`), the present
+  before the change from the village to the graveyard gate repeats the last tick (0 changed
+  pixels) and the next shows the new shot whole (scratch/runs/shot-cut-2 `shot-386-393.png`);
+  the cutscene's start and end are cut by the active camera changing (`shot-546-553.png`).
+- The first step out of black after a scene load: not a cut. Warping into Link's house, the old
+  scene's last section is frame 215 and the new scene's first closed section is frame 12 (frames
+  1 to 11 close no section while the scene loads), so (215, 12) is cut by the restart and (12, 13)
+  is blended: no refusal, the fade paired. Yet the present before tick 13's frame is black
+  (mean luminance 0.0, then 5.0, 7.7, 10.4, scratch/runs/fade-5): the in-between is made but never
+  shown. `RasterizerVulkan::TakeInBetween` shows it only on a later vblank of tick 12's frame,
+  and is skipped while an LCD colour fill is on; which of the two holds there (tick 12's frame on
+  one vblank after the load's lag, or the screen still filled) is not measured yet. Next: count
+  per vblank whether the in-between is due, the shown buffer and the fill state across this load.

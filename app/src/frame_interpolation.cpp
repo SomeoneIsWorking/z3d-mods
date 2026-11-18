@@ -98,6 +98,9 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .modeFunction = field(*table, "camera_mode_function"),
           .doorFunction = field(*table, "door_camera_function"),
           .doorFarSide = field(*table, "door_camera_far_side"),
+          .cutsceneEyeShot = field(*table, "cutscene_eye_shot"),
+          .cutsceneAtShot = field(*table, "cutscene_at_shot"),
+          .cutsceneShot = field(*table, "cutscene_shot"),
       }),
       .actors = ActorTrack(ActorAddresses{
           .play = field(*table, "play"),
