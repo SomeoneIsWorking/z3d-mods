@@ -255,4 +255,13 @@ cuts.
   unpaired. Link turning while he runs: with interpolation on every present has its own heading
   where off repeats each one twice (scratch/runs/mm-act-on `on-vs-off-link-36-47.png`, on above).
   His leg pose still steps at the tick rate (no skeleton track yet).
-  Next: skeletons, fades, materials, effect pools, then the door and shot cuts.
+  Next: skeletons, fades, materials, effect pools, then the door and shot cuts; then the option.
+- MM3D, where the work stands (2026-11-18). Skeletons: the player's `SkelAnime` layout is seen in
+  memory (decomp/mm3d `docs/actors.md` "The player's skeleton"), but the skeleton track needs the
+  branch in the draw that queues a skeleton with its `SkelAnime` in a register; MM3D has neither
+  OoT3D's `SkelAnime_DrawOpa` nor its queue function 0x4C7AB0 by their bytes, so it is found
+  next by tracing the player's draw (or a read of `SkelAnime.model` in the section). Fades:
+  `Play_Draw` draws the transition through `PlayState + 0xCA94` on the instance at `+0xC860`
+  (decomp/mm3d `docs/frame.md`); the fade's type, colour and draw function are not read yet. The
+  scene's material animations, effect pools and the door and shot cuts are not started. The
+  "Frame interpolation" option stays OoT3D-only until these pass.
