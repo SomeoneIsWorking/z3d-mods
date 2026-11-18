@@ -154,6 +154,16 @@ cuts.
   difference 0.0). Still at 30 Hz in Link's house and Kokiri Forest standing still: Navi's
   sparkles (not traced). Not built: actors' own material animations and the time of day's list,
   the remaining declared cuts, MM3D and the option. (2026-11-18)
+- OoT3D step maps (harness states `kak2`, Kakariko at night after its intro; `field`, Hyrule
+  Field at night by two Stalchildren, warp 0xCD from `kf`; `deku`, inside the Deku Tree, warp 0x0;
+  scratch/runs/<state>-step `step0.png`/`step1.png`, 6 s each, 0 refused): Kakariko and the Deku
+  Tree step nowhere; Hyrule Field steps only Navi's sparkle trail (424 pixels, `field-step/step1.png`),
+  the Stalchildren move into every present. Next: find the sparkles' pool (the soft sprites,
+  `EffectSSResourceManager` 0x4A3638, spawned from En_Elf, `EnElf_Init` 0x18A8E0) by a write
+  watch on a sparkle's drawn position in `field`, name its record (position, velocity, life, type)
+  in decomp/oot3d, and track it as a pool: a slot pairs while live in both samples with its type
+  unchanged and its life one tick on. The actors' own material animations and the time of day's
+  list showed nothing stepping in these three states; a state that shows them is still needed.
 - Step 4, declared cuts. Shipwright declares two camera cuts: `Camera_Special9` when the door
   timer runs out and `animState` goes 1 to 2 (the eye jumps to the door's far side), and
   `Camera_SetCSParams`. Door cut: built. A door within a scene (the Fire Temple lobby's left door,
@@ -369,8 +379,8 @@ cuts.
   - Step maps (scratch/runs/mm-steps; a region steps when its change all falls into the real
     ticks): South Clock Town by day, only the clock's minute digit. The Southern Swamp: the far
     water band and Woodfall Temple's speck at (222,12) stepped; both were models' material
-    animations, fixed below. Clock Town at night: not mapped yet (state `night` exists, see the
-    next steps).
+    animations, fixed below. Clock Town at night (state `night`, 9:09 on the first night,
+    scratch/runs/night-step `step0.png`, 269 replays, 0 refused): only the clock's minute digit.
   - Models' material animations: interpolated. `Model_Update` (0x2240EC) steps the player at the
     model's +0x98 inside the draw section, through its vtable at +0x58 (decomp/mm3d `docs/frame.md`
     "Material animations"), so the replay stepped it once from the start state and drew the newer
