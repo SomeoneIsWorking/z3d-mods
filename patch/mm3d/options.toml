@@ -33,6 +33,13 @@ pad = "cstick_invert_y"
 label = "Camera stick: invert Y"
 default = false
 
+# A 60 Hz in-between of each two 30 Hz ticks, the game's draw run again (docs/plans/replay-interpolation.md).
+[[option]]
+id = "frame_interpolation"
+app = "frame_interpolation"
+label = "Frame interpolation"
+default = true
+
 # Times the mouse's 0.05 degrees a count, for the camera and the aim.
 [[option]]
 id = "mouse_sensitivity"

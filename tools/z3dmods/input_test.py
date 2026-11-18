@@ -16,12 +16,27 @@ import signal
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
 from evdev import AbsInfo, UInput, ecodes
 
-from z3dmods import app, config, ctr, desktop_container, games, harness, options, package, play, shortcut, source_check, steps, symbols
+from z3dmods import (
+    app,
+    config,
+    ctr,
+    desktop_container,
+    games,
+    harness,
+    options,
+    package,
+    play,
+    shortcut,
+    source_check,
+    steps,
+    symbols,
+)
 from z3dmods.app_keys import AppKeys
 from z3dmods.config import Config
 from z3dmods.install import GameSet
@@ -1361,11 +1376,11 @@ INTERP_TURN = (40, 0)
 INTERP_TURN_EVERY = 0.25
 
 
-def _interp(session: Session, expected: str) -> None:
-    """OoT3D's File 1 with the camera turning; the app's pacing reports made wholly in play
+def _interp(session: Session, expected: str, file_1: Callable[[Session], None]) -> None:
+    """A game's File 1 with the camera turning; the app's pacing reports made wholly in play
     (flips, the in-betweens among them and ticks a second) are kept in pacing.txt."""
     session.expect(f"frame interpolation {expected}", 60)
-    _oot3d_file_1(session)
+    file_1(session)
     session.expect("mouse camera:")
     session.shot("play")
     # The report under way when play starts covers the boot too.
@@ -1382,14 +1397,15 @@ def _interp(session: Session, expected: str) -> None:
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "camera": _camera, "camera-mm3d": _camera_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d,
           "aim-fast": _aim_fast, "camera-fast": _camera_fast, "camera-mq": _camera, "fire": _fire,
-          "fire-mm3d": _fire_mm3d, "interp": lambda session, pad: _interp(session, "on"),
-          "interp-off": lambda session, pad: _interp(session, "off")}
+          "fire-mm3d": _fire_mm3d, "interp": lambda session, pad: _interp(session, "on", _oot3d_file_1),
+          "interp-off": lambda session, pad: _interp(session, "off", _oot3d_file_1),
+          "interp-mm3d": lambda session, pad: _interp(session, "on", _mm3d_file_1)}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
                "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
                "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d", "aim-fast": "oot3d",
                "camera-fast": "oot3d", "camera-mq": "oot3d", "fire": "oot3d", "fire-mm3d": "mm3d",
-               "interp": "oot3d", "interp-off": "oot3d"}
+               "interp": "oot3d", "interp-off": "oot3d", "interp-mm3d": "mm3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
@@ -1404,6 +1420,7 @@ PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-
            "fire": lambda cfg, user, out: _oot3d_slots_file(cfg, user, out, aimed_on_y=True),
            "fire-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, aimed_on_y=True),
            "interp-off": lambda cfg, user, out: _store_options(cfg, user, "oot3d", {"frame_interpolation": 0}),
+           "interp-mm3d": _mm3d_slots_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}
