@@ -9,9 +9,20 @@ void FadeTrack::sample(Core::SectionReplay &replay) {
   const auto play = readStart<uint32_t>(replay, addresses_.play);
   previous_ = play == play_ ? std::move(current_) : decltype(previous_){};
   current_.clear();
+  previousCard_ = play == play_ ? currentCard_ : std::nullopt;
+  currentCard_.reset();
   play_ = play;
   if (play == 0) {
     return;
+  }
+  if (addresses_.titleCard) {
+    const auto card = play + addresses_.titleCard->card;
+    const auto fadeAddress = card + addresses_.titleCard->fade;
+    currentCard_ = CardSample{
+        .fadeAddress = fadeAddress,
+        .texture = readStart<uint32_t>(replay, card + addresses_.titleCard->texture),
+        .fade = readStart<std::array<int16_t, 2>>(replay, fadeAddress),
+    };
   }
   const auto take = [&](uint32_t fade) {
     current_[fade] = Sample{
@@ -42,6 +53,14 @@ FadeTrack::Counts FadeTrack::inputs(float t, std::vector<Core::SectionReplay::In
       color[i] = lerpByte(from->second.color[i], to.color[i], t);
     }
     out.push_back(replayInput(fade + addresses_.color, color));
+  }
+  if (currentCard_ && previousCard_ && currentCard_->texture == previousCard_->texture &&
+      currentCard_->fade != previousCard_->fade) {
+    std::array<int16_t, 2> fade{};
+    for (std::size_t i = 0; i < fade.size(); ++i) {
+      fade[i] = lerpShort(previousCard_->fade[i], currentCard_->fade[i], t);
+    }
+    out.push_back(replayInput(currentCard_->fadeAddress, fade));
   }
   return counts;
 }

@@ -30,6 +30,12 @@ using Vec3s = std::array<int16_t, 3>;
       std::lround(lerp(static_cast<float>(from), static_cast<float>(to), t)));
 }
 
+// A signed 16-bit level, rounded.
+[[nodiscard]] inline int16_t lerpShort(int16_t from, int16_t to, float t) {
+  return static_cast<int16_t>(
+      std::lround(lerp(static_cast<float>(from), static_cast<float>(to), t)));
+}
+
 // A binary angle (0x10000 a turn) the short way round.
 [[nodiscard]] inline int16_t lerpAngle(int16_t from, int16_t to, float t) {
   const auto delta = static_cast<int16_t>(static_cast<uint16_t>(to) - static_cast<uint16_t>(from));

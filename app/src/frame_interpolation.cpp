@@ -170,6 +170,12 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .fadeDraw = field(*table, "fade_draw"),
         .type = field(*table, "fade_type"),
         .color = field(*table, "fade_color"),
+        .titleCard = has(*table, "title_card") ? std::optional(FadeAddresses::TitleCard{
+                                                     .card = field(*table, "title_card"),
+                                                     .texture = field(*table, "title_card_texture"),
+                                                     .fade = field(*table, "title_card_fade"),
+                                                 })
+                                               : std::nullopt,
     });
   }
   // An animation is stepped in the draw (material_step_calls) or before it (material_lead_calls).

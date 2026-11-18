@@ -59,15 +59,20 @@ fade_flash = ["PlayState.transitionFadeFlash"]
 fade_draw = ["TransitionFade_Draw"]
 fade_type = ["TransitionFade.type"]
 fade_color = ["TransitionFade.a"]
-# The material track: the material animations Scene_Draw steps (AnimPlayer_Update's r0; the time
-# of day's list is left out, its frame is set from the time), their frame, speed and loop, and the
-# frame count AnimPlayer_Update wraps at.
+# The place name card: TitleCard_Update steps its alpha and intensity in the update.
+title_card = ["PlayState.actorCtx", "ActorContext.titleCtx"]
+title_card_texture = ["TitleCardContext.texture"]
+title_card_fade = ["TitleCardContext.alpha"]
+# The material track: the material animations the draw steps, Scene_Draw's and each queued
+# model's own (AnimPlayer_Update's r0; the time of day's list is left out, its frame is set from
+# the time), their frame, speed and loop, and the frame count AnimPlayer_Update wraps at.
 material_step_calls = [
   ["Scene_Draw", "SCENE_DRAW_ANIM_UPDATE_CALL"],
   ["Scene_Draw", "SCENE_DRAW_ANIM_UPDATE_CALL_A0"],
   ["Scene_Draw", "SCENE_DRAW_ANIM_UPDATE_CALL_A1"],
   ["Scene_Draw", "SCENE_DRAW_ANIM_UPDATE_CALL_B0"],
   ["Scene_Draw", "SCENE_DRAW_ANIM_UPDATE_CALL_B1"],
+  ["Model_Update", "MODEL_UPDATE_MATERIAL_CALL"],
 ]
 material_step_arg = [0]
 material_anim = ["AnimPlayer.anim"]

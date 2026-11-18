@@ -136,8 +136,8 @@ cuts.
   `t` of the way on, so the draw's own step lands halfway. Kokiri Forest's waterfall flows on every
   present (about 10 changed pixels a present in its crop) where interpolation off moves on every
   second (55 to 72, then 0) (scratch/runs/interp-mat-1 `on-waterfall-10-17.png` against
-  `off-waterfall-10-17.png`). Not covered: the time of day's list (its frame is set from the time)
-  and animations actors step in their own update or draw.
+  `off-waterfall-10-17.png`). Not covered: the time of day's list (its frame is set from the
+  time); models' own animations are, below.
 - Step 4, effect pools: built (`app/src/effect_pool_track`). Kokiri Forest's floating motes are
   `ObjectKankyo`'s fairies (decomp/oot3d `docs/frame.md` "Effects"): in each ObjectKankyo with the
   fairies' params that the actor track pairs, each effect in use with its `state` and `base`
@@ -151,9 +151,7 @@ cuts.
   its peak brightness falls on every present (211 203 192 179 177 170 162 153 144 132 120) where
   before it repeated in pairs (211 210, 153 153, 134 132); `mote-after-vs-before-10-21.png`,
   after above. The real presents equal interpolation off's (kf-fairy2 on and off, mean
-  difference 0.0). Still at 30 Hz in Link's house and Kokiri Forest standing still: Navi's
-  sparkles (not traced). Not built: actors' own material animations and the time of day's list,
-  the remaining declared cuts, MM3D and the option. (2026-11-18)
+  difference 0.0).
 - OoT3D step maps (harness states `kak2`, Kakariko at night after its intro; `field`, Hyrule
   Field at night by two Stalchildren, warp 0xCD from `kf`; `deku`, inside the Deku Tree, warp 0x0;
   scratch/runs/<state>-step `step0.png`/`step1.png`, 6 s each, 0 refused): Kakariko and the Deku
@@ -460,3 +458,18 @@ cuts.
     0, 7272, 0, 7039) and MM3D South Clock Town (gx-sct-on `on-vs-off-14-19.png`: every present
     changes, off 0, 12248, 0, 12426), colours as the real frames'. The t = 1 probe and the leak
     check compare requests as read, so neither could see a wrong translation.
+- OoT3D's place name card: blended. `TitleCard_Update` steps the card's alpha and intensity in
+  the update and the draw only reads them (decomp/oot3d `docs/frame.md` "Fades"), so the fade
+  track blends both while the card's texture is the same in both ticks. Entering Zora's Domain
+  (`loadstate:kf warp:0x108`), the card's brightness rises on every present with interpolation
+  on (207 207 208 209 210 211 213 214 ...) where off holds each step for two (205 207 207 209
+  209 211 211 214 ...); scratch/runs/zora-step3, zora-off. The Kakariko intro's step map, which
+  showed the card stepping (kakcs-step `step1.png`), is clean (kakcs-step2).
+- OoT3D models' own material animations: interpolated. `Model_Update` (0x3FED90), run for each
+  model the draw queues, tail-branches to `AnimPlayer_Update` on the model's player
+  (`MODEL_UPDATE_MATERIAL_CALL`, decomp/oot3d `docs/frame.md` "Material animations"), as MM3D's
+  does; the table names it with Scene_Draw's sites. Zora's Domain's waterfall
+  (`BgSpot07Taki_Draw`'s model) stepped there (zora-step `step1.png`); now two players pair a
+  tick, and the step maps of Zora's Domain, Kokiri Forest and the Kakariko intro show nothing
+  stepping (zora-step3, kf-step3, kakcs-step2), Lake Hylia one pixel of an outline (lake-step2).
+  `interp leakcheck` in Zora's Domain: 119 replays, 0 refused, 0 leaking.

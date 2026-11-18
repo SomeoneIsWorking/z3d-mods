@@ -1,12 +1,14 @@
 // The fade track of frame interpolation (docs/plans/replay-interpolation.md): the colour of each
-// screen fill the draw fades (the scene transition while it is a fade, and the fade flash),
-// blended between two ticks. A fill pairs by its address and type while it is a fade in both.
+// screen fill the draw fades (the scene transition while it is a fade, and the fade flash), and
+// the place name card's alpha and intensity, blended between two ticks. A fill pairs by its
+// address and type while it is a fade in both, the card by its texture.
 #pragma once
 
 #include "core/section_replay.h"
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -21,6 +23,12 @@ struct FadeAddresses {
   uint32_t fadeDraw;       // the fade's draw function
   uint32_t type;           // offsets in a fade
   uint32_t color;
+  struct TitleCard {
+    uint32_t card;    // offset in the play state
+    uint32_t texture; // offsets in the card
+    uint32_t fade;    // its alpha, then its intensity, each an s16
+  };
+  std::optional<TitleCard> titleCard;
 };
 
 class FadeTrack {
@@ -42,11 +50,18 @@ private:
     uint8_t type = 0;
     std::array<uint8_t, 4> color{};
   };
+  struct CardSample {
+    uint32_t fadeAddress = 0;
+    uint32_t texture = 0;
+    std::array<int16_t, 2> fade{};
+  };
 
   FadeAddresses addresses_;
   uint32_t play_ = 0;
   std::unordered_map<uint32_t, Sample> previous_;
   std::unordered_map<uint32_t, Sample> current_;
+  std::optional<CardSample> previousCard_;
+  std::optional<CardSample> currentCard_;
 };
 
 } // namespace z3d::app
