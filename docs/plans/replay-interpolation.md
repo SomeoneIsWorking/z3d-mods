@@ -168,3 +168,27 @@ cuts.
   and is skipped while an LCD colour fill is on; which of the two holds there (tick 12's frame on
   one vblank after the load's lag, or the screen still filled) is not measured yet. Next: count
   per vblank whether the in-between is due, the shown buffer and the fill state across this load.
+- The replay's own render target: not built. What `GPU::RunDetached` does to the game's state
+  today, read from the fork (be7fbf188): its lists draw through `GetFramebufferSurfaces` into the
+  game's colour and depth surfaces and `InvalidateRegion` makes them the regions' dirty owners;
+  a MemoryFill or TextureCopy request goes to `Execute`, so a fill registers a fill surface that
+  owns the game's region after the replay, and a copy the cache cannot accelerate writes guest
+  memory; a RequestDma (id 0, 45 of them in the Fire Temple door run) copies guest memory the
+  replay may have changed, outside the store journal; a `FlushRegion` during the replay (from
+  `ValidateSurface`) can download the replay's pixels into guest memory, also outside the
+  journal; display transfers to anything but a screen's display buffer are dropped, so a frame
+  that transfers into a texture it reads later would read the real one. The design: an overlay
+  in `RasterizerCache` opened and closed by `RunDetached`. Opening it snapshots the cache's
+  bookkeeping (`page_table`, `dirty_regions`, `cached_pages`, `sentenced`, each registered
+  surface's metadata); the first image write to a surface that existed before (a draw's colour or
+  depth target, a copy, blit, clear or upload into it, a texture cube built from it) moves the
+  original out of its slot into a stash and puts a copy in its place, after dropping the
+  framebuffers and cube faces that name it, so every lookup of that id reads and writes the copy
+  and the original is never drawn into. Closing it destroys the copies and every surface made
+  during the replay, returns the originals to their slots, restores the bookkeeping and the
+  memory's cached-page marks to match, and drops framebuffers made meanwhile. Inside it a flush
+  of an interval the overlay owns is skipped and counted, a fill or copy goes through the cache
+  only (no software fallback; refused instead), a DMA is refused, and a display transfer into a
+  non-screen surface runs into the overlay. Proof wanted: `interp leakcheck`, the game's render
+  target surfaces read back before and after a replay, byte equal, in Kokiri Forest and the Fire
+  Temple door run.
