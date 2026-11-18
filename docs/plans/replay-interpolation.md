@@ -311,8 +311,26 @@ cuts.
     (here after the matrix is built at 0x18FD0C), blending the queued model's matrix between the
     two ticks' real values: generic for every draw-time writer, but a new replay mechanism. Also
     still stepping: edge pixels on Link, not traced.
-  - Effect pools, the door and cutscene shot cuts: not started. MM3D's door camera and
-    cutscene camera fields (the `Camera` setting, mode and step, the cutscene's shot) are not
-    laid out in decomp/mm3d yet; OoT3D's `Camera_Special9` and `Camera_SetCSParams` and
-    2 Ship 2 Harkinian's camera cut call sites are the leads.
-  - The "Frame interpolation" option stays OoT3D-only until these pass.
+  - Effect pools: not started.
+  - Door cut: under way, nothing built. Found so far (code.bin, not yet in decomp/mm3d):
+    `Camera_Update` 0x180CC4; `Camera` +0x156 setting, +0x158 mode (s16); `sCameraSettings`
+    0x667894 (12-byte entries, modes pointer at +8; modes 8 bytes, funcIdx s16 at +0);
+    `sCameraFunctions` 0x667D38, `Camera_Special9` 0x470818 is index 70. Its step is the s16 at
+    `Camera` +0x172 (tested against 0, 10 and 20 on entry, against 5 later), so the far-side
+    value differs from OoT3D's and must be read from a door run. No door run yet: the Stock Pot
+    Inn (`warp:0xBC00`, state `inn`) has doors (`EnDoor` 0x5, category 10; one at
+    -150,0,-150 facing +X), but placing Link at -122,0,-150 facing it and pressing A opened
+    nothing (camera +0x150..0x17F unchanged; tmp door.py). Next: walk to a door with the stick
+    instead of a teleport, or find what the door's open test reads.
+  - Cutscene shot cut: not started. MM3D's cutscene camera is script command 90
+    (decomp/mm3d `docs/cutscene.md`); its shot field is not found.
+  - The "Frame interpolation" option stays OoT3D-only: with interpolation on, MM3D crashes a
+    second or two after Start on the title screen (reproduction: `z3dmods run mm3d <dir>
+    --harness interp:on wait:29 start wait:6`; `interp:leakcheck` crashes too, `interp:census`
+    and `interp:off` do not). The core asserts in `RasterizerCache::UpdatePagesCachedCount`
+    (count below 0) after `VirtualToPhysicalAddress` meets 0x010C8000. Every title-screen
+    replay is refused (svc 0x22 from 0x12A150) and the leak check finds no leak in memory or
+    the rasterizer cache's state, so what a refused replay changes is outside what it compares
+    (GPU registers or GSP state are the candidates). Not traced. The `interp-mm3d` scenario
+    (OoT3D's `interp` with `_mm3d_file_1`, prepared like `camera-mm3d`) reached the crash and
+    was not landed.
