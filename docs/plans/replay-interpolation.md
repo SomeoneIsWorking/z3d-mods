@@ -313,16 +313,17 @@ cuts.
     two ticks' real values: generic for every draw-time writer, but a new replay mechanism. Also
     still stepping: edge pixels on Link, not traced.
   - Effect pools: not started.
-  - Door cut: under way, nothing built. Found so far (code.bin, not yet in decomp/mm3d):
-    `Camera_Update` 0x180CC4; `Camera` +0x156 setting, +0x158 mode (s16); `sCameraSettings`
-    0x667894 (12-byte entries, modes pointer at +8; modes 8 bytes, funcIdx s16 at +0);
-    `sCameraFunctions` 0x667D38, `Camera_Special9` 0x470818 is index 70. Its step is the s16 at
-    `Camera` +0x172 (tested against 0, 10 and 20 on entry, against 5 later), so the far-side
-    value differs from OoT3D's and must be read from a door run. No door run yet: the Stock Pot
-    Inn (`warp:0xBC00`, state `inn`) has doors (`EnDoor` 0x5, category 10; one at
-    -150,0,-150 facing +X), but placing Link at -122,0,-150 facing it and pressing A opened
-    nothing (camera +0x150..0x17F unchanged; tmp door.py). Next: walk to a door with the stick
-    instead of a teleport, or find what the door's open test reads.
+  - Door cut: built (the table only; `camera_track` is OoT3D's). A door within a scene runs
+    setting 0x8, function 70 `Camera_Special9`, whose step (`Camera.animState`, +0x172) becomes 2
+    in the tick that puts the eye beyond the door, as in OoT3D (decomp/mm3d `docs/camera.md` "The
+    door camera"). Woodfall Temple's first door (harness state `mayor`, which is Woodfall Temple:
+    `teleport:0,-1185,860 wait:1 walk:0,770,4 teleport:0,-1185,745 wait:0.05` then A; walking
+    against the door stops 50.6 from it, too far for its prompt): with interpolation on, the
+    present before the jump repeats the last tick (0 changed pixels) and the next shows the far
+    side whole; the presents after it move again (scratch/runs/mm-door-cut-1 `cut-39-44.png`; 91
+    replays, 0 refused, 2 cuts: the first after `interp on` and the door). The Stock Pot Inn's
+    doors are all type 5 in their params (bits 7-9), the game's schedule doors, which is
+    likely why A did nothing there.
   - Cutscene shot cut: not started. MM3D's cutscene camera is script command 90
     (decomp/mm3d `docs/cutscene.md`); its shot field is not found.
   - The title-screen crash: fixed. With `interp on`, MM3D crashed a second or two after Start on
