@@ -250,4 +250,9 @@ cuts.
   ArbitrateAddress wait). The scene's white fade out and fade in still step on every second
   present (no fade track yet). OoT3D after the change: the Fire Temple door run still gives 2
   cuts and 2 refusals in 136 replays. Not found yet in MM3D: the door and cutscene shot cuts.
-  Next: actors, skeletons, fades, materials, effect pools, then those cuts.
+- Step 5, MM3D actors: built. `Actor.shape.rot` is +0xC0 (decomp/mm3d `docs/actors.md` "The
+  model's place in the draw"); about 40 actors pair a tick in South Clock Town's tower base, none
+  unpaired. Link turning while he runs: with interpolation on every present has its own heading
+  where off repeats each one twice (scratch/runs/mm-act-on `on-vs-off-link-36-47.png`, on above).
+  His leg pose still steps at the tick rate (no skeleton track yet).
+  Next: skeletons, fades, materials, effect pools, then the door and shot cuts.
