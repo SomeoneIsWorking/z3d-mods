@@ -51,9 +51,10 @@ bool has(const lucent::json::Value &table, const char *name) {
   return table.find(name) != nullptr;
 }
 
-bool observeAll(Core::SectionReplay &replay, const std::vector<uint32_t> &sites) {
+bool observeAll(Core::SectionReplay &replay, const std::vector<uint32_t> &sites,
+                bool lead = false) {
   for (const uint32_t site : sites) {
-    if (!replay.Observe(site)) {
+    if (!(lead ? replay.ObserveLead(site) : replay.Observe(site))) {
       return false;
     }
   }
@@ -154,15 +155,19 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .color = field(*table, "fade_color"),
     });
   }
-  if (has(*table, "material_step_calls")) {
+  // An animation is stepped in the draw (material_step_calls) or before it (material_lead_calls).
+  const bool materialLead = has(*table, "material_lead_calls");
+  if (has(*table, "material_step_calls") || materialLead) {
     section.materials.emplace(MaterialAddresses{
-        .stepCalls = fields(*table, "material_step_calls"),
+        .stepCalls = fields(*table, materialLead ? "material_lead_calls" : "material_step_calls"),
+        .lead = materialLead,
         .stepArg = field(*table, "material_step_arg"),
         .anim = field(*table, "material_anim"),
         .frame = field(*table, "material_frame"),
         .speed = field(*table, "material_speed"),
         .loop = field(*table, "material_loop"),
         .paused = field(*table, "material_paused"),
+        .animFile = field(*table, "material_anim_file"),
         .animOffset = field(*table, "cmab_anim_offset"),
         .frameCount = field(*table, "cmab_frame_count"),
     });
@@ -210,7 +215,8 @@ bool FrameInterpolation::setMode(Mode mode) {
                                 onSection(section);
                               }) ||
               (section.skeletons && !observeAll(replay, section.skeletons->drawCalls())) ||
-              (section.materials && !observeAll(replay, section.materials->stepCalls())))) {
+              (section.materials &&
+               !observeAll(replay, section.materials->stepCalls(), section.materials->lead())))) {
     replay.Uninstall();
     return false;
   }
@@ -292,14 +298,19 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   blend(section.actors, totals_.actors);
   blend(section.skeletons, totals_.skeletons);
   blend(section.fades, totals_.fades);
-  blend(section.materials, totals_.materials);
   blend(section.effects, totals_.effects);
+  std::vector<Core::SectionReplay::Call> leads;
+  if (section.materials) {
+    const auto counts = section.materials->inputs(kHalfway, inputs, leads);
+    totals_.materials.paired += counts.paired;
+    totals_.materials.unpaired += counts.unpaired;
+  }
   VideoCore::GPU &gpu = emulator_.gpu();
   const bool checking = mode_ == Mode::LeakCheck;
   if (checking) {
     leaks_.before();
   }
-  const Core::SectionReplay::Result result = replay.Replay(inputs, [&] {
+  const Core::SectionReplay::Result result = replay.Replay(inputs, leads, [&] {
     const VideoCore::GPU::DetachedRun run = gpu.RunDetached(section.cmdlist.read().commands);
     totals_.inBetweens += run.in_betweens;
     totals_.gpuSkipped += run.skipped;
@@ -321,7 +332,7 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
 void FrameInterpolation::probe(Core::SectionReplay &replay, Section &section) {
   std::vector<Core::SectionReplay::Difference> differences;
   std::string gxDifference;
-  const Core::SectionReplay::Result result = replay.Replay({}, [&] {
+  const Core::SectionReplay::Result result = replay.Replay({}, {}, [&] {
     differences = replay.DiffWithSection();
     const GxOutput replayed = section.cmdlist.read();
     gxDifference = compareGx(real_, replayed);

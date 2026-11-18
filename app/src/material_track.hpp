@@ -1,7 +1,8 @@
 // The material track of frame interpolation (docs/plans/replay-interpolation.md): the material
-// animations (texture scroll, colour and texture frames) the draw steps, each started a fraction
-// of its step on, so that the draw's own step lands between two ticks. An animation pairs by its
-// address and animation while the newer tick's frame is the older one's step.
+// animations (texture scroll, colour and texture frames), each started a fraction of its step on
+// so that its step lands between two ticks. The step is the draw's own (OoT3D), or the update's
+// call of it before the section (MM3D), which the replay makes again as a lead. An animation pairs
+// by its address and animation while the newer tick's frame is the older one's step.
 #pragma once
 
 #include "core/section_replay.h"
@@ -15,13 +16,15 @@ namespace z3d::app {
 
 // Guest addresses and offsets from the manifest's "interpolation" table.
 struct MaterialAddresses {
-  std::vector<uint32_t> stepCalls; // the branches that step an animation in the draw
+  std::vector<uint32_t> stepCalls; // the branches that step an animation
+  bool lead;                       // they come before the section, which only reads the result
   uint32_t stepArg;                // which of their arguments is the animation
   uint32_t anim;                   // offsets in an animation
   uint32_t frame;
   uint32_t speed;
   uint32_t loop;
   uint32_t paused;
+  uint32_t animFile;   // in what `anim` points to: the file
   uint32_t animOffset; // in the animation's file: its block
   uint32_t frameCount; // in the block
 };
@@ -33,17 +36,23 @@ public:
   [[nodiscard]] const std::vector<uint32_t> &stepCalls() const {
     return addresses_.stepCalls;
   }
+  [[nodiscard]] bool lead() const {
+    return addresses_.lead;
+  }
   // Takes the animations the real section stepped, as they stood at its start.
   void sample(Core::SectionReplay &replay);
   struct Counts {
     uint64_t paired = 0;
     uint64_t unpaired = 0;
   };
-  // The paired animations' frames a fraction `t` of their step on from the previous tick's.
-  Counts inputs(float t, std::vector<Core::SectionReplay::Input> &out) const;
+  // The paired animations' frames a fraction `t` of their step on from the previous tick's, and
+  // for lead steps the calls that step and apply them again.
+  Counts inputs(float t, std::vector<Core::SectionReplay::Input> &out,
+                std::vector<Core::SectionReplay::Call> &leads) const;
 
 private:
   struct Sample {
+    Core::SectionReplay::Call call{};
     uint32_t anim = 0;
     float frame = 0.0F;
     float speed = 0.0F;

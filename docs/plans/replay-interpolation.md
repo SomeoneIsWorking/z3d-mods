@@ -275,12 +275,30 @@ cuts.
   50.3, 57.5), and the fade in from black after the load the same (7.2, 8.6, 9.6, 11.0 against
   7.2, 7.2, 9.6, 9.6); the first step out of black is cut by the play state's restart, as in
   OoT3D (`fade-out-3-8.png`, on above). 114 replays, 2 cuts, 2 refused (the load).
+- Step 5, MM3D material animations: built (fork 548c1a4e1). MM3D's `AnimPlayer` is a C++ class
+  (decomp/mm3d `docs/frame.md` "Material animations") and the scene's are stepped and applied in
+  the update (`Scene_UpdateRoomAnims` from `Play_Update`), so the draw only reads the materials
+  they wrote. The core's replay therefore makes lead calls: `SectionReplay::ObserveLead` records
+  the calls the section's thread makes through a site before the section, and `Replay` makes the
+  chosen ones again from the section's starting state, each returning to the open site, before
+  the section runs with its own registers. The table names `AnimPlayerList_Update`'s call of each
+  player's `AnimPlayer_Update` (`material_lead_calls`); `material_track` writes a paired player's
+  frame a step short of the in-between's and makes its call again, so the game's own step, wrap
+  and apply land halfway. Found by a memory scan for a float stepping by the word after it, then
+  write watches on it and on the game thread's stack for the pushed return addresses. In the
+  Laundry Pool (harness state `pool`: `loadstate:sct warp:0xDA00 wait:8 savestate:laundry
+  stick:0,-30000,2.5 wait:1.5 savestate:pool`) the stream's water changes on every present, by
+  about half a tick's change (mean 0.5 against 0.9 to 1.1 a tick in its crop), where
+  interpolation off changes it on every second present (scratch/runs/mm-pool-on3
+  `water-on-vs-off-10-13.png`, each crop over its change from the present before, x8; on above).
+  One player pairs a tick, none unpaired; `interp leakcheck` there, walking: 119 replays, 0
+  refused, 0 leaking; the play state's first 0x400 bytes, the player and the animation player
+  are byte for byte equal after 4 s with interpolation on and off. OoT3D after the change: Kokiri
+  Forest's waterfall still flows on every present (scratch/runs/oot-mat-kf
+  `waterfall-on-vs-off-10-15.png`), the Fire Temple door run gives 2 cuts and 2 refusals in 166
+  replays. Not covered: actors' own material animations (`AnimPlayer_Update` reached through
+  0x224148, a model's update).
 - MM3D, where the work stands (2026-11-18).
-  - Material animations: not found. OoT3D's `AnimPlayer_Update` (0x373BEC) has no match in MM3D's
-    code by its words (literals and branches masked), nor does its frame count read (`ldr
-    [anim+0x14]; add; ldr [+4]`), so MM3D's material player is laid out differently. The tower
-    base (`sct`) shows no scene texture scroll to trace it by; a scene with one (the clock town's
-    water) and a write watch on its texture coordinates is the next lead.
   - What still steps at the tick rate standing in the tower base with interpolation on
     (mm-still, `stepped.png`: pixels whose in-between equals the next tick): a spinning green
     rupee near the owl statue (`top-10-15.png`), so its draw turns it by a field other than the

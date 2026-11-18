@@ -45,3 +45,17 @@ fade_flash = ["PlayState.transitionFadeFlash"]
 fade_draw = ["TransitionFade_Draw"]
 fade_type = ["TransitionFade.type"]
 fade_color = ["TransitionFade.a"]
+# The material track: the scene's material animations, which the update steps and applies
+# (Scene_UpdateRoomAnims through AnimPlayerList_Update, decomp/mm3d docs/frame.md "Material
+# animations"); the replay makes those calls again as leads. Their frame, speed and loop, and the
+# frame count AnimPlayer_Step wraps at.
+material_lead_calls = [["AnimPlayerList_Update", "ANIM_PLAYER_LIST_UPDATE_CALL"]]
+material_step_arg = [0]
+material_anim = ["AnimPlayer.anim"]
+material_anim_file = ["CmabResource.file"]
+material_frame = ["AnimPlayer.frame"]
+material_speed = ["AnimPlayer.speed"]
+material_loop = ["AnimPlayer.loop"]
+material_paused = ["AnimPlayer.paused"]
+cmab_anim_offset = ["CmabHeader.animOffset"]
+cmab_frame_count = ["CmabAnim.frameCount"]

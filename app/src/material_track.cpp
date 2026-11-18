@@ -14,7 +14,8 @@ MaterialTrack::MaterialTrack(MaterialAddresses addresses)
 void MaterialTrack::sample(Core::SectionReplay &replay) {
   previous_ = std::move(current_);
   current_.clear();
-  for (const Core::SectionReplay::Call &call : replay.SectionCensus().calls) {
+  const Core::SectionReplay::Census &census = replay.SectionCensus();
+  for (const Core::SectionReplay::Call &call : addresses_.lead ? census.lead_calls : census.calls) {
     if (!calls_.contains(call.site)) {
       continue;
     }
@@ -23,11 +24,12 @@ void MaterialTrack::sample(Core::SectionReplay &replay) {
       continue;
     }
     Sample sample;
+    sample.call = call;
     sample.anim = readStart<uint32_t>(replay, player + addresses_.anim);
     if (sample.anim == 0) {
       continue;
     }
-    const auto file = readStart<uint32_t>(replay, sample.anim);
+    const auto file = readStart<uint32_t>(replay, sample.anim + addresses_.animFile);
     const auto block = file + readStart<uint32_t>(replay, file + addresses_.animOffset);
     sample.frameCount = readStart<int32_t>(replay, block + addresses_.frameCount);
     sample.frame = readStart<float>(replay, player + addresses_.frame);
@@ -50,8 +52,8 @@ float MaterialTrack::stepped(const Sample &from) {
   return frame;
 }
 
-MaterialTrack::Counts MaterialTrack::inputs(float t,
-                                            std::vector<Core::SectionReplay::Input> &out) const {
+MaterialTrack::Counts MaterialTrack::inputs(float t, std::vector<Core::SectionReplay::Input> &out,
+                                            std::vector<Core::SectionReplay::Call> &leads) const {
   Counts counts;
   for (const auto &[player, to] : current_) {
     const auto from = previous_.find(player);
@@ -64,8 +66,13 @@ MaterialTrack::Counts MaterialTrack::inputs(float t,
     if (to.speed == 0.0F) {
       continue;
     }
-    // The draw steps it once more and wraps it.
-    out.push_back(replayInput(player + addresses_.frame, from->second.frame + to.speed * t));
+    // The replay steps it once more and wraps it: in the draw from the frame before its step, or
+    // in the lead call from the frame after it.
+    const float step = addresses_.lead ? to.speed : 0.0F;
+    out.push_back(replayInput(player + addresses_.frame, from->second.frame + to.speed * t - step));
+    if (addresses_.lead) {
+      leads.push_back(to.call);
+    }
   }
   return counts;
 }

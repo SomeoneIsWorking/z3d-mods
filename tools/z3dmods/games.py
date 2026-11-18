@@ -177,7 +177,7 @@ def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | 
         return None
     table = tomllib.loads(path.read_text())
     sites = ("open_site", "close_site")
-    site_lists = ("skeleton_draw_calls", "material_step_calls")
+    site_lists = ("skeleton_draw_calls", "material_step_calls", "material_lead_calls")
     functions = ("fade_draw",)
     sizes = {key: symbols.size(d, struct) for key, (anchor, struct) in INTERPOLATION_SIZES.items() if anchor in table}
     return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites if key in table} | {

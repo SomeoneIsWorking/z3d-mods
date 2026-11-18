@@ -68,6 +68,7 @@ material_step_calls = [
 ]
 material_step_arg = [0]
 material_anim = ["AnimPlayer.anim"]
+material_anim_file = ["CmabResource.file"]
 material_frame = ["AnimPlayer.frame"]
 material_speed = ["AnimPlayer.speed"]
 material_loop = ["AnimPlayer.loop"]
