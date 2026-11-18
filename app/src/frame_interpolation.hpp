@@ -59,6 +59,9 @@ private:
     std::optional<FadeTrack> fades{};
     std::optional<MaterialTrack> materials{};
     std::optional<EffectPoolTrack> effects{};
+    // The patch's draw fraction in the link block, where the patch keeps one: an in-between's
+    // draw reads how far it is from the newer tick, for the draws that step on a tick count.
+    std::optional<uint32_t> drawFraction{};
   };
 
   void onSection(Section &section);

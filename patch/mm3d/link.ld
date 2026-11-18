@@ -7,6 +7,8 @@ SECTIONS {
   .patch.play_entry kPlayUpdate : { KEEP(*(.patch.play_entry)) }
   .patch.interpreter_start kCutsceneBeginScript + 0x1D8 : { KEEP(*(.patch.interpreter_start)) }
   .patch.actor_update kActorUpdateAll + 0x48 : { KEEP(*(.patch.actor_update)) }
+  .patch.arrow_turn_move kTargetDraw + kArrowTurnMove : { KEEP(*(.patch.arrow_turn_move)) }
+  .patch.arrow_turn_convert kTargetDraw + kArrowTurnConvert : { KEEP(*(.patch.arrow_turn_convert)) }
   .patch.printer_update kPrinterUpdate : { KEEP(*(.patch.printer_update)) }
   .patch.cstick_neutral kCStickNeutral : { KEEP(*(.patch.cstick_neutral)) }
   .patch.save_entry kPlaySaveAtStatue : { KEEP(*(.patch.save_entry)) }

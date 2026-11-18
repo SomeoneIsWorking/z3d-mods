@@ -29,6 +29,7 @@ FIELDS = (
     Field("beat", "uint8_t", 1, 1, "patch: one more every update, so a block nothing updates is seen"),
     Field("charge", "uint8_t", 1, SLOTS, "patch: how far a slot that must be held has been held, kSlotCharged when it plays"),
     Field("look", "int16_t", 2, 2, "app: the mouse's turn of the free camera not yet taken, right then down, in binary angles; the patch takes it and writes 0"),
+    Field("draw_fraction", "float", 4, 1, "app: in an in-between's draw, how far it is from the newer tick's in ticks (t - 1); 0 in every real draw"),
 )
 
 # PadMode, in the app's order (app/src/pad_input.hpp).

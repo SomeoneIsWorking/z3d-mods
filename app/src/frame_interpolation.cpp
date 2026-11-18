@@ -1,6 +1,7 @@
 #include "frame_interpolation.hpp"
 
 #include "emulator.hpp"
+#include "section_memory.hpp"
 
 #include "core/section_replay.h"
 #include "video_core/gpu.h"
@@ -69,7 +70,10 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
   const std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   std::string error;
   const auto document = lucent::json::parse(json, error);
-  const lucent::json::Value *table = document ? document->find("interpolation") : nullptr;
+  if (!document) {
+    return;
+  }
+  const lucent::json::Value *table = document->find("interpolation");
   if (table == nullptr) {
     return;
   }
@@ -193,6 +197,10 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .base = field(*table, "effect_base"),
     });
   }
+  const lucent::json::Value *link = document->find("link");
+  if (link != nullptr && has(*link, "draw_fraction")) {
+    section.drawFraction = field(*link, "draw_fraction");
+  }
   // The camera track declares the cuts every blend obeys; the effects live in paired actors.
   const bool blends = section.actors || section.skeletons || section.fades || section.materials;
   if (blends && !section.camera) {
@@ -311,6 +319,9 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
     const auto counts = section.materials->inputs(kHalfway, inputs, leads);
     totals_.materials.paired += counts.paired;
     totals_.materials.unpaired += counts.unpaired;
+  }
+  if (section.drawFraction) {
+    inputs.push_back(replayInput(*section.drawFraction, kHalfway - 1.0F));
   }
   VideoCore::GPU &gpu = emulator_.gpu();
   const bool checking = mode_ == Mode::LeakCheck;

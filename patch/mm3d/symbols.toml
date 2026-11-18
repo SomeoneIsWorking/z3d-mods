@@ -2,6 +2,7 @@
 
 [functions]
 kMainScreenDraw = "MainScreen_Draw"
+kTargetDraw = "Target_Draw"
 kMainScreenDrawMinimap = "MainScreen_DrawMinimap"
 kCutsceneBeginScript = "Cutscene_BeginScript"
 kCutsceneStartScript = "CutsceneHandler_StartScript"
@@ -102,6 +103,9 @@ kCsActorCueSize = "CsCmdActorCue"
 kVecGeoSize = "VecGeo"
 
 [defines]
+kArrowTurnMove = "TARGET_DRAW_ARROW_TURN_MOVE"
+kArrowTurnConvert = "TARGET_DRAW_ARROW_TURN_CONVERT"
+kArrowTurnStep = "TARGET_ARROW_TURN_STEP"
 kDrawQueueCapacity = "LAYOUT_DRAW_QUEUE_CAPACITY"
 kDrawQueueTop = "LAYOUT_DRAW_QUEUE_TOP"
 kDrawQueueTouch = "LAYOUT_DRAW_QUEUE_TOUCH"

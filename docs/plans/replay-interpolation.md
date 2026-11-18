@@ -300,19 +300,30 @@ cuts.
   replays. Not covered: actors' own material animations (`AnimPlayer_Update` reached through
   0x224148, a model's update).
 - MM3D, where the work stands (2026-11-18).
-  - What still steps at the tick rate standing in the tower base with interpolation on: the
-    "spinning green rupee" over the owl statue is the Z-target arrow (decomp/mm3d
-    `docs/actors.md` "The target arrow"). `Target_Draw` turns it by `gameplayFrames * 3000`,
-    `gameplayFrames` (`PlayState` +0xC4BC) an integer stepped once a tick, so no write of it
-    can put the arrow halfway: the in-between needs gameplayFrames - 0.5. About 68 code sites
-    read the same offset, so other draws may turn or scroll by it too (not traced). Not built,
-    for the user to choose: (a) our patch makes `Target_Draw`'s angle read gameplayFrames plus a
-    patch-owned fraction that is 0 in real draws and that the replay writes (one site, the
-    game's own rule kept); (b) a core mechanism that writes inputs when the replay reaches a site
-    (here after the matrix is built at 0x18FD0C), blending the queued model's matrix between the
-    two ticks' real values: generic for every draw-time writer, but a new replay mechanism. Also
-    still stepping: edge pixels on Link, not traced.
-  - Effect pools: not started.
+  - The option: built. "Frame interpolation" (`frame_interpolation` in
+    `patch/mm3d/options.toml`, on by default), as OoT3D's. The windowed app in Gamescope
+    (`z3dmods inputtest interp-mm3d`: File 1 at South Clock Town's owl statue, the mouse turning
+    the camera): 59.83 flips a second, 29.86 and 29.91 of them in-betweens, 29.96 and 29.91
+    ticks, 0.501 and 0.500 ticks a flip, real time 1.000 of emulated (scratch/input-test/
+    interp-mm3d `pacing.txt`, `02-turned.png` in play).
+  - The target arrow: built (option a). The "spinning green rupee" over the owl statue is the
+    Z-target arrow (decomp/mm3d `docs/actors.md` "The target arrow"): `Target_Draw` turns it by
+    `gameplayFrames * 3000`, an integer stepped once a tick. The link block (`slot_link.py`) has
+    one draw frame fraction, `draw_fraction`, which `FrameInterpolation` writes as a replay input
+    of t - 1 (-0.5: the replay draws the newer tick) and which is 0 in every real draw; the
+    patch (`patch/mm3d/target_arrow.cpp`, hooked at `TARGET_DRAW_ARROW_TURN_MOVE` and
+    `_CONVERT`) turns the arrow by the angle plus the fraction times `TARGET_ARROW_TURN_STEP`.
+    Other draws that step on `gameplayFrames` take the same fraction once seen stepping, each
+    named in the decomp. In the tower base (`loadstate:sct patch:off patch:on`: a state holds the
+    code it was saved with), the arrow's box changes on every other present with interpolation
+    off and on every present with it on, each in-between's turn between its neighbours'
+    (scratch/runs/mm-arrow-on `arrow-off-vs-on.png`, top off, bottom on). Still stepping there:
+    edge pixels on Link, not traced.
+  - Effect pools: not found. South Clock Town at 6:10 on the first day (mm-sct-fx-2,
+    `stepmap.png`: pixels that change into a real tick and not into the in-between before it)
+    shows no particles stepping: the clock's minute digit, the dog, and noise over Link and the
+    plaza's far side that shows at both present parities. Which particles were seen, and where,
+    is the next step; a midnight poke of `time` did not take.
   - Door cut: built (the table only; `camera_track` is OoT3D's). A door within a scene runs
     setting 0x8, function 70 `Camera_Special9`, whose step (`Camera.animState`, +0x172) becomes 2
     in the tick that puts the eye beyond the door, as in OoT3D (decomp/mm3d `docs/camera.md` "The

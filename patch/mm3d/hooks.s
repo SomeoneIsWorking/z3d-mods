@@ -52,7 +52,24 @@
     bl _ZN7z3dmods4mm3d11drawMinimapEPv
 .section .expect.minimap, "", %progbits
     .word 0xEBF41FC7 @ bl 0x2A326C
+@ Target_Draw's turn of the arrow: r0 is the angle; arrow_turn leaves it in s0 as a float.
+.section .patch.arrow_turn_move, "ax", %progbits
+    bl arrow_turn
+.section .expect.arrow_turn_move, "", %progbits
+    .word 0xEE000A10 @ vmov s0, r0
+.section .patch.arrow_turn_convert, "ax", %progbits
+    nop
+.section .expect.arrow_turn_convert, "", %progbits
+    .word 0xEEB80A40 @ vcvt.f32.u32 s0, s0
 .text
+@ s1 holds the arrow's unit, which the game multiplies by next.
+arrow_turn:
+    push {r4, lr}
+    vpush {d0}
+    bl _ZN7z3dmods4mm3d9arrowTurnEj
+    vpop {d0}
+    vmov s0, r0
+    pop {r4, pc}
 printer_update:
     push {r0-r3, r12, lr}
     vpush {d0}
