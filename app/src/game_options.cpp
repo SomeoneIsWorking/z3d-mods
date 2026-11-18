@@ -29,9 +29,10 @@ constexpr double kPercent = 100.0;
 constexpr std::string_view kCStickInvertX = "cstick_invert_x";
 constexpr std::string_view kCStickInvertY = "cstick_invert_y";
 constexpr std::string_view kMouseScale = "mouse_scale";
+constexpr std::string_view kFrameInterpolation = "frame_interpolation";
 // In ScreenLayout's order.
-constexpr std::array<const char *, 5> kLayoutNames{"Both screens", "Top screen only", "Large top screen",
-                                                   "Side by side", "Single screen"};
+constexpr std::array<const char *, 5> kLayoutNames{
+    "Both screens", "Top screen only", "Large top screen", "Side by side", "Single screen"};
 
 std::vector<std::string> switchChoices() {
   return {"Off", "On"};
@@ -61,7 +62,8 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
     hud = document->find("hud") != nullptr;
     const lucent::json::Value *address = document->find("address");
     const lucent::json::Value *options = document->find("options");
-    if (address == nullptr || !address->integer() || options == nullptr || options->array() == nullptr) {
+    if (address == nullptr || !address->integer() || options == nullptr ||
+        options->array() == nullptr) {
       throw std::runtime_error(manifest.string() + " wants \"address\" and \"options\"");
     }
     address_ = static_cast<uint32_t>(*address->integer());
@@ -115,13 +117,16 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
       }
       const lucent::json::Value *pad = entry.find("pad");
       const bool onPad = pad != nullptr && pad->string() != nullptr;
-      const bool inBlock = !onPad && layers.empty();
+      const lucent::json::Value *app = entry.find("app");
+      const bool onApp = app != nullptr && app->string() != nullptr;
+      const bool inBlock = !onPad && !onApp && layers.empty();
       if (inBlock && blockCount_ != items_.size()) {
         throw std::runtime_error(manifest.string() + ": the patch's options come before the app's");
       }
       items_.push_back({*id->string(), *label->string(), std::move(choices),
                         static_cast<uint8_t>(*value), onPad ? *pad->string() : std::string(),
-                        std::move(scales), std::move(layers)});
+                        std::move(scales), std::move(layers),
+                        onApp ? *app->string() : std::string()});
       blockCount_ += inBlock ? 1 : 0;
     }
   }
@@ -129,6 +134,7 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
                     "Screen layout",
                     std::vector<std::string>(kLayoutNames.begin(), kLayoutNames.end()),
                     static_cast<uint8_t>(setup_.layout),
+                    {},
                     {},
                     {},
                     {}});
@@ -153,7 +159,7 @@ GameOptions::GameOptions(const GameSetup &setup, const std::filesystem::path &ma
     items_.push_back(std::move(opacity));
   }
   if (setup_.customTextures) {
-    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}, {}, {}});
+    items_.push_back({kTexturesId, "Texture pack", switchChoices(), 1, {}, {}, {}, {}});
   }
   if (stored_.empty()) {
     return;
@@ -213,6 +219,12 @@ HudLook GameOptions::hudLook() const {
   return look;
 }
 
+bool GameOptions::frameInterpolation() const {
+  return std::ranges::any_of(items_, [](const Option &item) {
+    return item.app == kFrameInterpolation && item.value != 0;
+  });
+}
+
 void GameOptions::apply(Emulator &emulator, PadInput &pad) const {
   bool invertX = false;
   bool invertY = false;
@@ -249,7 +261,8 @@ void GameOptions::save() const {
   std::ofstream file(stored_);
   file << "{";
   for (size_t i = 0; i < items_.size(); ++i) {
-    file << (i == 0 ? "\n" : ",\n") << "  \"" << items_[i].id << "\": " << static_cast<int>(items_[i].value);
+    file << (i == 0 ? "\n" : ",\n") << "  \"" << items_[i].id
+         << "\": " << static_cast<int>(items_[i].value);
   }
   file << "\n}\n";
   if (!file) {

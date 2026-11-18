@@ -79,7 +79,7 @@ cuts.
    the camera turning, crops of consecutive presents halfway between.
 4. Actors and skeletons, then the pools; cuts.
 5. MM3D: its frame loop and draw section, then the same tracks.
-6. The option in each game's options ("Frame interpolation"), on by default once both games pass.
+6. The option in each game's options ("Frame interpolation"), on by default for a game once it passes.
 
 ## Status
 
@@ -205,4 +205,17 @@ cuts.
   busier host costs the replays their margin. The harness presents to no display, so this is
   the emulator's pacing, not a display's flips; a windowed run with the option (below) is the
   one that shows flips.
-  Next: MM3D's frame loop and draw section (step 5), then the option (step 6).
+- Step 6, OoT3D: the option. "Frame interpolation" (`frame_interpolation` in
+  `patch/oot3d/options.toml`, an app switch, on by default) is a row of the game's options on the
+  picker (X on its tile); `Player` turns `FrameInterpolation` on with it while the game plays,
+  from a direct launch or the picker, and logs `pacing` every 10 s with the window's presents
+  counted by the core (`PerfStats::AddWindowPresent`, and those that showed an in-between). The
+  windowed app in Gamescope (`z3dmods inputtest interp`, Link's house, mouse turning the camera):
+  59.83 flips a second, 29.96 and 29.91 of them in-betweens, 29.86 and 29.91 ticks, 0.499 and
+  0.500 ticks a flip, real time 1.000 of emulated (scratch/input-test/interp `pacing.txt`); with
+  the option off (`interp-off`) 59.83 flips, none an in-between, 29.91 ticks. The title screen
+  and file select make no in-betweens (no play state). `options-oot3d` shows the row on and the
+  game booted from the picker logging `frame interpolation on`. The windowed counts show which
+  presents are in-betweens; that each sits halfway is shown by the harness crops above, through
+  the same presenter (`RendererVulkan::PrepareRendertarget`).
+  Next: MM3D's frame loop and draw section (step 5), then its option.

@@ -14,7 +14,6 @@
 #include <charconv>
 #include <cstdint>
 #include <fstream>
-#include <iomanip>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -86,7 +85,8 @@ std::string Repl::execute(const std::string &line) {
     if (!(args >> x >> y) || x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX) {
       return "err " + command + " <x> <y>";
     }
-    const auto analog = command == "stick" ? Settings::NativeAnalog::CirclePad : Settings::NativeAnalog::CStick;
+    const auto analog =
+        command == "stick" ? Settings::NativeAnalog::CirclePad : Settings::NativeAnalog::CStick;
     pad_.setStick(analog, static_cast<float>(x) / kStickFull, -static_cast<float>(y) / kStickFull);
     return "ok";
   }
@@ -142,7 +142,8 @@ std::string Repl::execute(const std::string &line) {
     int x = 0;
     const auto [end, error] = std::from_chars(first.data(), first.data() + first.size(), x);
     if (error != std::errc() || end != first.data() + first.size() || !(args >> y) || x < 0 ||
-        x >= static_cast<int>(Core::kScreenBottomWidth) || y < 0 || y >= static_cast<int>(Core::kScreenBottomHeight)) {
+        x >= static_cast<int>(Core::kScreenBottomWidth) || y < 0 ||
+        y >= static_cast<int>(Core::kScreenBottomHeight)) {
       return "err touch <x> <y> | touch off";
     }
     window_.touchScreen(TouchPoint{static_cast<uint16_t>(x), static_cast<uint16_t>(y)});
@@ -200,7 +201,8 @@ std::string Repl::execute(const std::string &line) {
   if (command == "option") {
     std::string id;
     unsigned value = 0;
-    if (!(args >> id >> value) || value > UINT8_MAX || !options_.set(id, static_cast<uint8_t>(value))) {
+    if (!(args >> id >> value) || value > UINT8_MAX ||
+        !options_.set(id, static_cast<uint8_t>(value))) {
       return "err option <id> <value>";
     }
     options_.apply(emulator_, pad_);
@@ -262,14 +264,7 @@ std::string Repl::execute(const std::string &line) {
     return "ok";
   }
   if (command == "pacing") {
-    const Pacing pacing = emulator_.takePacing();
-    std::ostringstream reply;
-    reply << std::fixed << std::setprecision(3) << "ok seconds=" << pacing.seconds
-          << " vblanks_per_second=" << pacing.vblanksPerSecond
-          << " ticks_per_second=" << pacing.ticksPerSecond << " ticks_per_vblank="
-          << (pacing.vblanksPerSecond > 0.0 ? pacing.ticksPerSecond / pacing.vblanksPerSecond : 0.0)
-          << " speed=" << pacing.speed;
-    return reply.str();
+    return "ok " + emulator_.takePacing().text();
   }
   if (command == "interp") {
     std::string what;

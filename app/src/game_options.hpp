@@ -1,6 +1,7 @@
 // One game's options: the installed patch's switches (its z3d-options.json: the guest address of
 // the patch's options block and one byte per switch, tools/z3dmods/options.py) and the app's own
-// (layout, custom textures, the HUD's size and opacity). The player's choices are kept per game and written into the guest.
+// (layout, custom textures, the HUD's size and opacity). The player's choices are kept per game and
+// written into the guest.
 #pragma once
 
 #include "app_config.hpp"
@@ -29,6 +30,8 @@ struct Option {
   // Folders of replacement game files: choice n + 1 layers in the nth, choice 0 none; empty for
   // the others.
   std::vector<std::string> layers;
+  // An app switch's owner (frame_interpolation); empty for the others.
+  std::string app;
 };
 
 // How our play HUD is drawn: its elements' size about their nearest corner of the top screen, and
@@ -60,6 +63,9 @@ public:
   // The setup to boot with: the set's, with the app's own options applied.
   [[nodiscard]] GameSetup setup() const;
   [[nodiscard]] HudLook hudLook() const;
+  // Whether the player wants the game's in-betweens (frame_interpolation.hpp); false for a game
+  // without the switch.
+  [[nodiscard]] bool frameInterpolation() const;
   // Writes the patch's switches into the running game's options block and sets the pad's.
   void apply(Emulator &emulator, PadInput &pad) const;
 

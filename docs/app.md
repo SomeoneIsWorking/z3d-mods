@@ -16,7 +16,8 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
   side picks it, the edge slides out and the game plays on while the other is unloaded. A game not
   set up yet shows the icon and title from the player's dump (its SMDH). X opens the selected
   game's options. F10 or the gamepad's guide button in a game shuts it down and returns to the
-  picker; closing the window quits.
+  picker; closing the window quits. While a game plays, the log has a `pacing` line every 10 s
+  (`Player`, the fields of the `pacing` command below).
 - `--hidden` (the tools): the window is never mapped, there is no sound and no pacing, and custom
   textures load before the frame that needs them (asynchronous loading falls behind an unpaced run); the game
   runs frame by frame from stdin lines, one reply line each (`ok [value]` or `err <reason>`):
@@ -33,7 +34,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
 | `interp off\|census\|probe\|on\|leakcheck\|report` | frame interpolation (docs/plans/replay-interpolation.md): census reports the draw section's pages, SVCs, GX requests and host time each tick; probe also replays it at t = 1 and compares its memory and its command list's requests and PICA lists with the real run's; on replays it at t = 0.5 with the tracks blended and shows the in-between on the vblank before the tick's frame; leakcheck is on with the rasterizer cache's state (surfaces with their contents read back, dirty regions, cached pages, texture cubes) and FCRAM and VRAM compared before and after each replay, reported as `leak_checked`, `leaking` and the leaks by kind (`src/replay_leak_check`) |
-| `pace on\|off` / `pacing` | frames in real time (the core's frame limit) or as fast as they run (the tools' default); the emulated vblanks and the game's frame submissions (its logic ticks) a second of real time since the last `pacing`, their ratio and real time over emulated time |
+| `pace on\|off` / `pacing` | frames in real time (the core's frame limit) or as fast as they run (the tools' default); the emulated vblanks, the game's frame submissions (its logic ticks) and the presents to the window (`flips`, and those that showed an in-between) a second of real time since the last `pacing`, ticks a vblank and a flip, and real time over emulated time |
 | `touch <x> <y>` / `touch off` | the stylus held at a pixel of the 320x240 touch screen, wherever the layout draws it, or lifted |
 | `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
 | `patch on` / `patch off` / `textures on` / `textures off` | swaps the running game's mods (Hotswap below) |
@@ -185,6 +186,11 @@ is the row that asks for the folders again (Setup above). `GameOptions` owns the
   `cstick_invert_y` turn the C-stick around on its way to the game (MM3D's camera stick, which the
   game reads itself); `mouse_scale`, with `scales` (its choices, "0.25x" to "4x"), multiplies
   the mouse's degrees a count for the aim and the camera.
+- An `[[option]]` with `app` is an app switch read by the owner it names:
+  `frame_interpolation` ("Frame interpolation", OoT3D, on by default) has `Player` turn the
+  game's in-betweens on (`FrameInterpolation::Mode::On`, docs/plans/replay-interpolation.md) for
+  as long as it plays, and off when it returns to the picker. The tools are not affected: a
+  `--hidden` run turns interpolation on only with `interp on`.
 - An `[[option]]` with `layers` picks Off or one of its folders of replacement game files beside
   the set's `romfs/` (`load/mods/<title id>/<folder>/`, each written by the install), by label;
   `default` names the label it starts on. The picked folder goes in the core's

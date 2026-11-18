@@ -881,13 +881,18 @@ def _camera_mm3d(session: Session, pad: Gamepad) -> None:
 FAST = 2.0
 
 
-def _fast_option(cfg: Config, user: Path, game: str) -> None:
-    """The player's choice of FAST for `game`, kept where the options menu keeps it
-    (app/src/main.cpp, storedOptions)."""
-    scales = next(o.scales for o in options.load(cfg.repo, game) if o.id == "mouse_sensitivity")
+def _store_options(cfg: Config, user: Path, game: str, choices: dict[str, int]) -> None:
+    """The player's `choices` (option id: choice index) for `game`, kept where the options menu
+    keeps them (app/src/main.cpp, storedOptions)."""
     stored = user / "options" / f"{cfg.rom(GameSet.named(cfg.repo, game).title_id).stem}.json"
     stored.parent.mkdir(parents=True, exist_ok=True)
-    stored.write_text(json.dumps({"mouse_sensitivity": scales.index(FAST)}) + "\n")
+    stored.write_text(json.dumps(choices) + "\n")
+
+
+def _fast_option(cfg: Config, user: Path, game: str) -> None:
+    """The player's choice of FAST for `game`."""
+    scales = next(o.scales for o in options.load(cfg.repo, game) if o.id == "mouse_sensitivity")
+    _store_options(cfg, user, game, {"mouse_sensitivity": scales.index(FAST)})
 
 
 def _fast_moves(moves: tuple[tuple[str, int, int], ...]) -> tuple[tuple[str, int, int], ...]:
@@ -1258,11 +1263,17 @@ def _stage(session: Session, pad: Gamepad) -> None:
     session.shot("mm3d-playing")
 
 
+# How long the picker's stage takes to load both games before it reads keys.
+PICKER_LOADED = 8
+
+
 def _options(session: Session, pad: Gamepad) -> None:
     """The picker's options: X on MM3D opens them, A turns the cutscene skip off, Up scrolls to the
     Fullscreen row and A and the fullscreen key flip it, and Start then leaves the opening narration
     running."""
     game = session.expect("picker: on ")
+    # The stage takes keys once both games are loaded.
+    session.wait(PICKER_LOADED)
     while "Majora" not in game:
         session.key("menu", "right")
         game = session.expect("picker: on ")
@@ -1304,9 +1315,11 @@ def _options(session: Session, pad: Gamepad) -> None:
 
 
 def _options_oot3d(session: Session, pad: Gamepad) -> None:
-    """The picker's options for OoT3D: X opens them, Down and A turn Quick Text off, and File 1
-    then boots with the option written. Each step waits on the menu's own log line."""
+    """The picker's options for OoT3D: X opens them, Down and A turn Quick Text off, the Frame
+    interpolation row is there and on, and File 1 then boots with the option written and the
+    in-betweens on. Each step waits on the menu's own log line."""
     game = session.expect("picker: on ")
+    session.wait(PICKER_LOADED)
     while "Ocarina" not in game:
         session.key("menu", "right")
         game = session.expect("picker: on ")
@@ -1319,6 +1332,12 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
     session.key("menu", "a")
     session.expect("options: quick_text = Off")
     session.shot("quick-text-off")
+    while not row.endswith("options: row frame_interpolation"):
+        # A press right after a release would read as held.
+        session.wait(0.2)
+        session.key("menu", "down")
+        row = session.expect("options: row ")
+    session.shot("frame-interpolation-row")
     session.key("menu", "b")
     session.expect("picker: on ")
     session.key("menu", "a")
@@ -1330,18 +1349,47 @@ def _options_oot3d(session: Session, pad: Gamepad) -> None:
     session.key("name", "a")
     session.wait(10)
     session.shot("house")
+    session.expect("frame interpolation on")
 
 
 # Direct launches of one game, and the installed shortcut's picker.
+# The interpolation scenarios turn the camera through this many of the app's pacing reports
+# (app/src/player.hpp, kPacingReport), wholly in play.
+INTERP_REPORTS = 2
+INTERP_REPORT_SECONDS = 10
+INTERP_TURN = (40, 0)
+INTERP_TURN_EVERY = 0.25
+
+
+def _interp(session: Session, expected: str) -> None:
+    """OoT3D's File 1 with the camera turning; the app's pacing reports made wholly in play
+    (flips, the in-betweens among them and ticks a second) are kept in pacing.txt."""
+    session.expect(f"frame interpolation {expected}", 60)
+    _oot3d_file_1(session)
+    session.expect("mouse camera:")
+    session.shot("play")
+    # The report under way when play starts covers the boot too.
+    session.expect("pacing ", INTERP_REPORT_SECONDS + 5)
+    turns = round((INTERP_REPORTS * INTERP_REPORT_SECONDS + 1) / INTERP_TURN_EVERY)
+    for _ in range(turns):
+        session.mouse(*INTERP_TURN)
+        session.wait(INTERP_TURN_EVERY)
+    session.shot("turned")
+    reports = [session.expect("pacing ", INTERP_REPORT_SECONDS) for _ in range(INTERP_REPORTS)]
+    (session.out / "pacing.txt").write_text("\n".join(reports) + "\n")
+
+
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "camera": _camera, "camera-mm3d": _camera_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d,
           "aim-fast": _aim_fast, "camera-fast": _camera_fast, "camera-mq": _camera, "fire": _fire,
-          "fire-mm3d": _fire_mm3d}
+          "fire-mm3d": _fire_mm3d, "interp": lambda session, pad: _interp(session, "on"),
+          "interp-off": lambda session, pad: _interp(session, "off")}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
                "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
                "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d", "aim-fast": "oot3d",
-               "camera-fast": "oot3d", "camera-mq": "oot3d", "fire": "oot3d", "fire-mm3d": "mm3d"}
+               "camera-fast": "oot3d", "camera-mq": "oot3d", "fire": "oot3d", "fire-mm3d": "mm3d",
+               "interp": "oot3d", "interp-off": "oot3d"}
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
@@ -1355,6 +1403,7 @@ PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-
            "camera-mq": lambda cfg, user, out: _oot3d_slots_file(cfg, user, out, master_quest=True),
            "fire": lambda cfg, user, out: _oot3d_slots_file(cfg, user, out, aimed_on_y=True),
            "fire-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, aimed_on_y=True),
+           "interp-off": lambda cfg, user, out: _store_options(cfg, user, "oot3d", {"frame_interpolation": 0}),
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}

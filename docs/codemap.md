@@ -99,7 +99,7 @@
   - `gx_cmdlist`: the bound nn::gx command list's requests and PICA lists, the draw section's output, read and compared.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`), and as the camera's turn through the link block in the rest of play.
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
-  - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request.
+  - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request; frame interpolation on by the game's option, and the pacing logged.
   - `frame`: a captured frame and its PNG encoding.
   - `repl`: the stdin command language.
   - `icon/z3d.svg`: the app's icon.

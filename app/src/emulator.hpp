@@ -13,12 +13,13 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace Core {
 class SectionReplay;
 class System;
-}
+} // namespace Core
 namespace VideoCore {
 class GPU;
 }
@@ -37,13 +38,19 @@ struct WriteHit {
   uint32_t lr;
 };
 
-// The emulated vblanks and the game's frame submissions (its logic ticks) per second of real
-// time since the last measurement, and real time over emulated time.
+// The emulated vblanks, the game's frame submissions (its logic ticks) and the presents to the
+// window (those that showed an in-between apart) per second of real time since the last
+// measurement, and real time over emulated time.
 struct Pacing {
   double seconds = 0.0;
   double vblanksPerSecond = 0.0;
   double ticksPerSecond = 0.0;
+  double flipsPerSecond = 0.0;
+  double inBetweenFlipsPerSecond = 0.0;
   double speed = 0.0;
+
+  // `key=value` pairs, ticks a vblank and a flip among them.
+  [[nodiscard]] std::string text() const;
 };
 
 class Emulator {

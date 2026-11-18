@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <chrono>
 #include <exception>
+#include <format>
 #include <stdexcept>
 #include <string>
 
@@ -270,6 +271,18 @@ VideoCore::GPU &Emulator::gpu() {
   return system_.GPU();
 }
 
+std::string Pacing::text() const {
+  const auto per = [](double part, double whole) {
+    return whole > 0.0 ? part / whole : 0.0;
+  };
+  return std::format(
+      "seconds={:.3f} vblanks_per_second={:.3f} ticks_per_second={:.3f} "
+      "ticks_per_vblank={:.3f} flips_per_second={:.3f} in_between_flips_per_second={:.3f} "
+      "ticks_per_flip={:.3f} speed={:.3f}",
+      seconds, vblanksPerSecond, ticksPerSecond, per(ticksPerSecond, vblanksPerSecond),
+      flipsPerSecond, inBetweenFlipsPerSecond, per(ticksPerSecond, flipsPerSecond), speed);
+}
+
 Pacing Emulator::takePacing() {
   const auto now = std::chrono::steady_clock::now();
   const Core::PerfStats::Results stats = system_.GetAndResetPerfStats();
@@ -277,6 +290,8 @@ Pacing Emulator::takePacing() {
       .seconds = std::chrono::duration<double>(now - pacedSince_).count(),
       .vblanksPerSecond = stats.system_fps,
       .ticksPerSecond = stats.game_fps,
+      .flipsPerSecond = stats.window_present_fps,
+      .inBetweenFlipsPerSecond = stats.in_between_present_fps,
       .speed = stats.emulation_speed,
   };
   pacedSince_ = now;

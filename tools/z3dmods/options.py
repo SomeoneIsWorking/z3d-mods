@@ -1,7 +1,8 @@
 """A game's switches (patch/<game>/options.toml). Those with a `field` are the patch's: one byte
 each, in file order, in a block at the start of the patch's payload. Those with a `pad` are the
 app's, applied to the pad it feeds the game (app/src/pad_input.hpp); one with `scales` is a
-choice of those instead of on or off, its `default` one of them. Those with `layers` are a
+choice of those instead of on or off, its `default` one of them. One with `app` is an app switch
+read by the owner it names (`frame_interpolation`: app/src/frame_interpolation.hpp). Those with `layers` are a
 choice of Off or one of their folders of replacement game files beside the installed `romfs/`,
 which the app layers in; `default` names the one it starts on. Generates the patch's `options.hpp` and the manifest the app's options
 menu reads and writes guest memory from (docs/app.md, "Options").
@@ -45,6 +46,8 @@ class Option:
     layers: tuple[Layer, ...]
     # What the option picks from (mouse_scale: times the mouse's degrees a count), or None for a switch.
     scales: tuple[float, ...] | None = None
+    # The app owner that reads the switch (frame_interpolation), or None.
+    app: str | None = None
 
 
 def load(repo: Path, game: str) -> list[Option]:
@@ -52,11 +55,12 @@ def load(repo: Path, game: str) -> list[Option]:
     entries = tomllib.loads(path.read_text())["option"]
     options = [Option(e["id"], e["label"], e["default"], e.get("field"), e.get("pad"),
                       tuple(Layer(**layer) for layer in e.get("layers", ())),
-                      tuple(e["scales"]) if "scales" in e else None)
+                      tuple(e["scales"]) if "scales" in e else None, e.get("app"))
                for e in entries]
     for option in options:
-        if sum((option.field is not None, option.pad is not None, bool(option.layers))) != 1:
-            raise ValueError(f"{path}: {option.id} wants one of field, pad and layers")
+        if sum((option.field is not None, option.pad is not None, bool(option.layers),
+                option.app is not None)) != 1:
+            raise ValueError(f"{path}: {option.id} wants one of field, pad, layers and app")
         if option.layers and option.default not in [layer.label for layer in option.layers]:
             raise ValueError(f"{path}: {option.id}'s default is one of its layers' labels")
         if option.scales is not None and (option.pad is None or option.default not in option.scales):
@@ -97,6 +101,7 @@ def manifest(repo: Path, game: str, address: int, layers: set[str], link: int | 
     (slot_link.py)."""
     # A layer option's choices are Off and its layers, in order.
     items = [{"id": o.id, "label": o.label, "default": o.default} | ({"pad": o.pad} if o.pad else {})
+             | ({"app": o.app} if o.app else {})
              | ({"layers": [{"label": layer.label, "folder": layer.folder} for layer in o.layers],
                  "default": 1 + [layer.label for layer in o.layers].index(o.default)} if o.layers else {})
              | ({"scales": list(o.scales), "default": o.scales.index(o.default)} if o.scales else {})
