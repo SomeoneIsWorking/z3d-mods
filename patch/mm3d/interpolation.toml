@@ -74,3 +74,10 @@ material_loop = ["AnimPlayer.loop"]
 material_paused = ["AnimPlayer.paused"]
 cmab_anim_offset = ["CmabHeader.animOffset"]
 cmab_frame_count = ["CmabAnim.frameCount"]
+# The GSP interrupt lock: the interrupt thread holds it at the title screen's section starts, and a
+# replay, which runs no other thread, starts with it free (decomp/mm3d docs/frame.md "The GSP
+# interrupt lock").
+held_lock = ["gGspInterruptLock"]
+lock_event = ["OsCriticalSection.event"]
+lock_owner = ["OsCriticalSection.ownerTls"]
+lock_count = ["OsCriticalSection.count"]

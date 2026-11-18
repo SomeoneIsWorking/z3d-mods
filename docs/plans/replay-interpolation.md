@@ -372,10 +372,22 @@ cuts.
     the swamp's scene handlers 0x493C00 and 0x4C5FC4, a model's material frames through the model
     update 0x2240EC). Woodfall Temple: one speck at (222,12), not traced.
     Clock Town at night: not mapped yet (the capture landed on the day's title card).
-  - In the window, MM3D's title screen and file select refuse every replay (svc 0x22, an
-    ArbitrateAddress wait in the lock 0x13C5D0 another thread holds), so they show at 30 Hz;
-    play after File 1 refuses none (the window logs `interpolation replays=...` beside the
-    pacing).
+  - The title screen and file select: interpolated. Every replay there was refused (svc 0x22 at
+    0x12A150): the section's first entry into `gGspInterruptLock` (0x7C0F50, an nn::os critical
+    section) waited for the GSP interrupt thread, which holds it at every title section's start
+    (60 of 60: event -1, its TLS the owner) while it runs the previous tick's list, and which a
+    replay does not run (decomp/mm3d `docs/frame.md` "The GSP interrupt lock"). `HeldLock`
+    (`app/src/held_lock`, the table's `held_lock`) starts every replay, probe included, with the
+    lock as its holder leaves it (event 1, no owner, no entries) when a thread other than the
+    section's holds it. t = 1 probe from boot on the title (title-probe): 90 of 90 done, requests
+    and PICA lists byte for byte the real ones in 90 of 90 (1.93 MB); memory differs only in what
+    the interrupt thread stores meanwhile (its time stamp 0x6A3A10, `gNngxState` +0x11 and the
+    running list's request index). With `interp on` from a title state (title-ab): Majora's Mask
+    over Skull Kid turns on every present where interpolation off repeats each pose twice (73, 0,
+    74, 0 changed pixels off, 57, 59, 47, 57 on; `mask-on-vs-off-20-25.png`, on above).
+    `interp leakcheck` from boot through Start and A to the clock (title-leak): 374 replays, 0
+    refused, 0 leaking, no assert or unknown address in the core log. Play in South Clock Town
+    never starts with the lock held.
   - The title-screen crash: fixed. With `interp on`, MM3D crashed a second or two after Start on
     the title screen (`z3dmods run mm3d <dir> --harness interp:on wait:29 start wait:6`; the core
     asserted in `RasterizerCache::UpdatePagesCachedCount` after `Unknown virtual address @

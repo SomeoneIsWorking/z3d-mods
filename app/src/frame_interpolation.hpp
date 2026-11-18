@@ -9,6 +9,7 @@
 #include "camera_track.hpp"
 #include "effect_pool_track.hpp"
 #include "fade_track.hpp"
+#include "held_lock.hpp"
 #include "material_track.hpp"
 #include "skeleton_track.hpp"
 #include "gx_cmdlist.hpp"
@@ -19,6 +20,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace z3d::app {
 
@@ -65,12 +67,16 @@ private:
     // The patch's draw fraction in the link block, where the patch keeps one: an in-between's
     // draw reads how far it is from the newer tick, for the draws that step on a tick count.
     std::optional<uint32_t> drawFraction{};
+    std::optional<HeldLock> heldLock{};
   };
 
   void onSection(Section &section);
   void census(Core::SectionReplay &replay, Section &section);
   void probe(Core::SectionReplay &replay, Section &section);
   void interpolate(Core::SectionReplay &replay, Section &section);
+  // What every replay starts with besides its blends: a lock another thread held, released.
+  [[nodiscard]] std::vector<Core::SectionReplay::Input> startInputs(Core::SectionReplay &replay,
+                                                                    const Section &section);
 
   Emulator &emulator_;
   std::optional<Section> section_;
@@ -118,6 +124,8 @@ private:
     uint64_t inBetweens = 0;
     // Fills and transfers of in-betweens the rasterizer cache could not run.
     uint64_t gpuSkipped = 0;
+    // Replays that started with the held lock released.
+    uint64_t locksReleased = 0;
     Pairing actors;
     Pairing skeletons;
     Pairing fades;

@@ -99,6 +99,8 @@ public:
 
   // The core's draw-section replay owner (frame_interpolation.hpp).
   [[nodiscard]] Core::SectionReplay &sectionReplay();
+  // The TLS address of the guest thread running now (in a section's handler, the section's), or 0.
+  [[nodiscard]] uint32_t runningThreadTls() const;
   [[nodiscard]] VideoCore::GPU &gpu();
   [[nodiscard]] Pacing takePacing();
   // Physical memory (FCRAM, VRAM) as the GPU path reads and writes it; empty where unbacked.

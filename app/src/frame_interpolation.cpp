@@ -202,6 +202,14 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
   if (link != nullptr && has(*link, "draw_fraction")) {
     section.drawFraction = field(*link, "draw_fraction");
   }
+  if (has(*table, "held_lock")) {
+    section.heldLock.emplace(HeldLockAddresses{
+        .lock = field(*table, "held_lock"),
+        .event = field(*table, "lock_event"),
+        .owner = field(*table, "lock_owner"),
+        .count = field(*table, "lock_count"),
+    });
+  }
   // The camera track declares the cuts every blend obeys; the effects live in paired actors.
   const bool blends = section.actors || section.skeletons || section.fades || section.materials;
   if (blends && !section.camera) {
@@ -276,6 +284,15 @@ void FrameInterpolation::census(Core::SectionReplay &replay, Section &section) {
   }
 }
 
+std::vector<Core::SectionReplay::Input> FrameInterpolation::startInputs(Core::SectionReplay &replay,
+                                                                        const Section &section) {
+  std::vector<Core::SectionReplay::Input> inputs;
+  if (section.heldLock && section.heldLock->release(replay, emulator_.runningThreadTls(), inputs)) {
+    ++totals_.locksReleased;
+  }
+  return inputs;
+}
+
 void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &section) {
   if (section.camera) {
     section.camera->sample(replay);
@@ -303,6 +320,9 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
       return;
     }
     inputs = std::move(*camera);
+  }
+  for (Core::SectionReplay::Input &input : startInputs(replay, section)) {
+    inputs.push_back(std::move(input));
   }
   const auto blend = [&inputs](const auto &track, Pairing &pairing) {
     if (track) {
@@ -351,7 +371,7 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
 void FrameInterpolation::probe(Core::SectionReplay &replay, Section &section) {
   std::vector<Core::SectionReplay::Difference> differences;
   std::string gxDifference;
-  const Core::SectionReplay::Result result = replay.Replay({}, {}, [&] {
+  const Core::SectionReplay::Result result = replay.Replay(startInputs(replay, section), {}, [&] {
     differences = replay.DiffWithSection();
     const GxOutput replayed = section.cmdlist.read();
     gxDifference = compareGx(real_, replayed);
@@ -430,7 +450,8 @@ std::string FrameInterpolation::takeReport() {
   for (const auto &[page, bytes] : totals_.windowOnly) {
     report << std::hex << page << std::dec << ':' << bytes << ',';
   }
-  report << " replays=" << totals_.replays << " refused=" << totals_.refused;
+  report << " replays=" << totals_.replays << " refused=" << totals_.refused
+         << " locks_released=" << totals_.locksReleased;
   if (!totals_.lastRefusal.empty()) {
     report << " (" << totals_.lastRefusal << ')';
   }

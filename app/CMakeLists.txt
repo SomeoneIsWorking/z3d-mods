@@ -44,6 +44,7 @@ add_executable(z3d
   src/camera_track.cpp
   src/effect_pool_track.cpp
   src/fade_track.cpp
+  src/held_lock.cpp
   src/material_track.cpp
   src/skeleton_track.cpp
   src/frame_interpolation.cpp

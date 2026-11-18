@@ -94,6 +94,7 @@
   - `effect_pool_track`: an actor's own effect array blended slot by slot (ObjectKankyo's fairies), in actors the actor track paired.
   - `fade_track`: the fades' motion track: the colour of the transition's fill while it is a fade, and of the fade flash, blended.
   - `material_track`: the material animations' track (texture scroll): each animation the draw steps, or the update steps before it (made again as the replay's lead call), started part of its step on, paired by address, animation and step.
+  - `held_lock`: a lock another thread holds as the draw section starts (MM3D's GSP interrupt lock), written free for each replay.
   - `motion_blend`: the tracks' blends (floats, vectors, binary angles the short way, rigid 3x4 matrices); `section_memory`: typed reads of the section's start state and replay inputs.
   - `camera_track`: the camera's motion track for an in-between: `View_LookAt`'s eye, at, up and fovy blended unshaken between two ticks, with the newer tick's quake, and the cuts.
   - `replay_leak_check`: `interp leakcheck`: the rasterizer cache's state and physical memory captured before and after a replay and compared.

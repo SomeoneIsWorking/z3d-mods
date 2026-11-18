@@ -10,6 +10,7 @@
 #include "core/frontend/image_interface.h"
 #include "core/hle/kernel/kernel.h"
 #include "core/hle/kernel/process.h"
+#include "core/hle/kernel/thread.h"
 #include "core/hle/service/cfg/cfg.h"
 #include "core/loader/loader.h"
 #include "core/memory.h"
@@ -265,6 +266,11 @@ bool Emulator::loadState(std::vector<uint8_t> state) {
 
 Core::SectionReplay &Emulator::sectionReplay() {
   return system_.Replay();
+}
+
+uint32_t Emulator::runningThreadTls() const {
+  const Kernel::Thread *thread = system_.Kernel().GetCurrentThreadManager().GetCurrentThread();
+  return thread != nullptr ? thread->GetTLSAddress() : 0;
 }
 
 VideoCore::GPU &Emulator::gpu() {
