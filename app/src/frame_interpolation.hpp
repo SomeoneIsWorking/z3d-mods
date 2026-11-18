@@ -46,6 +46,9 @@ public:
   bool setMode(Mode mode);
   // What the sections and replays did since the last call, one line.
   [[nodiscard]] std::string takeReport();
+  // The replays' outcomes since the last call (done, refused with the last reason, cut), one
+  // line for the window's log; takes them as takeReport does.
+  [[nodiscard]] std::string takeOutcomes();
 
 private:
   // The game's draw section as the manifest names it, and the tracks it names.

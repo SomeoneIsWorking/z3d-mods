@@ -56,6 +56,8 @@ struct AppConfig {
   uint32_t resolution = 1;
   // Every texture the game uploads, as PNG under <user>/Azahar/dump/textures/.
   bool dumpTextures = false;
+  // The window's play: each present's top screen as <record>/<index>.png, in-betweens included.
+  std::filesystem::path record;
   // --keys alone: print every key binding (PadInput::listKeys) and leave.
   bool listKeys = false;
   // Z3D_TEST_PAD=1, the input tests alone: the loopback channel that makes and drives their
@@ -64,7 +66,7 @@ struct AppConfig {
 
   // z3d --keys
   // z3d --user <dir> (--rom <3ds> [--layout l] [--textures] [--options <json>] [--option <id>=<value>]... [--assets <dir>] | --library <json> --font <ttf> --assets <dir>)
-  //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures]
+  //     [--title t] [--app-id id] [--resolution n] [--hidden] [--dump-textures] [--record <dir>]
   //     [--tools <program> [<argument>]...]
   // Environment: Z3D_TEST_PAD.
   [[nodiscard]] static AppConfig parse(int argc, char **argv);

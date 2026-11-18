@@ -43,7 +43,11 @@ Flags (`src/app_config.hpp`): `--user`, then either `--rom` with `--layout`
 (`default|single_screen|large_screen|side_by_side|overlay`), `--textures` and `--options <json>`, or `--library <json>` and
 `--font <ttf>` for the picker (never `--hidden`); `--title`, `--app-id`, `--resolution`, `--hidden`,
 `--dump-textures` (the core writes every texture without a replacement as PNG under
-`<user>/Azahar/dump/textures/<title id>/`; `z3dmods run ... --harness --dump-textures`).
+`<user>/Azahar/dump/textures/<title id>/`; `z3dmods run ... --harness --dump-textures`),
+`--record <dir>` (the window's play: every present's top screen, in-betweens included, as
+`<dir>/<index>.png`, written on a thread of its own by `src/frame_recorder`; `z3dmods inputtest
+interp-textures` and `interp-textures-mm3d` record File 1's scene loading with the window's
+asynchronous custom textures, at render scale 1 so the writes keep up).
 `tools/z3dmods/app.py` derives a game's from its set: its `screen_layout`, textures when it has a
 pack, render scale 1 for the tools and 3 for play. `play.py` writes the library,
 `<user>/library.json`, an array of `{"rom", "layout", "textures", "options"}` per set (and

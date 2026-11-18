@@ -396,6 +396,17 @@ void FrameInterpolation::probe(Core::SectionReplay &replay, Section &section) {
   }
 }
 
+std::string FrameInterpolation::takeOutcomes() {
+  std::ostringstream outcomes;
+  outcomes << "replays=" << totals_.replays << " refused=" << totals_.refused;
+  if (!totals_.lastRefusal.empty()) {
+    outcomes << " (" << totals_.lastRefusal << ')';
+  }
+  outcomes << " cuts=" << totals_.cuts << " in_betweens=" << totals_.inBetweens;
+  totals_ = {};
+  return outcomes.str();
+}
+
 std::string FrameInterpolation::takeReport() {
   std::ostringstream report;
   report << "sections=" << totals_.sections << " section_pages=" << totals_.sectionPages

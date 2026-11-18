@@ -39,6 +39,7 @@ add_executable(z3d
   src/slot_link.cpp
   src/mouse_aim.cpp
   src/emulator.cpp
+  src/frame_recorder.cpp
   src/actor_track.cpp
   src/camera_track.cpp
   src/effect_pool_track.cpp

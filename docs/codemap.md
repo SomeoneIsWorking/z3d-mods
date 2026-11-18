@@ -102,6 +102,7 @@
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.
   - `player`: the windowed loop, paced by the core's frame limiter, until close or the menu request; frame interpolation on by the game's option, and the pacing logged.
   - `frame`: a captured frame and its PNG encoding.
+  - `frame_recorder`: the window's presents saved as numbered PNGs on a thread of their own (`--record`).
   - `repl`: the stdin command language.
   - `icon/z3d.svg`: the app's icon.
 - `sets/`: per-game mod set manifests.

@@ -196,8 +196,16 @@ cuts.
   costs about 0.55 ms of host time a replay in Kokiri Forest (2.61 against 2.06 ms, one run each,
   not a perf-units measurement). Depth surfaces are compared by the 4 bytes a pixel their download
   writes (`DepthToBuffer` packs D24S8), not the 5 the staging buffer holds. Not covered by the
-  check: a custom texture's asynchronous decode (play loads them asynchronously; in a replay
-  only an already decoded one is uploaded, otherwise the guest's image shows in that in-between).
+  check: a custom texture's asynchronous decode. A replay decides nothing about custom textures
+  (fork `RasterizerCache::UploadCustomSurface` and `ValidateSurface` under the overlay): it starts
+  no decode and uploads nothing over a surface, so it draws a custom image only where the real
+  frame bound one and the guest's image where the real frame did. The window's asynchronous
+  loading after File 1 loads (`z3dmods inputtest interp-textures` and `interp-textures-mm3d`,
+  which record every present): each in-between's textures are its neighbours'
+  (scratch/input-test/interp-textures `entry-1653-1658.png`, Link's house as it fades in, and
+  interp-textures-mm3d `entry-3210-3215.png`, the clock tower base, real frames and in-betweens
+  in turn). The build before showed no in-between with the guest's image on this host either,
+  so this proves the rule, not a fix of a seen frame.
   Harness states load only in the core revision that saved them; their recipe is in docs/app.md.
 - Pacing (Design 5): measured in real time with `pace on` and `pacing` (docs/app.md), which read
   the core's own counts: emulated vblanks, and the game's frame submissions, one a logic tick. A
@@ -317,8 +325,10 @@ cuts.
     named in the decomp. In the tower base (`loadstate:sct patch:off patch:on`: a state holds the
     code it was saved with), the arrow's box changes on every other present with interpolation
     off and on every present with it on, each in-between's turn between its neighbours'
-    (scratch/runs/mm-arrow-on `arrow-off-vs-on.png`, top off, bottom on). Still stepping there:
-    edge pixels on Link, not traced.
+    (scratch/runs/mm-arrow-on `arrow-off-vs-on.png`, top off, bottom on). Link's edges move
+    with him: of the change in his box, 48% falls into the in-betweens with interpolation on and
+    0% off (mm-arrow-on, mm-arrow-off); single pixels that flag at one parity are his outline's
+    aliasing.
   - Effect pools: not found. South Clock Town at 6:10 on the first day (mm-sct-fx-2,
     `stepmap.png`: pixels that change into a real tick and not into the in-between before it)
     shows no particles stepping: the clock's minute digit, the dog, and noise over Link and the
@@ -346,9 +356,20 @@ cuts.
     shows the new shot whole, with the presents after moving again (scratch/runs/mm-shot-cut-1
     `cut-302-307.png`, mm-shot-cut-2 `cut-422-427.png`; 261 replays, 1 refused, 4 cuts: `interp
     on`, the warp, the two shots).
-  - The warp's white fade-in steps at the logic rate: in mm-shot-cut-1 presents 107 to 140
-    change by about 6000 pixels on each real tick and by under 300 on each in-between. Its owner
-    is not found.
+  - The warp's white fade-in is blended: the swamp's mean brightness falls on every present
+    with interpolation on (249.75, 246.87, 243.25, 239.57, ...) and in pairs off
+    (scratch/runs/swamp-fade `fade-in-124-129.png`). A count of pixels over a threshold read it
+    as stepping.
+  - Step maps (scratch/runs/mm-steps; a region steps when its change all falls into the real
+    ticks): South Clock Town by day, only the clock's minute digit. The Southern Swamp: the far
+    water band steps (0% of its change in the in-betweens); its owner is not traced (candidates:
+    the swamp's scene handlers 0x493C00 and 0x4C5FC4, a model's material frames through the model
+    update 0x2240EC). Woodfall Temple: one speck at (222,12), not traced.
+    Clock Town at night: not mapped yet (the capture landed on the day's title card).
+  - In the window, MM3D's title screen and file select refuse every replay (svc 0x22, an
+    ArbitrateAddress wait in the lock 0x13C5D0 another thread holds), so they show at 30 Hz;
+    play after File 1 refuses none (the window logs `interpolation replays=...` beside the
+    pacing).
   - The title-screen crash: fixed. With `interp on`, MM3D crashed a second or two after Start on
     the title screen (`z3dmods run mm3d <dir> --harness interp:on wait:29 start wait:6`; the core
     asserted in `RasterizerCache::UpdatePagesCachedCount` after `Unknown virtual address @

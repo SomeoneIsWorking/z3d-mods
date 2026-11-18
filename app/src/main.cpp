@@ -86,7 +86,7 @@ int direct(const AppConfig &config, const GameSetup &game, PadInput &pad) {
     repl.serve(std::cin, std::cout);
     return 0;
   }
-  Player(emulator, window, mods, options, pad, interpolation).run();
+  Player(emulator, window, mods, options, pad, interpolation, config.record).run();
   return 0;
 }
 
@@ -151,7 +151,7 @@ int picker(const AppConfig &config, PadInput &pad) {
                    options[*chosen].blockAddress());
       const MouseAim aim(window, emulator, pad, link, config.userDir / game.setup.options);
       FrameInterpolation interpolation(emulator, config.userDir / game.setup.options);
-      Player(emulator, window, mods, options[*chosen], pad, interpolation).run();
+      Player(emulator, window, mods, options[*chosen], pad, interpolation, config.record).run();
     }
     if (window.closeRequested()) {
       return 0;

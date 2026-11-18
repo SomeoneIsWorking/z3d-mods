@@ -20,10 +20,14 @@ void Player::run() {
   auto report = std::chrono::steady_clock::now() + kPacingReport;
   // The core paces itself (frame limit) and reads the pad through the window's event pump.
   while (!window_.closeRequested() && !window_.takeMenuRequest()) {
-    emulator_.runFrames(1, Emulator::Capture::None);
+    emulator_.runFrames(1, recorder_ ? Emulator::Capture::Top : Emulator::Capture::None);
+    if (recorder_) {
+      recorder_->add(emulator_.frame());
+    }
     swapMods();
     if (std::chrono::steady_clock::now() >= report) {
       lucent::info("z3d", "pacing {}", emulator_.takePacing().text());
+      lucent::info("z3d", "interpolation {}", interpolation_.takeOutcomes());
       report += kPacingReport;
     }
   }

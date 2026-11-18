@@ -12,7 +12,7 @@ constexpr std::string_view kUsage =
     "usage: z3d --keys | z3d --user <dir> (--rom <3ds> [--layout default|single_screen|large_screen|"
     "side_by_side|overlay] [--textures] [--options <json>] [--option <id>=<value>]... | "
     "--library <json> --font <ttf> --assets <dir>) [--assets <dir>] [--title <text>] "
-    "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures] "
+    "[--app-id <id>] [--resolution <1..10>] [--hidden] [--dump-textures] [--record <dir>] "
     "[--tools <program> [<argument>]...]";
 
 constexpr std::array kLayouts{
@@ -108,6 +108,8 @@ AppConfig AppConfig::parse(int argc, char **argv) {
       game.layout = parseLayout(value);
     } else if (flag == "--resolution") {
       config.resolution = parseResolution(value);
+    } else if (flag == "--record") {
+      config.record = value;
     } else {
       throw std::invalid_argument("unknown flag " + std::string(flag));
     }
