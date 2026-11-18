@@ -178,15 +178,18 @@ cuts.
   `ValidateSurface`) can download the replay's pixels into guest memory, also outside the
   journal; display transfers to anything but a screen's display buffer are dropped, so a frame
   that transfers into a texture it reads later would read the real one. The design: an overlay
-  in `RasterizerCache` opened and closed by `RunDetached`. Opening it snapshots the cache's
-  bookkeeping (`page_table`, `dirty_regions`, `cached_pages`, `sentenced`, each registered
-  surface's metadata); the first image write to a surface that existed before (a draw's colour or
+  in `RasterizerCache` opened and closed by `RunDetached`. Opening it snapshots `dirty_regions`,
+  `texture_cube_cache` and each registered surface's `SurfaceBase` metadata; the first image write to a surface that existed before (a draw's colour or
   depth target, a copy, blit, clear or upload into it, a texture cube built from it) moves the
   original out of its slot into a stash and puts a copy in its place, after dropping the
   framebuffers and cube faces that name it, so every lookup of that id reads and writes the copy
-  and the original is never drawn into. Closing it destroys the copies and every surface made
-  during the replay, returns the originals to their slots, restores the bookkeeping and the
-  memory's cached-page marks to match, and drops framebuffers made meanwhile. Inside it a flush
+  and the original is never drawn into. Closing it unregisters every surface made during
+  the replay (to `sentenced`, so the GPU is done with it before it goes), registers again through
+  `RegisterSurface` the originals the replay unregistered (a fill's slot is kept while the overlay
+  is open), which keeps `page_table`, `cached_pages` and the memory's cached marks right without a
+  snapshot, swaps the originals back (the copies kept per original for the next replay, or
+  sentenced, never destroyed while in flight), restores the snapshots and drops the framebuffers
+  that name a swapped id. `Surface` (Vulkan) is movable, so the swap is a move of slot contents. Inside it a flush
   of an interval the overlay owns is skipped and counted, a fill or copy goes through the cache
   only (no software fallback; refused instead), a DMA is refused, and a display transfer into a
   non-screen surface runs into the overlay. Proof wanted: `interp leakcheck`, the game's render
