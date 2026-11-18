@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from z3dmods.install import GameSet
 
 # The fork's z3d-harness branch the app is built against.
-AZAHAR_REVISION = "d3890458b"
+AZAHAR_REVISION = "abcc9ce21"
 TOOLCHAIN = "clang"
 COMPILERS = ["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]
 AZAHAR_OPTIONS = {
