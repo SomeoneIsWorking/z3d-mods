@@ -10,10 +10,105 @@
 namespace z3d::app {
 namespace {
 
-// A request is its command id and the GSP command's first six parameter words.
-constexpr uint32_t kRequestArgs = 24;
+// A request is its kind and six words in nngx's own encoding (decomp docs/frame.md "Requests").
+constexpr uint32_t kRequestWords = 7;
 // nngx keeps at most this many requests in a list.
 constexpr uint32_t kMaxRequests = 0x200;
+
+using Request = std::array<uint32_t, kRequestWords>;
+using Service::GSP::Command;
+using Service::GSP::CommandId;
+
+Command commandOf(CommandId id) {
+  Command command{};
+  command.id.Assign(id);
+  return command;
+}
+
+uint32_t low(uint32_t word) {
+  return word & 0xFFFF;
+}
+
+uint32_t high(uint32_t word) {
+  return word >> 16;
+}
+
+// A fill's size word: the byte count in its low 23 bits, the fill width in bits 23 and 24.
+uint32_t fillEnd(uint32_t start, uint32_t size) {
+  return start + (size & 0x7FFFFF);
+}
+
+uint16_t fillControl(uint32_t size) {
+  return static_cast<uint16_t>(((size >> 15) & 0x300) | 1);
+}
+
+// nngx's display transfer flags as the GSP's (Pica::DisplayTransferConfig).
+uint32_t transferFlags(uint32_t flags, uint32_t inSize, uint32_t outSize) {
+  const bool crop = low(outSize) < low(inSize) || high(outSize) < high(inSize);
+  return ((flags >> 6) & 1) | ((flags >> 9) & 2) | (crop ? 4U : 0U) | ((flags >> 6) & 0x20) |
+         ((flags & 7) << 8) | ((flags & 0x38) << 9) | ((flags & 0x200) << 7) |
+         ((flags & 0x180) << 17);
+}
+
+// The GSP commands nngx's dispatcher (MM3D 0x1490F4, OoT3D 0x3027DC) sends for one request.
+std::vector<Command> commandsOf(const Request &r) {
+  switch (static_cast<CommandId>(r[0] & 0xFF)) {
+  case CommandId::RequestDma: {
+    Command command = commandOf(CommandId::RequestDma);
+    command.dma_request = {.source_address = r[1], .dest_address = r[2], .size = r[3]};
+    return {command};
+  }
+  case CommandId::SubmitCmdList: {
+    std::vector<Command> commands;
+    // Bit 2 of the flags word skips the cache flush before the list.
+    if ((r[3] & 4) == 0) {
+      Command flush = commandOf(CommandId::CacheFlush);
+      flush.cache_flush.regions[0] = {.address = r[1], .size = r[2]};
+      commands.push_back(flush);
+    }
+    Command command = commandOf(CommandId::SubmitCmdList);
+    command.submit_gpu_cmdlist.address = r[1];
+    command.submit_gpu_cmdlist.size = r[2];
+    command.submit_gpu_cmdlist.flags = r[3] & 1;
+    commands.push_back(command);
+    return commands;
+  }
+  case CommandId::MemoryFill: {
+    Command command = commandOf(CommandId::MemoryFill);
+    command.memory_fill = {.start1 = r[1],
+                           .value1 = r[2],
+                           .end1 = fillEnd(r[1], r[3]),
+                           .start2 = r[4],
+                           .value2 = r[5],
+                           .end2 = fillEnd(r[4], r[6]),
+                           .control1 = fillControl(r[3]),
+                           .control2 = fillControl(r[6])};
+    return {command};
+  }
+  case CommandId::DisplayTransfer: {
+    Command command = commandOf(CommandId::DisplayTransfer);
+    command.display_transfer = {.in_buffer_address = r[1],
+                                .out_buffer_address = r[2],
+                                .in_buffer_size = r[3],
+                                .out_buffer_size = r[4],
+                                .flags = transferFlags(r[5], r[3], r[4])};
+    return {command};
+  }
+  case CommandId::TextureCopy: {
+    Command command = commandOf(CommandId::TextureCopy);
+    const bool gaps = low(r[4]) != 0 || low(r[5]) != 0;
+    command.texture_copy = {.in_buffer_address = r[1],
+                            .out_buffer_address = r[2],
+                            .size = r[3],
+                            .in_width_gap = high(r[4]) | (low(r[4]) << 16),
+                            .out_width_gap = high(r[5]) | (low(r[5]) << 16),
+                            .flags = (gaps ? 4U : 0U) | 8U};
+    return {command};
+  }
+  default:
+    throw std::runtime_error("the GX command list holds a request nngx does not send");
+  }
+}
 
 } // namespace
 
@@ -39,20 +134,22 @@ GxOutput GxCmdlist::read() const {
     throw std::runtime_error("the GX command list holds more requests than nngx allows");
   }
   for (uint32_t i = 0; i < count; ++i) {
-    const uint32_t request = requests + i * addresses_.requestSize;
-    Service::GSP::Command command{};
-    command.id.Assign(static_cast<Service::GSP::CommandId>(u32(request)));
-    if (!emulator_.read(request + 4, std::span<uint8_t>(command.raw_data.data(), kRequestArgs))) {
+    std::array<uint8_t, sizeof(Request)> bytes{};
+    if (!emulator_.read(requests + i * addresses_.requestSize, bytes)) {
       throw std::runtime_error("cannot read a GX request");
     }
-    if (command.id == Service::GSP::CommandId::SubmitCmdList) {
-      std::vector<uint8_t> bytes(command.submit_gpu_cmdlist.size);
-      if (!emulator_.read(command.submit_gpu_cmdlist.address, bytes)) {
-        throw std::runtime_error("cannot read a PICA command list");
+    Request request{};
+    std::memcpy(request.data(), bytes.data(), bytes.size());
+    for (const Command &command : commandsOf(request)) {
+      if (command.id == CommandId::SubmitCmdList) {
+        std::vector<uint8_t> bytes(command.submit_gpu_cmdlist.size);
+        if (!emulator_.read(command.submit_gpu_cmdlist.address, bytes)) {
+          throw std::runtime_error("cannot read a PICA command list");
+        }
+        output.lists.push_back(std::move(bytes));
       }
-      output.lists.push_back(std::move(bytes));
+      output.commands.push_back(command);
     }
-    output.commands.push_back(command);
   }
   return output;
 }

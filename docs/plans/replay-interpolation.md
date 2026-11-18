@@ -27,7 +27,8 @@ cuts.
 1. **The draw section.** OoT3D: from `Gameplay_Update`'s branch to `Gameplay_Draw` (+0xA8) to
    `Graph_DrawFrame`'s call of the frame end (+0xD40), not run (`patch/oot3d/interpolation.toml`).
    Its output is the bound command list's requests and the PICA lists they name
-   (`app/src/gx_cmdlist`). It reaches no device; its only SVCs are ArbitrateAddress signals,
+   (`app/src/gx_cmdlist`), each request turned into the GSP commands nngx's dispatcher sends for
+   it (decomp/oot3d `docs/frame.md` "Requests"). It reaches no device; its only SVCs are ArbitrateAddress signals,
    which a replay answers without the kernel.
 2. **Running it in Azahar.** The core gets a replay owner beside the CPU: after the real tick's
    draw returns and before the frame end runs the list, it saves the ARM11 context, writes the
@@ -324,13 +325,24 @@ cuts.
     instead of a teleport, or find what the door's open test reads.
   - Cutscene shot cut: not started. MM3D's cutscene camera is script command 90
     (decomp/mm3d `docs/cutscene.md`); its shot field is not found.
-  - The "Frame interpolation" option stays OoT3D-only: with interpolation on, MM3D crashes a
-    second or two after Start on the title screen (reproduction: `z3dmods run mm3d <dir>
-    --harness interp:on wait:29 start wait:6`; `interp:leakcheck` crashes too, `interp:census`
-    and `interp:off` do not). The core asserts in `RasterizerCache::UpdatePagesCachedCount`
-    (count below 0) after `VirtualToPhysicalAddress` meets 0x010C8000. Every title-screen
-    replay is refused (svc 0x22 from 0x12A150) and the leak check finds no leak in memory or
-    the rasterizer cache's state, so what a refused replay changes is outside what it compares
-    (GPU registers or GSP state are the candidates). Not traced. The `interp-mm3d` scenario
-    (OoT3D's `interp` with `_mm3d_file_1`, prepared like `camera-mm3d`) reached the crash and
-    was not landed.
+  - The title-screen crash: fixed. With `interp on`, MM3D crashed a second or two after Start on
+    the title screen (`z3dmods run mm3d <dir> --harness interp:on wait:29 start wait:6`; the core
+    asserted in `RasterizerCache::UpdatePagesCachedCount` after `Unknown virtual address @
+    0x010C8000`). The core dump's stack is a replay that was done, not one refused:
+    `GPU::RunDetached`, `AccelerateFill`. `GxCmdlist::read` passed each nngx request to the GPU as
+    if it were a GSP command, but a request is nngx's own encoding (decomp/mm3d `docs/frame.md`
+    "Requests", read from the dispatcher 0x1490F4 and the same in OoT3D's 0x3027DC): a fill's
+    third word is its size and width (0x010C8000: 0xC8000 bytes, 32-bit), not its end, and a
+    display transfer's flags are nngx's bits, not the GSP's. It now builds the GSP commands the
+    dispatcher sends. The title's play state makes a fill after Start; South Clock Town's fill had
+    hit the same path without crashing. Every in-between of both games was made with nngx's
+    transfer flags as GSP flags (OoT3D's top screen 0x88, read as a texture copy with no
+    downscale, where the GSP gets 0x01001000); the presents looked right because the in-between
+    image is shown on its own. After the fix: the crash run, 940 replays (930 refused on the
+    title's lock wait, svc 0x22 at 0x12A150, 20 in-betweens after Start), no unknown address in
+    the core log (crash-fix-1); the same with `interp leakcheck`, 940 checked, 0 leaking
+    (crash-fix-leak.txt). In-betweens with the new flags, camera turning: OoT3D Kokiri Forest
+    (scratch/runs/gx-kf-on `ladder-on-vs-off-14-19.png`, on above: every present changes, off
+    0, 7272, 0, 7039) and MM3D South Clock Town (gx-sct-on `on-vs-off-14-19.png`: every present
+    changes, off 0, 12248, 0, 12426), colours as the real frames'. The t = 1 probe and the leak
+    check compare requests as read, so neither could see a wrong translation.

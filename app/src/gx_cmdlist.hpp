@@ -1,5 +1,5 @@
 // A draw section's output in nn::gx titles: the requests of the bound command list, which the
-// frame end hands the GSP in order (decomp docs/frame.md), as GSP GX commands.
+// frame end hands the GSP in order (decomp docs/frame.md), as the GSP GX commands nngx sends.
 #pragma once
 
 #include "core/hle/service/gsp/gsp_command.h"
