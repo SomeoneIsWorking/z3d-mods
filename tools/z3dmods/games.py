@@ -176,8 +176,8 @@ def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | 
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
-    sites = ("open_site", "close_site", "skeleton_draw_call")
-    site_lists = ("material_step_calls",)
+    sites = ("open_site", "close_site")
+    site_lists = ("skeleton_draw_calls", "material_step_calls")
     functions = ("fade_draw",)
     sizes = {key: symbols.size(d, struct) for key, (anchor, struct) in INTERPOLATION_SIZES.items() if anchor in table}
     return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites if key in table} | {
@@ -190,7 +190,7 @@ def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | 
 
 # The struct sizes the app's tracks step by: each key, the table key that names its track, its struct.
 INTERPOLATION_SIZES = {
-    "actor_list_size": ("actor_lists", "ActorListEntry"), "joint_size": ("skeleton_draw_call", "SkelJoint"),
+    "actor_list_size": ("actor_lists", "ActorListEntry"), "joint_size": ("skeleton_draw_calls", "SkelJoint"),
     "effect_size": ("effects", "ObjectKankyoEffect"),
     "camera_setting_size": ("door_camera_function", "CameraSetting"),
     "camera_mode_size": ("door_camera_function", "CameraMode")}

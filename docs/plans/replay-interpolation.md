@@ -256,12 +256,20 @@ cuts.
   where off repeats each one twice (scratch/runs/mm-act-on `on-vs-off-link-36-47.png`, on above).
   His leg pose still steps at the tick rate (no skeleton track yet).
   Next: skeletons, fades, materials, effect pools, then the door and shot cuts; then the option.
-- MM3D, where the work stands (2026-11-18). Skeletons: the player's `SkelAnime` layout is seen in
-  memory (decomp/mm3d `docs/actors.md` "The player's skeleton"), but the skeleton track needs the
-  branch in the draw that queues a skeleton with its `SkelAnime` in a register; MM3D has neither
-  OoT3D's `SkelAnime_DrawOpa` nor its queue function 0x4C7AB0 by their bytes, so it is found
-  next by tracing the player's draw (or a read of `SkelAnime.model` in the section). Fades:
-  `Play_Draw` draws the transition through `PlayState + 0xCA94` on the instance at `+0xC860`
-  (decomp/mm3d `docs/frame.md`); the fade's type, colour and draw function are not read yet. The
-  scene's material animations, effect pools and the door and shot cuts are not started. The
-  "Frame interpolation" option stays OoT3D-only until these pass.
+- Step 5, MM3D skeletons: built. MM3D's `SkelAnime_DrawOpa` (0x1FEB14) and `SkelAnime_DrawOpaEx`
+  (0x3780B0) queue a skeleton through one function, each with the `SkelAnime` in r1; the table
+  names both calls (`skeleton_draw_calls`, a site list in both games now). The draw reads the
+  joint table at `SkelAnime` +0x80 limb by limb through the actor's limb controller, after the
+  update posed it (decomp/mm3d `docs/actors.md` "Skeletons"). Three skeletons pair a tick in South
+  Clock Town's tower base, none unpaired. Link running toward the camera: every present has its
+  own leg pose and the in-betweens sit halfway (his tunic's centroid 142.25, 140.86, 139.69,
+  137.83, 134.98), where interpolation off repeats each pose twice (scratch/runs/mm-skel-on
+  `on-vs-off-link-36-40.png`, on above). OoT3D after the change: Kokiri Forest walking, 318
+  skeletons paired, poses between ticks (scratch/runs/oot-skel-kf `walk-vs-off-36-40.png`); the
+  Fire Temple door run, 2 cuts and 2 refusals in 166 replays.
+- MM3D, where the work stands (2026-11-18). Fades: `Play_Draw` draws the transition through
+  `PlayState + 0xCA94` on the instance at `+0xC860` while `+0xC85A` is 3 or 11 (decomp/mm3d
+  `docs/frame.md`), then 0x172004 on `+0xCAAC`, by its disassembly OoT3D's `TransitionFade_Draw`
+  (type at +0, colour alpha first at +4, the fade flash); not yet in the decomp, and which draw a
+  scene fade installs is not read yet. The scene's material animations, effect pools and the door and shot cuts are not
+  started. The "Frame interpolation" option stays OoT3D-only until these pass.

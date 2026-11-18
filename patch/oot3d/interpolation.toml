@@ -43,7 +43,7 @@ actor_id = ["Actor.id"]
 actor_position = ["Actor.world", "PosRot.pos"]
 actor_shape_rotation = ["Actor.shape", "ActorShape.rot"]
 # The skeleton track: the skeletons SkelAnime_DrawOpa queues (its r1), and their joint tables.
-skeleton_draw_call = ["SkelAnime_DrawOpa", "SKELANIME_DRAW_OPA_QUEUE_CALL"]
+skeleton_draw_calls = [["SkelAnime_DrawOpa", "SKELANIME_DRAW_OPA_QUEUE_CALL"]]
 skeleton_draw_arg = [1]
 skeleton_model = ["SkelAnime.model"]
 skeleton_limb_count = ["SkelAnime.limbCount"]

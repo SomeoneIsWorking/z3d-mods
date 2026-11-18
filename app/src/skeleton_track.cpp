@@ -2,13 +2,20 @@
 
 #include "section_memory.hpp"
 
+#include <utility>
+
 namespace z3d::app {
+
+SkeletonTrack::SkeletonTrack(SkeletonAddresses addresses)
+    : addresses_(std::move(addresses)),
+      calls_(addresses_.drawCalls.begin(), addresses_.drawCalls.end()) {
+}
 
 void SkeletonTrack::sample(Core::SectionReplay &replay) {
   previous_ = std::move(current_);
   current_.clear();
   for (const Core::SectionReplay::Call &call : replay.SectionCensus().calls) {
-    if (call.site != addresses_.drawCall) {
+    if (!calls_.contains(call.site)) {
       continue;
     }
     const uint32_t skeleton = call.args.at(addresses_.drawArg);

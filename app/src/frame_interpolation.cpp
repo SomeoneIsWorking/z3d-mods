@@ -133,9 +133,9 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .shapeRotation = field(*table, "actor_shape_rotation"),
     });
   }
-  if (has(*table, "skeleton_draw_call")) {
+  if (has(*table, "skeleton_draw_calls")) {
     section.skeletons.emplace(SkeletonAddresses{
-        .drawCall = field(*table, "skeleton_draw_call"),
+        .drawCalls = fields(*table, "skeleton_draw_calls"),
         .drawArg = field(*table, "skeleton_draw_arg"),
         .model = field(*table, "skeleton_model"),
         .limbCount = field(*table, "skeleton_limb_count"),
@@ -209,7 +209,7 @@ bool FrameInterpolation::setMode(Mode mode) {
                               [this, &section](Core::SectionReplay &) {
                                 onSection(section);
                               }) ||
-              (section.skeletons && !replay.Observe(section.skeletons->drawCall())) ||
+              (section.skeletons && !observeAll(replay, section.skeletons->drawCalls())) ||
               (section.materials && !observeAll(replay, section.materials->stepCalls())))) {
     replay.Uninstall();
     return false;

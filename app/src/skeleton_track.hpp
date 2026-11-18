@@ -8,15 +8,16 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace z3d::app {
 
 // Guest addresses and offsets from the manifest's "interpolation" table.
 struct SkeletonAddresses {
-  uint32_t drawCall; // the branch that queues a skeleton's draw
-  uint32_t drawArg;  // which of its arguments is the skeleton
-  uint32_t model;    // offsets in a skeleton
+  std::vector<uint32_t> drawCalls; // the branches that queue a skeleton's draw
+  uint32_t drawArg;                // which of their arguments is the skeleton
+  uint32_t model;                  // offsets in a skeleton
   uint32_t limbCount;
   uint32_t jointTable;
   uint32_t jointSize; // one joint's entry, its matrix first
@@ -24,11 +25,10 @@ struct SkeletonAddresses {
 
 class SkeletonTrack {
 public:
-  explicit SkeletonTrack(const SkeletonAddresses &addresses) : addresses_(addresses) {
-  }
+  explicit SkeletonTrack(SkeletonAddresses addresses);
 
-  [[nodiscard]] uint32_t drawCall() const {
-    return addresses_.drawCall;
+  [[nodiscard]] const std::vector<uint32_t> &drawCalls() const {
+    return addresses_.drawCalls;
   }
   // Takes the joint tables of the skeletons the real section drew, as they stood at its start.
   void sample(Core::SectionReplay &replay);
@@ -48,6 +48,7 @@ private:
   };
 
   SkeletonAddresses addresses_;
+  std::unordered_set<uint32_t> calls_;
   std::unordered_map<uint32_t, Sample> previous_;
   std::unordered_map<uint32_t, Sample> current_;
 };
