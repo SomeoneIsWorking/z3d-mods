@@ -1420,6 +1420,25 @@ def _interp_textures(session: Session, file_1: Callable[[Session], None], walk: 
     session.wait(INTERP_TEXTURES_SECONDS)
 
 
+# How far and how often the turning scenarios swing the camera, and for how long they walk.
+FAST_TURN = (400, 0)
+FAST_TURN_EVERY = 0.2
+FAST_TURN_SECONDS = 12
+
+
+def _interp_turn(session: Session, file_1: Callable[[Session], None]) -> None:
+    """A game's File 1 with every present recorded (--record), then the camera swung fast with the
+    mouse while Link runs: views the scene's custom textures were not yet drawn in come into the
+    in-betweens as the real frames bring them (presents/)."""
+    session.expect("frame interpolation on", 60)
+    file_1(session)
+    for turn in range(round(FAST_TURN_SECONDS / FAST_TURN_EVERY)):
+        if turn % 10 == 0:
+            session.key("stick", "up", FAST_TURN_EVERY * 5)
+        session.mouse(*FAST_TURN)
+        session.wait(FAST_TURN_EVERY)
+
+
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "camera": _camera, "camera-mm3d": _camera_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d,
           "aim-fast": _aim_fast, "camera-fast": _camera_fast, "camera-mq": _camera, "fire": _fire,
@@ -1427,16 +1446,18 @@ DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _ga
           "interp-off": lambda session, pad: _interp(session, "off", _oot3d_file_1),
           "interp-mm3d": lambda session, pad: _interp(session, "on", _mm3d_file_1),
           "interp-textures": lambda session, pad: _interp_textures(session, _oot3d_file_1, 4),
-          "interp-textures-mm3d": lambda session, pad: _interp_textures(session, _mm3d_file_1, 6)}
+          "interp-textures-mm3d": lambda session, pad: _interp_textures(session, _mm3d_file_1, 6),
+          "interp-turn": lambda session, pad: _interp_turn(session, _oot3d_file_1),
+          "interp-turn-mm3d": lambda session, pad: _interp_turn(session, _mm3d_file_1)}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
                "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
                "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d", "aim-fast": "oot3d",
                "camera-fast": "oot3d", "camera-mq": "oot3d", "fire": "oot3d", "fire-mm3d": "mm3d",
                "interp": "oot3d", "interp-off": "oot3d", "interp-mm3d": "mm3d", "interp-textures": "oot3d",
-               "interp-textures-mm3d": "mm3d"}
+               "interp-textures-mm3d": "mm3d", "interp-turn": "oot3d", "interp-turn-mm3d": "mm3d"}
 # The direct scenarios that record every present into presents/ (app --record).
-RECORDED = ("interp-textures", "interp-textures-mm3d")
+RECORDED = ("interp-textures", "interp-textures-mm3d", "interp-turn", "interp-turn-mm3d")
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
@@ -1451,7 +1472,7 @@ PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-
            "fire": lambda cfg, user, out: _oot3d_slots_file(cfg, user, out, aimed_on_y=True),
            "fire-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, aimed_on_y=True),
            "interp-off": lambda cfg, user, out: _store_options(cfg, user, "oot3d", {"frame_interpolation": 0}),
-           "interp-mm3d": _mm3d_slots_file, "interp-textures-mm3d": _mm3d_slots_file,
+           "interp-mm3d": _mm3d_slots_file, "interp-textures-mm3d": _mm3d_slots_file, "interp-turn-mm3d": _mm3d_slots_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}
