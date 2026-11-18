@@ -240,7 +240,14 @@ cuts.
   (scratch/input-test/interp-textures `entry-1653-1658.png`, Link's house as it fades in, and
   interp-textures-mm3d `entry-3210-3215.png`, the clock tower base, real frames and in-betweens
   in turn). The build before showed no in-between with the guest's image on this host either,
-  so this proves the rule, not a fix of a seen frame.
+  so this proves the rule, not a fix of a seen frame. Loads into later scenes
+  (`interp-scenes`, `interp-scenes-mm3d`: a harness walk's pad holds replayed in the window,
+  the camera swung fast after each load) show no in-between with a guest image either: no tile
+  of any present within 280 presents of a load has under half its neighbours' detail
+  (scratch/input-test/interp-scenes, loads into Link's house, Kokiri Forest and a Kokiri house
+  at presents 1655, 3014, 4999; interp-scenes-mm3d, South, East, North and East Clock Town at
+  3202, 7328, 7346, 8091). The holds play open-loop, so the window drifts off the harness route
+  after two or three loads.
   Harness states load only in the core revision that saved them; their recipe is in docs/app.md.
 - Pacing (Design 5): measured in real time with `pace on` and `pacing` (docs/app.md), which read
   the core's own counts: emulated vblanks, and the game's frame submissions, one a logic tick. A

@@ -261,6 +261,11 @@ class Gamepad:
         time.sleep(seconds)
         self._post("button", name=PAD_DPAD[direction], down=0)
 
+    def steer(self, x: int, y: int) -> None:
+        """Left stick, -32768..32767 with y growing downward, left there."""
+        self._post("axis", name="leftx", value=x)
+        self._post("axis", name="lefty", value=y)
+
     def stick(self, x: int, y: int, seconds: float) -> None:
         """Left stick, -32768..32767 with y growing downward, held for `seconds`, then centred."""
         for value in ((x, y), (0, 0)):
@@ -1439,6 +1444,33 @@ def _interp_turn(session: Session, file_1: Callable[[Session], None]) -> None:
         session.wait(FAST_TURN_EVERY)
 
 
+# Routes through several scenes (tools/z3dmods/routes/): the circle pad a harness walk held from the
+# scenario's File 1, [x, y, seconds] each ([0, 0, s] a wait), and ["mouse", dx, seconds] turns.
+ROUTES = Path(__file__).parent / "routes"
+INTERP_SCENES_SETTLE_SECONDS = 10
+
+
+def _interp_scenes(session: Session, pad: Gamepad, file_1: Callable[[Session], None], route: str) -> None:
+    """A game's File 1 with every present recorded (--record), then a route through several scenes,
+    the camera swung fast and back after each load: the in-betweens beside each load show whether
+    the next scene's custom textures came in later than its real frames' (presents/). The holds
+    play open-loop on wall-clock time, so the window can leave the route after a few loads."""
+    session.expect("frame interpolation on", 60)
+    # Attached before the route: attaching takes seconds the recorded holds do not wait for.
+    pad.steer(0, 0)
+    file_1(session)
+    # The routes start from Link standing after the scene's title card, which a window reaches later.
+    session.wait(INTERP_SCENES_SETTLE_SECONDS)
+    for x, y, seconds in json.loads((ROUTES / route).read_text())["route"]:
+        if x == "mouse":
+            session.mouse(y, 0)
+        else:
+            pad.steer(x, y)
+        session.wait(seconds)
+    pad.steer(0, 0)
+    session.wait(INTERP_TEXTURES_SECONDS)
+
+
 DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _gaps, "notebook-mm3d": _notebook_mm3d, "map-zoom-mm3d": _map_zoom_mm3d, "masks-mm3d": _masks_mm3d, "autosave-mm3d": _mm3d_reload, "camera": _camera, "camera-mm3d": _camera_mm3d, "hotswap": _hotswap, "slots": _slots, "slots-small": _slots,
           "slots-mm3d": _slots_mm3d, "slots-mm3d-small": _slots_mm3d, "aim": _aim, "aim-mm3d": _aim_mm3d,
           "aim-fast": _aim_fast, "camera-fast": _camera_fast, "camera-mq": _camera, "fire": _fire,
@@ -1448,16 +1480,21 @@ DIRECT = {"oot3d": _oot3d, "mm3d": _mm3d, "verbs-mm3d": _verbs_mm3d, "gaps": _ga
           "interp-textures": lambda session, pad: _interp_textures(session, _oot3d_file_1, 4),
           "interp-textures-mm3d": lambda session, pad: _interp_textures(session, _mm3d_file_1, 6),
           "interp-turn": lambda session, pad: _interp_turn(session, _oot3d_file_1),
-          "interp-turn-mm3d": lambda session, pad: _interp_turn(session, _mm3d_file_1)}
+          "interp-turn-mm3d": lambda session, pad: _interp_turn(session, _mm3d_file_1),
+          "interp-scenes": lambda session, pad: _interp_scenes(session, pad, _oot3d_file_1, "oot3d-kokiri.json"),
+          "interp-scenes-mm3d": lambda session, pad: _interp_scenes(session, pad, _mm3d_file_1,
+                                                                    "mm3d-clock-town.json")}
 # The game a direct scenario launches, when it is not the scenario's name.
 DIRECT_GAME = {"hotswap": "mm3d", "slots": "oot3d", "slots-small": "oot3d", "slots-mm3d": "mm3d", "slots-mm3d-small": "mm3d",
                "aim": "oot3d", "aim-mm3d": "mm3d", "verbs-mm3d": "mm3d", "gaps": "oot3d", "notebook-mm3d": "mm3d", "map-zoom-mm3d": "mm3d", "masks-mm3d": "mm3d",
                "autosave-mm3d": "mm3d", "camera": "oot3d", "camera-mm3d": "mm3d", "aim-fast": "oot3d",
                "camera-fast": "oot3d", "camera-mq": "oot3d", "fire": "oot3d", "fire-mm3d": "mm3d",
                "interp": "oot3d", "interp-off": "oot3d", "interp-mm3d": "mm3d", "interp-textures": "oot3d",
-               "interp-textures-mm3d": "mm3d", "interp-turn": "oot3d", "interp-turn-mm3d": "mm3d"}
+               "interp-textures-mm3d": "mm3d", "interp-turn": "oot3d", "interp-turn-mm3d": "mm3d",
+               "interp-scenes": "oot3d", "interp-scenes-mm3d": "mm3d"}
 # The direct scenarios that record every present into presents/ (app --record).
-RECORDED = ("interp-textures", "interp-textures-mm3d", "interp-turn", "interp-turn-mm3d")
+RECORDED = ("interp-textures", "interp-textures-mm3d", "interp-turn", "interp-turn-mm3d", "interp-scenes",
+            "interp-scenes-mm3d")
 # The window of a scenario that is not WIDTH by HEIGHT.
 SIZES = {"slots-small": SMALL, "slots-mm3d-small": SMALL}
 # What a scenario puts in its user folder before the app starts.
@@ -1473,6 +1510,7 @@ PREPARE = {"slots": _oot3d_slots_file, "slots-small": _oot3d_slots_file, "slots-
            "fire-mm3d": lambda cfg, user, out: _mm3d_slots_file(cfg, user, out, aimed_on_y=True),
            "interp-off": lambda cfg, user, out: _store_options(cfg, user, "oot3d", {"frame_interpolation": 0}),
            "interp-mm3d": _mm3d_slots_file, "interp-textures-mm3d": _mm3d_slots_file, "interp-turn-mm3d": _mm3d_slots_file,
+           "interp-scenes-mm3d": _mm3d_slots_file,
            "setup": _without_set,
            "setup-wrong-dump": _without_set, "setup-missing-mod": _without_set, "setup-different-mod": _without_set,
            "setup-archive": _without_archive_set}
