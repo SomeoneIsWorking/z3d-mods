@@ -157,13 +157,23 @@ cuts.
 - OoT3D step maps (harness states `kak2`, Kakariko at night after its intro; `field`, Hyrule
   Field at night by two Stalchildren, warp 0xCD from `kf`; `deku`, inside the Deku Tree, warp 0x0;
   scratch/runs/<state>-step `step0.png`/`step1.png`, 6 s each, 0 refused): Kakariko and the Deku
-  Tree step nowhere; Hyrule Field steps only Navi's sparkle trail (424 pixels, `field-step/step1.png`),
-  the Stalchildren move into every present. Next: find the sparkles' pool (the soft sprites,
-  `EffectSSResourceManager` 0x4A3638, spawned from En_Elf, `EnElf_Init` 0x18A8E0) by a write
-  watch on a sparkle's drawn position in `field`, name its record (position, velocity, life, type)
-  in decomp/oot3d, and track it as a pool: a slot pairs while live in both samples with its type
-  unchanged and its life one tick on. The actors' own material animations and the time of day's
-  list showed nothing stepping in these three states; a state that shows them is still needed.
+  Tree step nowhere; Hyrule Field stepped in one place (424 pixels, `field-step/step1.png`), the
+  Stalchildren moving into every present. The actors' own material animations and the time of
+  day's list showed nothing stepping in these three states.
+- OoT3D's target arrow: interpolated. What stepped in `field` was not Navi's sparkles: crops of
+  the presents show the yellow Z-target arrow spinning over a Stalchild, its shape changing every
+  second present. The game's soft sprites (the `EffectSs` pool at 0x598B98, records 0x88 bytes,
+  type at +0x63, life at +0x60) held only debris falling below the field and a type 0x15 there,
+  and the scan for Navi's drawn position found her glow's billboard batch, three points along her
+  velocity, rebuilt each draw. `Target_Draw` (0x47B124) turns the arrow by
+  `PlayState.gameplayFrames` times 3000 as MM3D's does (decomp/oot3d `docs/frame.md` "The target
+  arrow"); the patch hooks the same two instructions (`patch/oot3d/target_arrow.cpp`, sharing
+  `patch/common/target_arrow.hpp` with MM3D) and turns it by the link block's `draw_fraction`
+  of a step. With interpolation on the arrow narrows on every present where off holds each turn
+  for two (scratch/runs/arrow-on `arrow-off-vs-on-160-167.png`, off above), and the field's step
+  map loses it (scratch/runs/arrow-leak `step1.png`, 50 pixels left: Link's red damage flash at
+  his feet, next). `interp leakcheck` there: 179 replays, 0 refused, 0 leaking. MM3D after the
+  change: South Clock Town's step map shows only the clock's minute digit (mm-arrow-common).
 - Step 4, declared cuts. Shipwright declares two camera cuts: `Camera_Special9` when the door
   timer runs out and `animState` goes 1 to 2 (the eye jumps to the door's far side), and
   `Camera_SetCSParams`. Door cut: built. A door within a scene (the Fire Temple lobby's left door,

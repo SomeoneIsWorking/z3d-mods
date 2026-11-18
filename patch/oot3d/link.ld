@@ -23,6 +23,8 @@ SECTIONS {
   .patch.play_update kGameplayUpdate + 0x9C : { KEEP(*(.patch.play_update)) }
   .patch.base_camera kGameplayUpdate + 0xA8 : { KEEP(*(.patch.base_camera)) }
   .patch.static_cell_glyph kTextRendererFillStatic + 0x80 : { KEEP(*(.patch.static_cell_glyph)) }
+  .patch.arrow_turn_move kTargetDraw + kArrowTurnMove : { KEEP(*(.patch.arrow_turn_move)) }
+  .patch.arrow_turn_convert kTargetDraw + kArrowTurnConvert : { KEEP(*(.patch.arrow_turn_convert)) }
   /* File select's quad places (hooks.s back_lit, back_button), two floats a quad. */
   .patch.back_lit kFileChoose + kFileChooseQuadPositions + kFileChooseQuadBackLit * 8 : { KEEP(*(.patch.back_lit)) }
   .patch.back_button kFileChoose + kFileChooseQuadPositions + kFileChooseQuadBack * 8 : { KEEP(*(.patch.back_button)) }
