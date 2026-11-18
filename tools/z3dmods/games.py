@@ -171,7 +171,7 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
 
 def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | list[int]] | None:
     """interpolation.toml resolved: the sites are a function and a define of its offset (a site list, several), the functions a function, the rest
-    addresses and offsets as in aim.toml, with the play state's pointer and the sizes of a GX request, an actor list's entry, a joint, an effect, a camera setting and mode."""
+    addresses and offsets as in aim.toml, with the play state's pointer, a GX request's size and the sizes the tracks the table names use."""
     path = repo / "patch" / game / "interpolation.toml"
     if not path.exists():
         return None
@@ -179,15 +179,20 @@ def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | 
     sites = ("open_site", "close_site", "skeleton_draw_call")
     site_lists = ("material_step_calls",)
     functions = ("fade_draw",)
-    return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites} | {
-        key: [symbols.function(d, site[0]) + d.define(site[1]) for site in table[key]] for key in site_lists} | {
-        key: symbols.function(d, table[key][0]) for key in functions} | {
+    sizes = {key: symbols.size(d, struct) for key, (anchor, struct) in INTERPOLATION_SIZES.items() if anchor in table}
+    return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites if key in table} | {
+        key: [symbols.function(d, site[0]) + d.define(site[1]) for site in table[key]] for key in site_lists if key in table} | {
+        key: symbols.function(d, table[key][0]) for key in functions if key in table} | {
         key: _guest_address(d, terms) for key, terms in table.items()
         if key not in sites + site_lists + functions} | {
-        "play": symbols.global_(d, "gPlayState"), "request_size": symbols.size(d, "GxRequest"),
-        "actor_list_size": symbols.size(d, "ActorListEntry"), "joint_size": symbols.size(d, "SkelJoint"),
-        "effect_size": symbols.size(d, "ObjectKankyoEffect"),
-        "camera_setting_size": symbols.size(d, "CameraSetting"), "camera_mode_size": symbols.size(d, "CameraMode")}
+        "play": symbols.global_(d, "gPlayState"), "request_size": symbols.size(d, "GxRequest")} | sizes
+
+
+# The struct sizes the app's tracks step by: each key, the table key that names its track, its struct.
+INTERPOLATION_SIZES = {
+    "actor_list_size": ("actor_lists", "ActorListEntry"), "joint_size": ("skeleton_draw_call", "SkelJoint"),
+    "effect_size": ("effects", "ObjectKankyoEffect"),
+    "camera_setting_size": ("view_eye", "CameraSetting"), "camera_mode_size": ("view_eye", "CameraMode")}
 
 
 # hud.toml's tables every button shares: the counts and when each is full, the statuses, the
@@ -231,6 +236,7 @@ def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
         **_overlay(repo, "mm3d", d),
         hud=_hud(repo, "mm3d", d),
         aim=_aim(repo, "mm3d", d),
+        interpolation=_interpolation(repo, "mm3d", d),
         hud_visibility=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.hudVisibility"),
         hud_hidden=(d.define("HUD_VISIBILITY_NONE"), d.define("HUD_VISIBILITY_NONE_ALT")),
     )

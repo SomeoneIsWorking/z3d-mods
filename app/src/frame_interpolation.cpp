@@ -12,6 +12,7 @@
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace z3d::app {
@@ -46,6 +47,10 @@ std::vector<uint32_t> fields(const lucent::json::Value &table, const char *name)
   return out;
 }
 
+bool has(const lucent::json::Value &table, const char *name) {
+  return table.find(name) != nullptr;
+}
+
 bool observeAll(Core::SectionReplay &replay, const std::vector<uint32_t> &sites) {
   for (const uint32_t site : sites) {
     if (!replay.Observe(site)) {
@@ -67,7 +72,7 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
   if (table == nullptr) {
     return;
   }
-  section_.emplace(Section{
+  Section section{
       .open = field(*table, "open_site"),
       .close = field(*table, "close_site"),
       .cmdlist = GxCmdlist(emulator_,
@@ -77,83 +82,105 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
                                .requestCount = field(*table, "cmdlist_request_count"),
                                .requestSize = field(*table, "request_size"),
                            }),
-      .camera = CameraTrack(CameraAddresses{
-          .play = field(*table, "play"),
-          .frames = field(*table, "play_frames"),
-          .viewEye = field(*table, "view_eye"),
-          .viewAt = field(*table, "view_at"),
-          .viewUp = field(*table, "view_up"),
-          .viewFovy = field(*table, "view_fovy"),
-          .cameras = field(*table, "cameras"),
-          .activeCamera = field(*table, "active_camera"),
-          .cameraEye = field(*table, "camera_eye"),
-          .cameraAt = field(*table, "camera_at"),
-          .cameraSetting = field(*table, "camera_setting"),
-          .cameraMode = field(*table, "camera_mode"),
-          .cameraAnimState = field(*table, "camera_anim_state"),
-          .settings = field(*table, "camera_settings"),
-          .settingSize = field(*table, "camera_setting_size"),
-          .settingModes = field(*table, "camera_setting_modes"),
-          .modeSize = field(*table, "camera_mode_size"),
-          .modeFunction = field(*table, "camera_mode_function"),
-          .doorFunction = field(*table, "door_camera_function"),
-          .doorFarSide = field(*table, "door_camera_far_side"),
-          .cutsceneEyeShot = field(*table, "cutscene_eye_shot"),
-          .cutsceneAtShot = field(*table, "cutscene_at_shot"),
-          .cutsceneShot = field(*table, "cutscene_shot"),
-      }),
-      .actors = ActorTrack(ActorAddresses{
-          .play = field(*table, "play"),
-          .lists = field(*table, "actor_lists"),
-          .listCount = field(*table, "actor_list_count"),
-          .listSize = field(*table, "actor_list_size"),
-          .listHead = field(*table, "actor_list_head"),
-          .next = field(*table, "actor_next"),
-          .id = field(*table, "actor_id"),
-          .position = field(*table, "actor_position"),
-          .shapeRotation = field(*table, "actor_shape_rotation"),
-      }),
-      .skeletons = SkeletonTrack(SkeletonAddresses{
-          .drawCall = field(*table, "skeleton_draw_call"),
-          .drawArg = field(*table, "skeleton_draw_arg"),
-          .model = field(*table, "skeleton_model"),
-          .limbCount = field(*table, "skeleton_limb_count"),
-          .jointTable = field(*table, "skeleton_joint_table"),
-          .jointSize = field(*table, "joint_size"),
-      }),
-      .fades = FadeTrack(FadeAddresses{
-          .play = field(*table, "play"),
-          .transition = field(*table, "transition"),
-          .transitionDraw = field(*table, "transition_draw"),
-          .flash = field(*table, "fade_flash"),
-          .fadeDraw = field(*table, "fade_draw"),
-          .type = field(*table, "fade_type"),
-          .color = field(*table, "fade_color"),
-      }),
-      .materials = MaterialTrack(MaterialAddresses{
-          .stepCalls = fields(*table, "material_step_calls"),
-          .stepArg = field(*table, "material_step_arg"),
-          .anim = field(*table, "material_anim"),
-          .frame = field(*table, "material_frame"),
-          .speed = field(*table, "material_speed"),
-          .loop = field(*table, "material_loop"),
-          .paused = field(*table, "material_paused"),
-          .animOffset = field(*table, "cmab_anim_offset"),
-          .frameCount = field(*table, "cmab_frame_count"),
-      }),
-      .effects = EffectPoolTrack(EffectPoolAddresses{
-          .play = field(*table, "play"),
-          .count = field(*table, "effect_count"),
-          .id = field(*table, "effect_actor"),
-          .params = field(*table, "actor_params"),
-          .paramsValue = field(*table, "effect_actor_params"),
-          .effects = field(*table, "effects"),
-          .effectSize = field(*table, "effect_size"),
-          .state = field(*table, "effect_state"),
-          .position = field(*table, "effect_position"),
-          .base = field(*table, "effect_base"),
-      }),
-  });
+  };
+  // Each track runs when the table names its first key, and then wants all of its keys.
+  if (has(*table, "view_eye")) {
+    section.camera.emplace(CameraAddresses{
+        .play = field(*table, "play"),
+        .frames = field(*table, "play_frames"),
+        .viewEye = field(*table, "view_eye"),
+        .viewAt = field(*table, "view_at"),
+        .viewUp = field(*table, "view_up"),
+        .viewFovy = field(*table, "view_fovy"),
+        .cameras = field(*table, "cameras"),
+        .activeCamera = field(*table, "active_camera"),
+        .cameraEye = field(*table, "camera_eye"),
+        .cameraAt = field(*table, "camera_at"),
+        .cameraSetting = field(*table, "camera_setting"),
+        .cameraMode = field(*table, "camera_mode"),
+        .cameraAnimState = field(*table, "camera_anim_state"),
+        .settings = field(*table, "camera_settings"),
+        .settingSize = field(*table, "camera_setting_size"),
+        .settingModes = field(*table, "camera_setting_modes"),
+        .modeSize = field(*table, "camera_mode_size"),
+        .modeFunction = field(*table, "camera_mode_function"),
+        .doorFunction = field(*table, "door_camera_function"),
+        .doorFarSide = field(*table, "door_camera_far_side"),
+        .cutsceneEyeShot = field(*table, "cutscene_eye_shot"),
+        .cutsceneAtShot = field(*table, "cutscene_at_shot"),
+        .cutsceneShot = field(*table, "cutscene_shot"),
+    });
+  }
+  if (has(*table, "actor_lists")) {
+    section.actors.emplace(ActorAddresses{
+        .play = field(*table, "play"),
+        .lists = field(*table, "actor_lists"),
+        .listCount = field(*table, "actor_list_count"),
+        .listSize = field(*table, "actor_list_size"),
+        .listHead = field(*table, "actor_list_head"),
+        .next = field(*table, "actor_next"),
+        .id = field(*table, "actor_id"),
+        .position = field(*table, "actor_position"),
+        .shapeRotation = field(*table, "actor_shape_rotation"),
+    });
+  }
+  if (has(*table, "skeleton_draw_call")) {
+    section.skeletons.emplace(SkeletonAddresses{
+        .drawCall = field(*table, "skeleton_draw_call"),
+        .drawArg = field(*table, "skeleton_draw_arg"),
+        .model = field(*table, "skeleton_model"),
+        .limbCount = field(*table, "skeleton_limb_count"),
+        .jointTable = field(*table, "skeleton_joint_table"),
+        .jointSize = field(*table, "joint_size"),
+    });
+  }
+  if (has(*table, "transition")) {
+    section.fades.emplace(FadeAddresses{
+        .play = field(*table, "play"),
+        .transition = field(*table, "transition"),
+        .transitionDraw = field(*table, "transition_draw"),
+        .flash = field(*table, "fade_flash"),
+        .fadeDraw = field(*table, "fade_draw"),
+        .type = field(*table, "fade_type"),
+        .color = field(*table, "fade_color"),
+    });
+  }
+  if (has(*table, "material_step_calls")) {
+    section.materials.emplace(MaterialAddresses{
+        .stepCalls = fields(*table, "material_step_calls"),
+        .stepArg = field(*table, "material_step_arg"),
+        .anim = field(*table, "material_anim"),
+        .frame = field(*table, "material_frame"),
+        .speed = field(*table, "material_speed"),
+        .loop = field(*table, "material_loop"),
+        .paused = field(*table, "material_paused"),
+        .animOffset = field(*table, "cmab_anim_offset"),
+        .frameCount = field(*table, "cmab_frame_count"),
+    });
+  }
+  if (has(*table, "effects")) {
+    section.effects.emplace(EffectPoolAddresses{
+        .play = field(*table, "play"),
+        .count = field(*table, "effect_count"),
+        .id = field(*table, "effect_actor"),
+        .params = field(*table, "actor_params"),
+        .paramsValue = field(*table, "effect_actor_params"),
+        .effects = field(*table, "effects"),
+        .effectSize = field(*table, "effect_size"),
+        .state = field(*table, "effect_state"),
+        .position = field(*table, "effect_position"),
+        .base = field(*table, "effect_base"),
+    });
+  }
+  // The camera track declares the cuts every blend obeys; the effects live in paired actors.
+  const bool blends = section.actors || section.skeletons || section.fades || section.materials;
+  if (blends && !section.camera) {
+    throw std::runtime_error("\"interpolation\" blends tracks without the camera's cuts");
+  }
+  if (section.effects && !section.actors) {
+    throw std::runtime_error("\"interpolation\" has effect pools without the actor track");
+  }
+  section_.emplace(std::move(section));
 }
 
 FrameInterpolation::~FrameInterpolation() {
@@ -168,12 +195,13 @@ bool FrameInterpolation::setMode(Mode mode) {
   Core::SectionReplay &replay = emulator_.sectionReplay();
   if (mode == Mode::Off) {
     replay.Uninstall();
-  } else if (mode_ == Mode::Off && (!replay.Install(section.open, section.close,
-                                                    [this, &section](Core::SectionReplay &) {
-                                                      onSection(section);
-                                                    }) ||
-                                    !replay.Observe(section.skeletons.drawCall()) ||
-                                    !observeAll(replay, section.materials.stepCalls()))) {
+  } else if (mode_ == Mode::Off &&
+             (!replay.Install(section.open, section.close,
+                              [this, &section](Core::SectionReplay &) {
+                                onSection(section);
+                              }) ||
+              (section.skeletons && !replay.Observe(section.skeletons->drawCall())) ||
+              (section.materials && !observeAll(replay, section.materials->stepCalls())))) {
     replay.Uninstall();
     return false;
   }
@@ -199,7 +227,8 @@ void FrameInterpolation::census(Core::SectionReplay &replay, Section &section) {
   totals_.sectionHeldReads += census.held_reads;
   for (const Core::SectionReplay::Svc &svc : census.svcs) {
     std::ostringstream key;
-    key << std::hex << (svc.other_thread ? "other:" : "") << svc.number << '@' << svc.pc;
+    key << std::hex << (svc.other_thread ? "other:" : "") << svc.number << '@' << svc.pc << '<'
+        << svc.lr;
     if (!svc.service.empty()) {
       key << ':' << svc.service << ':' << svc.detail;
     } else if (svc.address != 0) {
@@ -217,38 +246,51 @@ void FrameInterpolation::census(Core::SectionReplay &replay, Section &section) {
 }
 
 void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &section) {
-  section.camera.sample(replay);
-  section.actors.sample(replay);
-  section.skeletons.sample(replay);
-  section.fades.sample(replay);
-  section.materials.sample(replay);
-  section.effects.sample(replay, section.actors);
-  auto inputs = section.camera.inputs(kHalfway);
-  if (!inputs) {
-    ++totals_.cuts;
-    return;
+  if (section.camera) {
+    section.camera->sample(replay);
   }
-  const ActorTrack::Counts actors = section.actors.inputs(kHalfway, *inputs);
-  totals_.actorsPaired += actors.paired;
-  totals_.actorsUnpaired += actors.unpaired;
-  const SkeletonTrack::Counts skeletons = section.skeletons.inputs(kHalfway, *inputs);
-  totals_.skeletonsPaired += skeletons.paired;
-  totals_.skeletonsUnpaired += skeletons.unpaired;
-  const FadeTrack::Counts fades = section.fades.inputs(kHalfway, *inputs);
-  totals_.fadesPaired += fades.paired;
-  totals_.fadesUnpaired += fades.unpaired;
-  const MaterialTrack::Counts materials = section.materials.inputs(kHalfway, *inputs);
-  totals_.materialsPaired += materials.paired;
-  totals_.materialsUnpaired += materials.unpaired;
-  const EffectPoolTrack::Counts effects = section.effects.inputs(kHalfway, *inputs);
-  totals_.effectsPaired += effects.paired;
-  totals_.effectsUnpaired += effects.unpaired;
+  if (section.actors) {
+    section.actors->sample(replay);
+  }
+  if (section.skeletons) {
+    section.skeletons->sample(replay);
+  }
+  if (section.fades) {
+    section.fades->sample(replay);
+  }
+  if (section.materials) {
+    section.materials->sample(replay);
+  }
+  if (section.effects && section.actors) {
+    section.effects->sample(replay, *section.actors);
+  }
+  std::vector<Core::SectionReplay::Input> inputs;
+  if (section.camera) {
+    auto camera = section.camera->inputs(kHalfway);
+    if (!camera) {
+      ++totals_.cuts;
+      return;
+    }
+    inputs = std::move(*camera);
+  }
+  const auto blend = [&inputs](const auto &track, Pairing &pairing) {
+    if (track) {
+      const auto counts = track->inputs(kHalfway, inputs);
+      pairing.paired += counts.paired;
+      pairing.unpaired += counts.unpaired;
+    }
+  };
+  blend(section.actors, totals_.actors);
+  blend(section.skeletons, totals_.skeletons);
+  blend(section.fades, totals_.fades);
+  blend(section.materials, totals_.materials);
+  blend(section.effects, totals_.effects);
   VideoCore::GPU &gpu = emulator_.gpu();
   const bool checking = mode_ == Mode::LeakCheck;
   if (checking) {
     leaks_.before();
   }
-  const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
+  const Core::SectionReplay::Result result = replay.Replay(inputs, [&] {
     const VideoCore::GPU::DetachedRun run = gpu.RunDetached(section.cmdlist.read().commands);
     totals_.inBetweens += run.in_betweens;
     totals_.gpuSkipped += run.skipped;
@@ -347,15 +389,15 @@ std::string FrameInterpolation::takeReport() {
          << " different_bytes=" << totals_.differentBytes << " gx_identical=" << totals_.gxIdentical
          << " list_bytes=" << totals_.listBytes << " cuts=" << totals_.cuts
          << " in_betweens=" << totals_.inBetweens << " gpu_skipped=" << totals_.gpuSkipped;
-  report << " actors_paired=" << totals_.actorsPaired
-         << " actors_unpaired=" << totals_.actorsUnpaired
-         << " skeletons_paired=" << totals_.skeletonsPaired
-         << " skeletons_unpaired=" << totals_.skeletonsUnpaired
-         << " fades_paired=" << totals_.fadesPaired << " fades_unpaired=" << totals_.fadesUnpaired
-         << " materials_paired=" << totals_.materialsPaired
-         << " materials_unpaired=" << totals_.materialsUnpaired
-         << " effects_paired=" << totals_.effectsPaired
-         << " effects_unpaired=" << totals_.effectsUnpaired;
+  report << " actors_paired=" << totals_.actors.paired
+         << " actors_unpaired=" << totals_.actors.unpaired
+         << " skeletons_paired=" << totals_.skeletons.paired
+         << " skeletons_unpaired=" << totals_.skeletons.unpaired
+         << " fades_paired=" << totals_.fades.paired << " fades_unpaired=" << totals_.fades.unpaired
+         << " materials_paired=" << totals_.materials.paired
+         << " materials_unpaired=" << totals_.materials.unpaired
+         << " effects_paired=" << totals_.effects.paired
+         << " effects_unpaired=" << totals_.effects.unpaired;
   if (!totals_.firstGxDifference.empty()) {
     report << " gx_first=" << totals_.firstGxDifference;
   }

@@ -1,8 +1,8 @@
 // Frame interpolation by replay (docs/plans/replay-interpolation.md): the game's draw section,
 // named by the manifest's "interpolation" table, is hooked in the core (core/section_replay.h).
-// After each real tick it runs again in the core's sandbox with the camera between the last two
-// ticks, and the GX commands it leaves in the bound command list make the in-between the renderer
-// shows on the vblank before the tick's own frame.
+// After each real tick it runs again in the core's sandbox with the tracks the manifest names
+// blended between the last two ticks, and the GX commands it leaves in the bound command list make
+// the in-between the renderer shows on the vblank before the tick's own frame.
 #pragma once
 
 #include "actor_track.hpp"
@@ -48,17 +48,17 @@ public:
   [[nodiscard]] std::string takeReport();
 
 private:
-  // The game's draw section as the manifest names it.
+  // The game's draw section as the manifest names it, and the tracks it names.
   struct Section {
     uint32_t open;
     uint32_t close;
     GxCmdlist cmdlist;
-    CameraTrack camera;
-    ActorTrack actors;
-    SkeletonTrack skeletons;
-    FadeTrack fades;
-    MaterialTrack materials;
-    EffectPoolTrack effects;
+    std::optional<CameraTrack> camera{};
+    std::optional<ActorTrack> actors{};
+    std::optional<SkeletonTrack> skeletons{};
+    std::optional<FadeTrack> fades{};
+    std::optional<MaterialTrack> materials{};
+    std::optional<EffectPoolTrack> effects{};
   };
 
   void onSection(Section &section);
@@ -73,6 +73,11 @@ private:
   Mode mode_ = Mode::Off;
   ReplayLeakCheck leaks_;
 
+  // A track's records paired across the two ticks and those drawn as they are.
+  struct Pairing {
+    uint64_t paired = 0;
+    uint64_t unpaired = 0;
+  };
   struct Totals {
     uint64_t sections = 0;
     uint64_t sectionPages = 0;
@@ -107,16 +112,11 @@ private:
     uint64_t inBetweens = 0;
     // Fills and transfers of in-betweens the rasterizer cache could not run.
     uint64_t gpuSkipped = 0;
-    uint64_t actorsPaired = 0;
-    uint64_t actorsUnpaired = 0;
-    uint64_t skeletonsPaired = 0;
-    uint64_t skeletonsUnpaired = 0;
-    uint64_t fadesPaired = 0;
-    uint64_t fadesUnpaired = 0;
-    uint64_t materialsPaired = 0;
-    uint64_t materialsUnpaired = 0;
-    uint64_t effectsPaired = 0;
-    uint64_t effectsUnpaired = 0;
+    Pairing actors;
+    Pairing skeletons;
+    Pairing fades;
+    Pairing materials;
+    Pairing effects;
   };
   Totals totals_;
 };

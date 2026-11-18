@@ -222,11 +222,22 @@ cuts.
   the same presenter (`RendererVulkan::PrepareRendertarget`).
 - Step 5 (MM3D): the draw section is found by disassembly, from `Play_Main` +0x160
   (`PLAY_MAIN_DRAW_CALL`) to `Graph_DrawFrame` +0xA04 (`GRAPH_DRAW_FRAME_END_CALL`), neither site
-  touched by our patch. Not done: the census. `FrameInterpolation` reads every track's addresses
-  from the manifest's table, so `patch/mm3d/interpolation.toml` needs the command list object
-  (MM3D's `gNngxState.boundCmdlist`, not found yet) before a census can run, and the tracks'
-  fields (View's eye, at, up, fovy; the camera pointers and settings; `Actor.shape.rot`;
-  `SkelAnime`; the transition fade; the scene's material animations; effect pools) before an
-  in-between can. Next: find the bound command list (Graph_RunBoundCmdlist's argument), write
-  the table with the section and command list and let the census run without the tracks' fields,
-  then the tracks one by one.
+  touched by our patch. `FrameInterpolation` runs each track only when the game's
+  `interpolation.toml` names it (its first key; then all of its keys are required), and refuses a
+  table that blends without the camera track's cuts; `patch/mm3d/interpolation.toml` names the
+  section and the command list (`gNngxState` 0x7B2700, the same object as OoT3D's) and no track.
+  Census (decomp/mm3d `docs/frame.md` "What the draw section touches", run mm-interp-census): about
+  195 pages a tick, 23 command lists, 2 DMAs, a fill and the two display transfers, and on the
+  section's thread three gsp::Gpu FlushDataCache requests and two 100 us SleepThreads (a vertex
+  upload that sleeps after itself). The replay answers both itself (fork 82a68448a): the GSP's
+  FlushDataCache is a stub that only replies, and a sleep in a replay has no thread to yield to.
+  t = 1 probe in South Clock Town (mm-interp-probe): 180 of 180 replays done, requests and PICA
+  lists byte for byte the real ones in 180 of 180 (5.66 MB); memory identical in 91, the rest only
+  in two pages other threads write meanwhile. `interp leakcheck` (mm-interp-leak, walking and
+  turning the camera): 180 replays, 0 refused, 0 leaking, 360 in-betweens, 0 GPU skipped. With
+  `interp on` and off from the same state and input, the player actor (0x800 bytes), the first
+  0x400 bytes of the play state and of `gCommonData` are byte for byte equal after 6 s
+  (mm-interp-logic-on, -off). The harness state `sct` (MM3D, this core): a new file through
+  `MM3D_BOOT` (tools/z3dmods/input_test.py) then `savestate:sct`. Next: the tracks' fields in
+  decomp/mm3d, the camera first (with its cuts), then actors, skeletons, fades, materials and
+  effect pools.

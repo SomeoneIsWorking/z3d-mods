@@ -1,0 +1,9 @@
+# The draw section the app replays (docs/plans/replay-interpolation.md), from Play_Main's call of
+# Play_Draw to Graph_DrawFrame's call of the frame end (decomp/mm3d docs/frame.md), each a function
+# and a define of its offset.
+open_site = ["Play_Main", "PLAY_MAIN_DRAW_CALL"]
+close_site = ["Graph_DrawFrame", "GRAPH_DRAW_FRAME_END_CALL"]
+# The section's output: the requests of the bound nn::gx command list, which the frame end runs.
+bound_cmdlist = ["gNngxState", "NngxState.boundCmdlist"]
+cmdlist_requests = ["GxCmdlist.requests"]
+cmdlist_request_count = ["GxCmdlist.requestCount"]
