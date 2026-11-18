@@ -7,3 +7,15 @@ close_site = ["Graph_DrawFrame", "GRAPH_DRAW_FRAME_END_CALL"]
 bound_cmdlist = ["gNngxState", "NngxState.boundCmdlist"]
 cmdlist_requests = ["GxCmdlist.requests"]
 cmdlist_request_count = ["GxCmdlist.requestCount"]
+# A play state started again (scene change, warp, respawn) restarts its frame count: a cut.
+play_frames = ["PlayState.frames"]
+# The camera track: View_LookAt's inputs in the play state's view, and the active camera's eye and
+# at; the view's offset from them is the quake (decomp/mm3d docs/camera.md "The view").
+view_eye = ["PlayState.view", "View.eye"]
+view_at = ["PlayState.view", "View.at"]
+view_up = ["PlayState.view", "View.up"]
+view_fovy = ["PlayState.view", "View.fovy"]
+cameras = ["PlayState.cameraPtrs"]
+active_camera = ["PlayState.activeCamera"]
+camera_eye = ["Camera.eye"]
+camera_at = ["Camera.at"]

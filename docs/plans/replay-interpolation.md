@@ -238,6 +238,16 @@ cuts.
   `interp on` and off from the same state and input, the player actor (0x800 bytes), the first
   0x400 bytes of the play state and of `gCommonData` are byte for byte equal after 6 s
   (mm-interp-logic-on, -off). The harness state `sct` (MM3D, this core): a new file through
-  `MM3D_BOOT` (tools/z3dmods/input_test.py) then `savestate:sct`. Next: the tracks' fields in
-  decomp/mm3d, the camera first (with its cuts), then actors, skeletons, fades, materials and
-  effect pools.
+  `MM3D_BOOT` (tools/z3dmods/input_test.py) then `savestate:sct`.
+- Step 5, MM3D camera: built. The camera track's door and shot cuts are their own groups of the
+  table, each used where a game names it; MM3D names the view (`PlayState.view` +0x1F8, the N64
+  layout, written by `View_LookAt` 0x184618), the cameras (+0xA68, the active index +0xA78) and
+  the frame count (+0x138), decomp/mm3d `docs/camera.md` "The view". Turning the camera in South
+  Clock Town's clock tower base (mm-cam-on, mm-cam-off): the wall moves 3.5 to 4 px on every
+  present where interpolation off moves 0, 7.5, 0, 7.5 (`on-vs-off-33-38.png`, on above, off
+  below). The logic rate is unchanged: the frame count advances 60 in 2 s with interpolation on.
+  A warp (mm-cam-cut) cuts once at the restart; two in-betweens of the load are refused (an
+  ArbitrateAddress wait). The scene's white fade out and fade in still step on every second
+  present (no fade track yet). OoT3D after the change: the Fire Temple door run still gives 2
+  cuts and 2 refusals in 136 replays. Not found yet in MM3D: the door and cutscene shot cuts.
+  Next: actors, skeletons, fades, materials, effect pools, then those cuts.

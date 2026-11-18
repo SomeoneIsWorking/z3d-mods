@@ -85,7 +85,7 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
   };
   // Each track runs when the table names its first key, and then wants all of its keys.
   if (has(*table, "view_eye")) {
-    section.camera.emplace(CameraAddresses{
+    CameraAddresses camera{
         .play = field(*table, "play"),
         .frames = field(*table, "play_frames"),
         .viewEye = field(*table, "view_eye"),
@@ -96,20 +96,29 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .activeCamera = field(*table, "active_camera"),
         .cameraEye = field(*table, "camera_eye"),
         .cameraAt = field(*table, "camera_at"),
-        .cameraSetting = field(*table, "camera_setting"),
-        .cameraMode = field(*table, "camera_mode"),
-        .cameraAnimState = field(*table, "camera_anim_state"),
-        .settings = field(*table, "camera_settings"),
-        .settingSize = field(*table, "camera_setting_size"),
-        .settingModes = field(*table, "camera_setting_modes"),
-        .modeSize = field(*table, "camera_mode_size"),
-        .modeFunction = field(*table, "camera_mode_function"),
-        .doorFunction = field(*table, "door_camera_function"),
-        .doorFarSide = field(*table, "door_camera_far_side"),
-        .cutsceneEyeShot = field(*table, "cutscene_eye_shot"),
-        .cutsceneAtShot = field(*table, "cutscene_at_shot"),
-        .cutsceneShot = field(*table, "cutscene_shot"),
-    });
+    };
+    if (has(*table, "door_camera_function")) {
+      camera.door = DoorCutAddresses{
+          .cameraSetting = field(*table, "camera_setting"),
+          .cameraMode = field(*table, "camera_mode"),
+          .cameraAnimState = field(*table, "camera_anim_state"),
+          .settings = field(*table, "camera_settings"),
+          .settingSize = field(*table, "camera_setting_size"),
+          .settingModes = field(*table, "camera_setting_modes"),
+          .modeSize = field(*table, "camera_mode_size"),
+          .modeFunction = field(*table, "camera_mode_function"),
+          .doorFunction = field(*table, "door_camera_function"),
+          .doorFarSide = field(*table, "door_camera_far_side"),
+      };
+    }
+    if (has(*table, "cutscene_shot")) {
+      camera.shot = ShotCutAddresses{
+          .eyeShot = field(*table, "cutscene_eye_shot"),
+          .atShot = field(*table, "cutscene_at_shot"),
+          .shot = field(*table, "cutscene_shot"),
+      };
+    }
+    section.camera.emplace(camera);
   }
   if (has(*table, "actor_lists")) {
     section.actors.emplace(ActorAddresses{

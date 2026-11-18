@@ -31,30 +31,37 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
   if (sample.camera != 0) {
     sample.cameraEye = readStart<Vec3>(replay, sample.camera + addresses_.cameraEye);
     sample.cameraAt = readStart<Vec3>(replay, sample.camera + addresses_.cameraAt);
-    const auto setting = readStart<uint16_t>(replay, sample.camera + addresses_.cameraSetting);
-    const auto mode = readStart<uint16_t>(replay, sample.camera + addresses_.cameraMode);
-    const auto modes = readStart<uint32_t>(replay, addresses_.settings +
-                                                       (setting & 0xFFU) * addresses_.settingSize +
-                                                       addresses_.settingModes);
-    sample.function = readStart<int16_t>(replay, modes + (mode & 0xFFU) * addresses_.modeSize +
-                                                     addresses_.modeFunction);
-    sample.animState = readStart<int16_t>(replay, sample.camera + addresses_.cameraAnimState);
   }
-  sample.cutsceneEyeShot = readStart<uint16_t>(replay, sample.play + addresses_.cutsceneEyeShot);
-  sample.cutsceneAtShot = readStart<uint16_t>(replay, sample.play + addresses_.cutsceneAtShot);
-  sample.cutsceneShot = readStart<int32_t>(replay, sample.play + addresses_.cutsceneShot);
+  if (sample.camera != 0 && addresses_.door) {
+    const DoorCutAddresses &door = *addresses_.door;
+    const auto setting = readStart<uint16_t>(replay, sample.camera + door.cameraSetting);
+    const auto mode = readStart<uint16_t>(replay, sample.camera + door.cameraMode);
+    const auto modes = readStart<uint32_t>(
+        replay, door.settings + (setting & 0xFFU) * door.settingSize + door.settingModes);
+    sample.function =
+        readStart<int16_t>(replay, modes + (mode & 0xFFU) * door.modeSize + door.modeFunction);
+    sample.animState = readStart<int16_t>(replay, sample.camera + door.cameraAnimState);
+  }
+  if (addresses_.shot) {
+    const ShotCutAddresses &shot = *addresses_.shot;
+    sample.cutsceneEyeShot = readStart<uint16_t>(replay, sample.play + shot.eyeShot);
+    sample.cutsceneAtShot = readStart<uint16_t>(replay, sample.play + shot.atShot);
+    sample.cutsceneShot = readStart<int32_t>(replay, sample.play + shot.shot);
+  }
   previous_ = current_;
   current_ = sample;
 }
 
 std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float t) const {
-  if (!previous_ || !current_ || previous_->play != current_->play ||
-      previous_->frames + 1 != current_->frames || previous_->camera != current_->camera ||
-      current_->camera == 0 || passedDoor() || newShot()) {
+  if (!previous_ || !current_) {
     return std::nullopt;
   }
   const Sample &from = *previous_;
   const Sample &to = *current_;
+  if (from.play != to.play || from.frames + 1 != to.frames || from.camera != to.camera ||
+      to.camera == 0 || passedDoor(from, to) || newShot(from, to)) {
+    return std::nullopt;
+  }
   // The unshaken point between the ticks, shaken by the newer tick's quake offset.
   const auto shaken = [&](const Vec3 &fromCamera, const Vec3 &toCamera, const Vec3 &toView) {
     Vec3 out = lerp(fromCamera, toCamera, t);
@@ -78,18 +85,21 @@ std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float
   };
 }
 
-bool CameraTrack::passedDoor() const {
-  const auto atFarSide = [this](const Sample &sample) {
-    return sample.function == static_cast<int16_t>(addresses_.doorFunction) &&
-           sample.animState == static_cast<int16_t>(addresses_.doorFarSide);
+bool CameraTrack::passedDoor(const Sample &from, const Sample &to) const {
+  if (!addresses_.door) {
+    return false;
+  }
+  const DoorCutAddresses &door = *addresses_.door;
+  const auto atFarSide = [&door](const Sample &sample) {
+    return sample.function == static_cast<int16_t>(door.doorFunction) &&
+           sample.animState == static_cast<int16_t>(door.doorFarSide);
   };
-  return atFarSide(*current_) && !atFarSide(*previous_);
+  return atFarSide(to) && !atFarSide(from);
 }
 
-bool CameraTrack::newShot() const {
-  return previous_->cutsceneEyeShot != current_->cutsceneEyeShot ||
-         previous_->cutsceneAtShot != current_->cutsceneAtShot ||
-         previous_->cutsceneShot != current_->cutsceneShot;
+bool CameraTrack::newShot(const Sample &from, const Sample &to) {
+  return from.cutsceneEyeShot != to.cutsceneEyeShot || from.cutsceneAtShot != to.cutsceneAtShot ||
+         from.cutsceneShot != to.cutsceneShot;
 }
 
 } // namespace z3d::app

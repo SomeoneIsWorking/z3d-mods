@@ -13,6 +13,32 @@
 
 namespace z3d::app {
 
+// The door cut, from the manifest's "interpolation" table: the active camera's function as
+// Camera_Update picks it, and the door camera's step that puts the eye beyond the door.
+struct DoorCutAddresses {
+  uint32_t cameraSetting; // offsets in a camera
+  uint32_t cameraMode;
+  uint32_t cameraAnimState;
+  // sCameraSettings, by which Camera_Update picks a camera's function from its setting and mode.
+  uint32_t settings;
+  uint32_t settingSize;
+  uint32_t settingModes;
+  uint32_t modeSize;
+  uint32_t modeFunction;
+  // Camera_Special9, and its animState once it has put the eye beyond the door.
+  uint32_t doorFunction;
+  uint32_t doorFarSide;
+};
+
+// The cutscene shot cut: offsets in the play state of the cutscene's shot (the frames its eye and
+// at point lists were handed to the camera, and command 0x97's segment), each changed only as a
+// shot starts.
+struct ShotCutAddresses {
+  uint32_t eyeShot;
+  uint32_t atShot;
+  uint32_t shot;
+};
+
 // Guest addresses and offsets from the manifest's "interpolation" table.
 struct CameraAddresses {
   uint32_t play;    // the global holding the play state's pointer
@@ -25,23 +51,9 @@ struct CameraAddresses {
   uint32_t activeCamera;
   uint32_t cameraEye; // offsets in a camera
   uint32_t cameraAt;
-  uint32_t cameraSetting;
-  uint32_t cameraMode;
-  uint32_t cameraAnimState;
-  // sCameraSettings, by which Camera_Update picks a camera's function from its setting and mode.
-  uint32_t settings;
-  uint32_t settingSize;
-  uint32_t settingModes;
-  uint32_t modeSize;
-  uint32_t modeFunction;
-  // Camera_Special9, and its animState once it has put the eye beyond the door.
-  uint32_t doorFunction;
-  uint32_t doorFarSide;
-  // Offsets in the play state: the cutscene's shot (the frames its eye and at point lists were
-  // handed to the camera, and command 0x97's segment), each changed only as a shot starts.
-  uint32_t cutsceneEyeShot;
-  uint32_t cutsceneAtShot;
-  uint32_t cutsceneShot;
+  // The cuts a game declares besides a restarted play state and another camera, where found.
+  std::optional<DoorCutAddresses> door{};
+  std::optional<ShotCutAddresses> shot{};
 };
 
 class CameraTrack {
@@ -53,8 +65,8 @@ public:
   void sample(Core::SectionReplay &replay);
   // The view's inputs a fraction `t` of the way from the previous tick to this one, or nothing at
   // a cut: no previous tick, another play state or camera, or a play state started again (its
-  // frame count not one on from the previous tick's: a scene change, warp or respawn), or the
-  // door camera's step to the door's far side, or a new cutscene shot.
+  // frame count not one on from the previous tick's: a scene change, warp or respawn), or, where
+  // the table names them, the door camera's step to the door's far side or a new cutscene shot.
   [[nodiscard]] std::optional<std::vector<Core::SectionReplay::Input>> inputs(float t) const;
 
 private:
@@ -76,8 +88,8 @@ private:
     int32_t cutsceneShot = 0;
   };
 
-  [[nodiscard]] bool passedDoor() const;
-  [[nodiscard]] bool newShot() const;
+  [[nodiscard]] bool passedDoor(const Sample &from, const Sample &to) const;
+  [[nodiscard]] static bool newShot(const Sample &from, const Sample &to);
 
   CameraAddresses addresses_;
   std::optional<Sample> previous_;

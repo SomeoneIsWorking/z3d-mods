@@ -192,7 +192,8 @@ def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | 
 INTERPOLATION_SIZES = {
     "actor_list_size": ("actor_lists", "ActorListEntry"), "joint_size": ("skeleton_draw_call", "SkelJoint"),
     "effect_size": ("effects", "ObjectKankyoEffect"),
-    "camera_setting_size": ("view_eye", "CameraSetting"), "camera_mode_size": ("view_eye", "CameraMode")}
+    "camera_setting_size": ("door_camera_function", "CameraSetting"),
+    "camera_mode_size": ("door_camera_function", "CameraMode")}
 
 
 # hud.toml's tables every button shares: the counts and when each is full, the statuses, the
@@ -224,8 +225,8 @@ def _mm3d(repo: Path, d: symbols.Decomp) -> Layout:
         actor_position=symbols.offset(d, "Actor.world"),
         actor_previous=symbols.offset(d, "Actor.prevPos"),
         actor_home=symbols.offset(d, "Actor.home"),
-        camera_at=symbols.offset(d, "PlayState.viewAt"),
-        camera_eye=symbols.offset(d, "PlayState.viewEye"),
+        camera_at=symbols.offset(d, "PlayState.view") + symbols.offset(d, "View.at"),
+        camera_eye=symbols.offset(d, "PlayState.view") + symbols.offset(d, "View.eye"),
         respawn_flag=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.respawnFlag"),
         respawn=symbols.global_(d, "gCommonData") + symbols.offset(d, "CommonData.respawn"),
         respawn_yaw=symbols.offset(d, "RespawnData.yaw"),
