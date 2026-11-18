@@ -119,6 +119,13 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .shot = field(*table, "cutscene_shot"),
       };
     }
+    if (has(*table, "cutscene_group_pending")) {
+      camera.group = GroupCutAddresses{
+          .eyeType = field(*table, "cutscene_eye_group_type"),
+          .atType = field(*table, "cutscene_at_group_type"),
+          .pending = field(*table, "cutscene_group_pending"),
+      };
+    }
     section.camera.emplace(camera);
   }
   if (has(*table, "actor_lists")) {

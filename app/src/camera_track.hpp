@@ -39,6 +39,15 @@ struct ShotCutAddresses {
   uint32_t shot;
 };
 
+// The cutscene group cut: the addresses of the cutscene camera's eye and at interpolators' group
+// type, and the type an interpolator stamps on a group it has reached but not yet read; the shot
+// starts in the tick that reads it.
+struct GroupCutAddresses {
+  uint32_t eyeType;
+  uint32_t atType;
+  uint32_t pending;
+};
+
 // Guest addresses and offsets from the manifest's "interpolation" table.
 struct CameraAddresses {
   uint32_t play;    // the global holding the play state's pointer
@@ -54,6 +63,7 @@ struct CameraAddresses {
   // The cuts a game declares besides a restarted play state and another camera, where found.
   std::optional<DoorCutAddresses> door{};
   std::optional<ShotCutAddresses> shot{};
+  std::optional<GroupCutAddresses> group{};
 };
 
 class CameraTrack {
@@ -66,7 +76,8 @@ public:
   // The view's inputs a fraction `t` of the way from the previous tick to this one, or nothing at
   // a cut: no previous tick, another play state or camera, or a play state started again (its
   // frame count not one on from the previous tick's: a scene change, warp or respawn), or, where
-  // the table names them, the door camera's step to the door's far side or a new cutscene shot.
+  // the table names them, the door camera's step to the door's far side, a new cutscene shot or a
+  // cutscene camera group read.
   [[nodiscard]] std::optional<std::vector<Core::SectionReplay::Input>> inputs(float t) const;
 
 private:
@@ -86,10 +97,13 @@ private:
     uint16_t cutsceneEyeShot = 0;
     uint16_t cutsceneAtShot = 0;
     int32_t cutsceneShot = 0;
+    uint8_t eyeGroupType = 0;
+    uint8_t atGroupType = 0;
   };
 
   [[nodiscard]] bool passedDoor(const Sample &from, const Sample &to) const;
   [[nodiscard]] static bool newShot(const Sample &from, const Sample &to);
+  [[nodiscard]] bool readGroup(const Sample &from, const Sample &to) const;
 
   CameraAddresses addresses_;
   std::optional<Sample> previous_;

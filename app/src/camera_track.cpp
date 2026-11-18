@@ -48,6 +48,10 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
     sample.cutsceneAtShot = readStart<uint16_t>(replay, sample.play + shot.atShot);
     sample.cutsceneShot = readStart<int32_t>(replay, sample.play + shot.shot);
   }
+  if (addresses_.group) {
+    sample.eyeGroupType = readStart<uint8_t>(replay, addresses_.group->eyeType);
+    sample.atGroupType = readStart<uint8_t>(replay, addresses_.group->atType);
+  }
   previous_ = current_;
   current_ = sample;
 }
@@ -59,7 +63,7 @@ std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float
   const Sample &from = *previous_;
   const Sample &to = *current_;
   if (from.play != to.play || from.frames + 1 != to.frames || from.camera != to.camera ||
-      to.camera == 0 || passedDoor(from, to) || newShot(from, to)) {
+      to.camera == 0 || passedDoor(from, to) || newShot(from, to) || readGroup(from, to)) {
     return std::nullopt;
   }
   // The unshaken point between the ticks, shaken by the newer tick's quake offset.
@@ -100,6 +104,17 @@ bool CameraTrack::passedDoor(const Sample &from, const Sample &to) const {
 bool CameraTrack::newShot(const Sample &from, const Sample &to) {
   return from.cutsceneEyeShot != to.cutsceneEyeShot || from.cutsceneAtShot != to.cutsceneAtShot ||
          from.cutsceneShot != to.cutsceneShot;
+}
+
+bool CameraTrack::readGroup(const Sample &from, const Sample &to) const {
+  if (!addresses_.group) {
+    return false;
+  }
+  const auto pending = static_cast<uint8_t>(addresses_.group->pending);
+  const auto read = [pending](uint8_t fromType, uint8_t toType) {
+    return fromType == pending && toType != pending;
+  };
+  return read(from.eyeGroupType, to.eyeGroupType) || read(from.atGroupType, to.atGroupType);
 }
 
 } // namespace z3d::app

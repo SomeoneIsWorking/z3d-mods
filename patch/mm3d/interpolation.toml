@@ -29,6 +29,11 @@ camera_setting_modes = ["CameraSetting.cameraModes"]
 camera_mode_function = ["CameraMode.funcIdx"]
 door_camera_function = ["CAM_FUNC_SPEC9"]
 door_camera_far_side = ["CAM_SPEC9_ANIM_FAR_SIDE"]
+# The cutscene group cut: command 90's interpolators' group type, which reads pending from the tick
+# a group is reached to the tick its shot starts (decomp/mm3d docs/cutscene.md "The camera's shots").
+cutscene_eye_group_type = ["sCutsceneCameraInfo", "CutsceneCamera.eyeInterp", "CutsceneCameraInterp.type"]
+cutscene_at_group_type = ["sCutsceneCameraInfo", "CutsceneCamera.atInterp", "CutsceneCameraInterp.type"]
+cutscene_group_pending = ["CS_CAM_GROUP_PENDING"]
 # The actor track: the actor lists, and the position and rotation an actor's model is placed by.
 actor_lists = ["PlayState.actorCtx", "ActorContext.actorLists"]
 actor_list_count = ["ACTORCAT_COUNT"]

@@ -324,8 +324,20 @@ cuts.
     replays, 0 refused, 2 cuts: the first after `interp on` and the door). The Stock Pot Inn's
     doors are all type 5 in their params (bits 7-9), the game's schedule doors, which is
     likely why A did nothing there.
-  - Cutscene shot cut: not started. MM3D's cutscene camera is script command 90
-    (decomp/mm3d `docs/cutscene.md`); its shot field is not found.
+  - Cutscene shot cut: built, as its own cut kind. Script command 90 runs the N64 game's
+    `CutsceneCamera_UpdateSplines` on `sCutsceneCameraInfo`, whose eye and at interpolators walk
+    the points a group (a shot) at a time; an interpolator stamps a group it has reached with type
+    8 and reads it, moving the eye to the new shot, in the next tick (decomp/mm3d
+    `docs/cutscene.md` "The camera's shots"). No field changes only as a shot starts, so the table
+    names the two group types and the pending type, and `camera_track` cuts in the tick a group
+    leaves pending. The Southern Swamp's first visit (`loadstate:sct interp:on warp:0x8400`): at
+    both shot changes the present before repeats the last tick (0 changed pixels) and the next
+    shows the new shot whole, with the presents after moving again (scratch/runs/mm-shot-cut-1
+    `cut-302-307.png`, mm-shot-cut-2 `cut-422-427.png`; 261 replays, 1 refused, 4 cuts: `interp
+    on`, the warp, the two shots).
+  - The warp's white fade-in steps at the logic rate: in mm-shot-cut-1 presents 107 to 140
+    change by about 6000 pixels on each real tick and by under 300 on each in-between. Its owner
+    is not found.
   - The title-screen crash: fixed. With `interp on`, MM3D crashed a second or two after Start on
     the title screen (`z3dmods run mm3d <dir> --harness interp:on wait:29 start wait:6`; the core
     asserted in `RasterizerCache::UpdatePagesCachedCount` after `Unknown virtual address @
