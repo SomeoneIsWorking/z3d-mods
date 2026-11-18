@@ -24,11 +24,15 @@ void ActorTrack::sample(Core::SectionReplay &replay) {
     for (auto actor = readStart<uint32_t>(replay, entry + addresses_.listHead);
          actor != 0 && walked < kMaxActors;
          actor = readStart<uint32_t>(replay, actor + addresses_.next), ++walked) {
-      current_[actor] = Sample{
+      Sample sample{
           .id = readStart<int16_t>(replay, actor + addresses_.id),
           .position = readStart<Vec3>(replay, actor + addresses_.position),
           .shapeRotation = readStart<Vec3s>(replay, actor + addresses_.shapeRotation),
       };
+      if (addresses_.drawPhase && sample.id == addresses_.drawPhase->id) {
+        sample.drawPhase = readStart<uint8_t>(replay, actor + addresses_.drawPhase->offset);
+      }
+      current_[actor] = sample;
     }
   }
 }
@@ -46,6 +50,10 @@ ActorTrack::Counts ActorTrack::inputs(float t, std::vector<Core::SectionReplay::
         replayInput(actor + addresses_.position, lerp(from->second.position, to.position, t)));
     out.push_back(replayInput(actor + addresses_.shapeRotation,
                               lerpAngles(from->second.shapeRotation, to.shapeRotation, t)));
+    if (addresses_.drawPhase && to.id == addresses_.drawPhase->id) {
+      out.push_back(replayInput(actor + addresses_.drawPhase->offset,
+                                lerpTurn8(from->second.drawPhase, to.drawPhase, t)));
+    }
   }
   return counts;
 }

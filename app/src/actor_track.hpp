@@ -7,6 +7,7 @@
 #include "motion_blend.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -23,6 +24,13 @@ struct ActorAddresses {
   uint32_t id;
   uint32_t position;
   uint32_t shapeRotation;
+  // An 8-bit turn the draw of actors with this id steps itself (OoT3D's Player_Draw, its damage
+  // flash): blended, then stepped once by the replay's draw.
+  struct DrawPhase {
+    int16_t id;
+    uint32_t offset;
+  };
+  std::optional<DrawPhase> drawPhase;
 };
 
 class ActorTrack {
@@ -46,6 +54,7 @@ private:
     int16_t id = 0;
     Vec3 position{};
     Vec3s shapeRotation{};
+    uint8_t drawPhase = 0;
   };
 
   ActorAddresses addresses_;

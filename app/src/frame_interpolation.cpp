@@ -143,6 +143,12 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .id = field(*table, "actor_id"),
         .position = field(*table, "actor_position"),
         .shapeRotation = field(*table, "actor_shape_rotation"),
+        .drawPhase = has(*table, "actor_draw_phase")
+                         ? std::optional(ActorAddresses::DrawPhase{
+                               .id = static_cast<int16_t>(field(*table, "actor_draw_phase_id")),
+                               .offset = field(*table, "actor_draw_phase"),
+                           })
+                         : std::nullopt,
     });
   }
   if (has(*table, "skeleton_draw_calls")) {

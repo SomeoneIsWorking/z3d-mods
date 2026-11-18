@@ -174,6 +174,15 @@ cuts.
   map loses it (scratch/runs/arrow-leak `step1.png`, 50 pixels left: Link's red damage flash at
   his feet, next). `interp leakcheck` there: 179 replays, 0 refused, 0 leaking. MM3D after the
   change: South Clock Town's step map shows only the clock's minute digit (mm-arrow-common).
+- OoT3D's damage flash: blended. Link's red flash after a Stalchild's hit stepped in `field`:
+  `Player_Draw` adds 50 less `invincibilityTimer` (8 to 40) to `Player.damageFlashTurn` itself
+  each draw (decomp/oot3d `docs/frame.md` "Actors in the draw"), so a replay drew the newer
+  tick's flash. The actor track's draw phase (`actor_draw_phase` in the table, for the player's
+  id) blends the turn from the two samples taken before the real draws the short way round 0x100,
+  and the replay's draw steps it once. His boots darken on every present with interpolation on
+  where off holds each shade for two (scratch/runs/flash-leak `flash-off-vs-on-200-207.png`, off
+  above); the step map keeps 3 pixels of the arrow's edge (`step1.png`). `interp leakcheck`:
+  179 replays, 0 refused, 0 leaking, 16826 actors paired, none unpaired.
 - Step 4, declared cuts. Shipwright declares two camera cuts: `Camera_Special9` when the door
   timer runs out and `animState` goes 1 to 2 (the eye jumps to the door's far side), and
   `Camera_SetCSParams`. Door cut: built. A door within a scene (the Fire Temple lobby's left door,

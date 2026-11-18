@@ -38,6 +38,12 @@ using Vec3s = std::array<int16_t, 3>;
       static_cast<uint16_t>(static_cast<int32_t>(static_cast<float>(delta) * t)));
 }
 
+// An 8-bit turn (0x100 a turn) the short way round, rounded.
+[[nodiscard]] inline uint8_t lerpTurn8(uint8_t from, uint8_t to, float t) {
+  const auto delta = static_cast<int8_t>(static_cast<uint8_t>(to - from));
+  return static_cast<uint8_t>(from + std::lround(static_cast<float>(delta) * t));
+}
+
 [[nodiscard]] inline Vec3s lerpAngles(const Vec3s &from, const Vec3s &to, float t) {
   Vec3s out{};
   for (std::size_t i = 0; i < out.size(); ++i) {
