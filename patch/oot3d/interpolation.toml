@@ -84,3 +84,5 @@ effects = ["ObjectKankyo.effects"]
 effect_state = ["ObjectKankyoEffect.state"]
 effect_position = ["ObjectKankyoEffect.pos"]
 effect_base = ["ObjectKankyoEffect.base"]
+# Stepped by the draw: blended, then stepped once by the replay's draw.
+effect_alpha = ["ObjectKankyoEffect.alpha"]

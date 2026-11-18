@@ -23,6 +23,7 @@ void EffectPoolTrack::sample(Core::SectionReplay &replay, const ActorTrack &acto
           .state = readStart<uint8_t>(replay, effect + addresses_.state),
           .position = readStart<Vec3>(replay, effect + addresses_.position),
           .base = readStart<Vec3>(replay, effect + addresses_.base),
+          .alpha = readStart<uint8_t>(replay, effect + addresses_.alpha),
       };
       if (sample.state != 0) {
         current_.emplace(effect, sample);
@@ -43,6 +44,8 @@ EffectPoolTrack::inputs(float t, std::vector<Core::SectionReplay::Input> &out) c
     ++counts.paired;
     out.push_back(
         replayInput(effect + addresses_.position, lerp(from->second.position, to.position, t)));
+    out.push_back(
+        replayInput(effect + addresses_.alpha, lerpByte(from->second.alpha, to.alpha, t)));
   }
   return counts;
 }

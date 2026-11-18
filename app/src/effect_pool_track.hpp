@@ -26,6 +26,7 @@ struct EffectPoolAddresses {
   uint32_t state; // offsets in an effect
   uint32_t position;
   uint32_t base;
+  uint32_t alpha; // stepped by the draw itself
 };
 
 class EffectPoolTrack {
@@ -39,7 +40,8 @@ public:
     uint64_t paired = 0;
     uint64_t unpaired = 0;
   };
-  // The paired effects' positions a fraction `t` of the way from the previous tick.
+  // The paired effects' positions and alphas a fraction `t` of the way from the previous tick; the
+  // draw then steps the blended alpha once, as it steps the real one.
   Counts inputs(float t, std::vector<Core::SectionReplay::Input> &out) const;
 
 private:
@@ -47,6 +49,7 @@ private:
     uint8_t state = 0;
     Vec3 position{};
     Vec3 base{};
+    uint8_t alpha = 0;
   };
 
   EffectPoolAddresses addresses_;

@@ -144,8 +144,14 @@ cuts.
   unchanged has `pos` blended. About 64 pair a tick, a few unpaired (respawned). A mote moves on
   every present (scratch/runs/interp-mote-on `on-mote-12-19.png`); with interpolation off the
   picture is unchanged on every second present (273, 0, 273, 0 changed pixels).
-- What still moves at 30 Hz in Link's house and Kokiri Forest standing still: the fairies'
-  twinkle (`alpha`, stepped by the draw by conditions on `timer`, not blended) and Navi's
+- The fairies' twinkle: blended. Their draw (0x159B2C) steps each `alpha` once a draw, so the
+  track blends it from the two samples taken before the real draws and the replay's draw steps
+  the blend once, which lands it the fraction of the way to the next tick's. A fading mote from
+  `loadstate:kf` (scratch/runs/kf-fairy2 against kf-fairy-before, the build without the blend):
+  its peak brightness falls on every present (211 203 192 179 177 170 162 153 144 132 120) where
+  before it repeated in pairs (211 210, 153 153, 134 132); `mote-after-vs-before-10-21.png`,
+  after above. The real presents equal interpolation off's (kf-fairy2 on and off, mean
+  difference 0.0). Still at 30 Hz in Link's house and Kokiri Forest standing still: Navi's
   sparkles (not traced). Not built: actors' own material animations and the time of day's list,
   the remaining declared cuts, MM3D and the option. (2026-11-18)
 - Step 4, declared cuts. Shipwright declares two camera cuts: `Camera_Special9` when the door

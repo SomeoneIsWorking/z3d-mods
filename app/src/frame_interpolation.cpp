@@ -195,6 +195,7 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
         .state = field(*table, "effect_state"),
         .position = field(*table, "effect_position"),
         .base = field(*table, "effect_base"),
+        .alpha = field(*table, "effect_alpha"),
     });
   }
   const lucent::json::Value *link = document->find("link");
