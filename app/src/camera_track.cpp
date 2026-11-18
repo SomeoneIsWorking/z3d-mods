@@ -31,6 +31,14 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
   if (sample.camera != 0) {
     sample.cameraEye = readStart<Vec3>(replay, sample.camera + addresses_.cameraEye);
     sample.cameraAt = readStart<Vec3>(replay, sample.camera + addresses_.cameraAt);
+    const auto setting = readStart<uint16_t>(replay, sample.camera + addresses_.cameraSetting);
+    const auto mode = readStart<uint16_t>(replay, sample.camera + addresses_.cameraMode);
+    const auto modes = readStart<uint32_t>(replay, addresses_.settings +
+                                                       (setting & 0xFFU) * addresses_.settingSize +
+                                                       addresses_.settingModes);
+    sample.function = readStart<int16_t>(replay, modes + (mode & 0xFFU) * addresses_.modeSize +
+                                                     addresses_.modeFunction);
+    sample.animState = readStart<int16_t>(replay, sample.camera + addresses_.cameraAnimState);
   }
   previous_ = current_;
   current_ = sample;
@@ -39,7 +47,7 @@ void CameraTrack::sample(Core::SectionReplay &replay) {
 std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float t) const {
   if (!previous_ || !current_ || previous_->play != current_->play ||
       previous_->frames + 1 != current_->frames || previous_->camera != current_->camera ||
-      current_->camera == 0) {
+      current_->camera == 0 || passedDoor()) {
     return std::nullopt;
   }
   const Sample &from = *previous_;
@@ -65,6 +73,14 @@ std::optional<std::vector<Core::SectionReplay::Input>> CameraTrack::inputs(float
       replayInput(to.play + addresses_.viewUp, up),
       replayInput(to.play + addresses_.viewFovy, lerp(from.fovy, to.fovy, t)),
   };
+}
+
+bool CameraTrack::passedDoor() const {
+  const auto atFarSide = [this](const Sample &sample) {
+    return sample.function == static_cast<int16_t>(addresses_.doorFunction) &&
+           sample.animState == static_cast<int16_t>(addresses_.doorFarSide);
+  };
+  return atFarSide(*current_) && !atFarSide(*previous_);
 }
 
 } // namespace z3d::app

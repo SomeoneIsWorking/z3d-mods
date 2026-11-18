@@ -19,6 +19,16 @@ cameras = ["PlayState.cameraPtrs"]
 active_camera = ["PlayState.activeCamera"]
 camera_eye = ["Camera.eye"]
 camera_at = ["Camera.at"]
+# The door cut: the active camera's function as Camera_Update picks it, and Camera_Special9's step
+# that puts the eye beyond the door (decomp/oot3d docs/camera.md "Fields past the view").
+camera_setting = ["Camera.setting"]
+camera_mode = ["Camera.mode"]
+camera_anim_state = ["Camera.animState"]
+camera_settings = ["sCameraSettings"]
+camera_setting_modes = ["CameraSetting.cameraModes"]
+camera_mode_function = ["CameraMode.funcIdx"]
+door_camera_function = ["CAM_FUNC_SPEC9"]
+door_camera_far_side = ["CAM_SPEC9_ANIM_FAR_SIDE"]
 # The actor track: the actor lists, and what Actor_Draw builds an actor's model matrix from.
 actor_lists = ["PlayState.actorCtx", "ActorContext.actorLists"]
 actor_list_count = ["ACTORCAT_MAX"]
