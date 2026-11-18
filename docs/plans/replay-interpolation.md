@@ -299,10 +299,18 @@ cuts.
   replays. Not covered: actors' own material animations (`AnimPlayer_Update` reached through
   0x224148, a model's update).
 - MM3D, where the work stands (2026-11-18).
-  - What still steps at the tick rate standing in the tower base with interpolation on
-    (mm-still, `stepped.png`: pixels whose in-between equals the next tick): a spinning green
-    rupee near the owl statue (`top-10-15.png`), so its draw turns it by a field other than the
-    `shape.rot` the actor track blends; and edge pixels on Link, not traced.
+  - What still steps at the tick rate standing in the tower base with interpolation on: the
+    "spinning green rupee" over the owl statue is the Z-target arrow (decomp/mm3d
+    `docs/actors.md` "The target arrow"). `Target_Draw` turns it by `gameplayFrames * 3000`,
+    `gameplayFrames` (`PlayState` +0xC4BC) an integer stepped once a tick, so no write of it
+    can put the arrow halfway: the in-between needs gameplayFrames - 0.5. About 68 code sites
+    read the same offset, so other draws may turn or scroll by it too (not traced). Not built,
+    for the user to choose: (a) our patch makes `Target_Draw`'s angle read gameplayFrames plus a
+    patch-owned fraction that is 0 in real draws and that the replay writes (one site, the
+    game's own rule kept); (b) a core mechanism that writes inputs when the replay reaches a site
+    (here after the matrix is built at 0x18FD0C), blending the queued model's matrix between the
+    two ticks' real values: generic for every draw-time writer, but a new replay mechanism. Also
+    still stepping: edge pixels on Link, not traced.
   - Effect pools, the door and cutscene shot cuts: not started. MM3D's door camera and
     cutscene camera fields (the `Camera` setting, mode and step, the cutscene's shot) are not
     laid out in decomp/mm3d yet; OoT3D's `Camera_Special9` and `Camera_SetCSParams` and
