@@ -119,6 +119,15 @@ cuts.
   luminance 5.0, 7.7, 10.4, 12.8 ... 46.6, 49.3, 53.6) where interpolation off holds each step
   for two (scratch/runs/interp-fade-on `fade-54-75.png`). The first step out of black has no
   in-between: the play state's frame count is not yet consecutive there, which cuts.
+- Step 4, material animations: built (`app/src/material_track`). The scene's texture scroll is
+  stepped in the draw (decomp/oot3d `docs/frame.md` "Material animations"): the core observes
+  `Scene_Draw`'s calls of `AnimPlayer_Update`, and each animation stepped in both ticks with the
+  newer frame one step on from the older one (wrapped or held as the game does) starts its step
+  `t` of the way on, so the draw's own step lands halfway. Kokiri Forest's waterfall flows on every
+  present (about 10 changed pixels a present in its crop) where interpolation off moves on every
+  second (55 to 72, then 0) (scratch/runs/interp-mat-1 `on-waterfall-10-17.png` against
+  `off-waterfall-10-17.png`). Not covered: the time of day's list (its frame is set from the time)
+  and animations actors step in their own update or draw.
 - What still moves at 30 Hz, seen by diffing consecutive presents with the camera and Link
   still: in Link's house only the scene's fade-in (the whole room brightens on tick presents;
   after it, only Navi), in Kokiri Forest the waterfall's texture scroll and the floating light

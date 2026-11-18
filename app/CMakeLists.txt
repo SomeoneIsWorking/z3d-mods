@@ -41,6 +41,7 @@ add_executable(z3d
   src/actor_track.cpp
   src/camera_track.cpp
   src/fade_track.cpp
+  src/material_track.cpp
   src/skeleton_track.cpp
   src/frame_interpolation.cpp
   src/gx_cmdlist.cpp

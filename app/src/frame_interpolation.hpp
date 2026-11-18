@@ -8,6 +8,7 @@
 #include "actor_track.hpp"
 #include "camera_track.hpp"
 #include "fade_track.hpp"
+#include "material_track.hpp"
 #include "skeleton_track.hpp"
 #include "gx_cmdlist.hpp"
 
@@ -53,6 +54,7 @@ private:
     ActorTrack actors;
     SkeletonTrack skeletons;
     FadeTrack fades;
+    MaterialTrack materials;
   };
 
   void onSection(Section &section);
@@ -104,6 +106,8 @@ private:
     uint64_t skeletonsUnpaired = 0;
     uint64_t fadesPaired = 0;
     uint64_t fadesUnpaired = 0;
+    uint64_t materialsPaired = 0;
+    uint64_t materialsUnpaired = 0;
   };
   Totals totals_;
 };

@@ -29,6 +29,32 @@ uint32_t field(const lucent::json::Value &table, const char *name) {
   return static_cast<uint32_t>(*integer);
 }
 
+std::vector<uint32_t> fields(const lucent::json::Value &table, const char *name) {
+  const lucent::json::Value *value = table.find(name);
+  const lucent::json::Array *items = value != nullptr ? value->array() : nullptr;
+  if (items == nullptr) {
+    throw std::runtime_error(std::string("\"interpolation\" wants the list \"") + name + '"');
+  }
+  std::vector<uint32_t> out;
+  for (const lucent::json::Value &item : *items) {
+    const auto integer = item.integer();
+    if (!integer) {
+      throw std::runtime_error(std::string("\"interpolation\" wants numbers in \"") + name + '"');
+    }
+    out.push_back(static_cast<uint32_t>(*integer));
+  }
+  return out;
+}
+
+bool observeAll(Core::SectionReplay &replay, const std::vector<uint32_t> &sites) {
+  for (const uint32_t site : sites) {
+    if (!replay.Observe(site)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 } // namespace
 
 FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem::path &manifest)
@@ -91,6 +117,17 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
           .type = field(*table, "fade_type"),
           .color = field(*table, "fade_color"),
       }),
+      .materials = MaterialTrack(MaterialAddresses{
+          .stepCalls = fields(*table, "material_step_calls"),
+          .stepArg = field(*table, "material_step_arg"),
+          .anim = field(*table, "material_anim"),
+          .frame = field(*table, "material_frame"),
+          .speed = field(*table, "material_speed"),
+          .loop = field(*table, "material_loop"),
+          .paused = field(*table, "material_paused"),
+          .animOffset = field(*table, "cmab_anim_offset"),
+          .frameCount = field(*table, "cmab_frame_count"),
+      }),
   });
 }
 
@@ -110,7 +147,8 @@ bool FrameInterpolation::setMode(Mode mode) {
                                                     [this, &section](Core::SectionReplay &) {
                                                       onSection(section);
                                                     }) ||
-                                    !replay.Observe(section.skeletons.drawCall()))) {
+                                    !replay.Observe(section.skeletons.drawCall()) ||
+                                    !observeAll(replay, section.materials.stepCalls()))) {
     replay.Uninstall();
     return false;
   }
@@ -158,6 +196,7 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   section.actors.sample(replay);
   section.skeletons.sample(replay);
   section.fades.sample(replay);
+  section.materials.sample(replay);
   auto inputs = section.camera.inputs(kHalfway);
   if (!inputs) {
     ++totals_.cuts;
@@ -172,6 +211,9 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   const FadeTrack::Counts fades = section.fades.inputs(kHalfway, *inputs);
   totals_.fadesPaired += fades.paired;
   totals_.fadesUnpaired += fades.unpaired;
+  const MaterialTrack::Counts materials = section.materials.inputs(kHalfway, *inputs);
+  totals_.materialsPaired += materials.paired;
+  totals_.materialsUnpaired += materials.unpaired;
   VideoCore::GPU &gpu = emulator_.gpu();
   const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
     totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
@@ -271,7 +313,9 @@ std::string FrameInterpolation::takeReport() {
          << " actors_unpaired=" << totals_.actorsUnpaired
          << " skeletons_paired=" << totals_.skeletonsPaired
          << " skeletons_unpaired=" << totals_.skeletonsUnpaired
-         << " fades_paired=" << totals_.fadesPaired << " fades_unpaired=" << totals_.fadesUnpaired;
+         << " fades_paired=" << totals_.fadesPaired << " fades_unpaired=" << totals_.fadesUnpaired
+         << " materials_paired=" << totals_.materialsPaired
+         << " materials_unpaired=" << totals_.materialsUnpaired;
   if (!totals_.firstGxDifference.empty()) {
     report << " gx_first=" << totals_.firstGxDifference;
   }

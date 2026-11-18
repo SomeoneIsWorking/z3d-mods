@@ -50,7 +50,7 @@ class Layout:
     # aim.toml as the app reads it (app/src/mouse_aim.hpp): guest addresses and offsets.
     aim: dict[str, int] | None = None
     # interpolation.toml as the app reads it (app/src/frame_interpolation.hpp): the draw section.
-    interpolation: dict[str, int] | None = None
+    interpolation: dict[str, int | list[int]] | None = None
     # CommonData.hudVisibility and its values that leave the main touch screen blank or dimmed.
     hud_visibility: int | None = None
     hud_hidden: tuple[int, ...] | None = None
@@ -169,18 +169,21 @@ def _aim(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int]:
         "play": symbols.global_(d, "gPlayState"), "player": _player_list_head(d)}
 
 
-def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int] | None:
-    """interpolation.toml resolved: the sites are a function and a define of its offset, the functions a function, the rest
+def _interpolation(repo: Path, game: str, d: symbols.Decomp) -> dict[str, int | list[int]] | None:
+    """interpolation.toml resolved: the sites are a function and a define of its offset (a site list, several), the functions a function, the rest
     addresses and offsets as in aim.toml, with the play state's pointer and the sizes of a GX request, an actor list's entry and a joint."""
     path = repo / "patch" / game / "interpolation.toml"
     if not path.exists():
         return None
     table = tomllib.loads(path.read_text())
     sites = ("open_site", "close_site", "skeleton_draw_call")
+    site_lists = ("material_step_calls",)
     functions = ("fade_draw",)
     return {key: symbols.function(d, table[key][0]) + d.define(table[key][1]) for key in sites} | {
+        key: [symbols.function(d, site[0]) + d.define(site[1]) for site in table[key]] for key in site_lists} | {
         key: symbols.function(d, table[key][0]) for key in functions} | {
-        key: _guest_address(d, terms) for key, terms in table.items() if key not in sites + functions} | {
+        key: _guest_address(d, terms) for key, terms in table.items()
+        if key not in sites + site_lists + functions} | {
         "play": symbols.global_(d, "gPlayState"), "request_size": symbols.size(d, "GxRequest"),
         "actor_list_size": symbols.size(d, "ActorListEntry"), "joint_size": symbols.size(d, "SkelJoint")}
 
