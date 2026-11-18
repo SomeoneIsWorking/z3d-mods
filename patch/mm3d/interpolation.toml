@@ -62,10 +62,13 @@ fade_type = ["TransitionFade.type"]
 fade_color = ["TransitionFade.a"]
 # The material track: the scene's material animations, which the update steps and applies
 # (Scene_UpdateRoomAnims through AnimPlayerList_Update, decomp/mm3d docs/frame.md "Material
-# animations"); the replay makes those calls again as leads. Their frame, speed and loop, and the
-# frame count AnimPlayer_Step wraps at.
+# animations"), made again as the replay's leads; and the models' own, which Model_Update steps in
+# the draw through the player's vtable, those calls that reach AnimPlayer_Update. Their frame,
+# speed and loop, and the frame count AnimPlayer_Step wraps at.
 material_lead_calls = [["AnimPlayerList_Update", "ANIM_PLAYER_LIST_UPDATE_CALL"]]
+material_step_calls = [["Model_Update", "MODEL_UPDATE_MATERIAL_CALL"]]
 material_step_arg = [0]
+material_update = ["AnimPlayer_Update"]
 material_anim = ["AnimPlayer.anim"]
 material_anim_file = ["CmabResource.file"]
 material_frame = ["AnimPlayer.frame"]

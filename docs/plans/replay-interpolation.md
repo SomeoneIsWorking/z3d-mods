@@ -368,10 +368,25 @@ cuts.
     as stepping.
   - Step maps (scratch/runs/mm-steps; a region steps when its change all falls into the real
     ticks): South Clock Town by day, only the clock's minute digit. The Southern Swamp: the far
-    water band steps (0% of its change in the in-betweens); its owner is not traced (candidates:
-    the swamp's scene handlers 0x493C00 and 0x4C5FC4, a model's material frames through the model
-    update 0x2240EC). Woodfall Temple: one speck at (222,12), not traced.
-    Clock Town at night: not mapped yet (the capture landed on the day's title card).
+    water band and Woodfall Temple's speck at (222,12) stepped; both were models' material
+    animations, fixed below. Clock Town at night: not mapped yet (state `night` exists, see the
+    next steps).
+  - Models' material animations: interpolated. `Model_Update` (0x2240EC) steps the player at the
+    model's +0x98 inside the draw section, through its vtable at +0x58 (decomp/mm3d `docs/frame.md`
+    "Material animations"), so the replay stepped it once from the start state and drew the newer
+    tick's frame. `MaterialTrack` now takes in-section step sites (`material_step_calls`, read from
+    the census's calls, frame `from + speed*t`) beside the lead sites, and `material_update`
+    keeps only the virtual calls that reach `AnimPlayer_Update`. The swamp's band (state `swampw`,
+    rows 96-110) now changes into every present (1.25, 1.27, 1.59, 1.37, ... on; 0, 1.99, 0, 2.37
+    off; scratch/runs/swamp-band `band-on-vs-off-41-44.png`), 179 replays leakchecked, 0 leaking.
+    Woodfall Temple's speck changes every present on, in pairs off (scratch/runs/wft-step2
+    `speck-on-vs-off-44-49.png`), and leaves the step map (`step1.png`); 99 leakchecked, 0
+    leaking, 1 refused (svc 0x28 at 0x1DFC04).
+  - Pack textures in in-betweens: not reproduced. Windowed `--record` runs with the 4K packs and a
+    fast mouse turn while running (`inputtest interp-turn-mm3d`, 5075 presents in South Clock Town;
+    `interp-turn`, 3208 in Link's house): no present has a tile under half both neighbours'
+    detail except where near geometry crosses the view, and those frames show the pack's textures
+    (looked at 2535, 4434, 4704, 4872). Entering several scenes in one recorded run is not covered.
   - The title screen and file select: interpolated. Every replay there was refused (svc 0x22 at
     0x12A150): the section's first entry into `gGspInterruptLock` (0x7C0F50, an nn::os critical
     section) waited for the GSP interrupt thread, which holds it at every title section's start

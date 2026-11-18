@@ -167,12 +167,16 @@ FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem
     });
   }
   // An animation is stepped in the draw (material_step_calls) or before it (material_lead_calls).
-  const bool materialLead = has(*table, "material_lead_calls");
-  if (has(*table, "material_step_calls") || materialLead) {
+  const bool stepped = has(*table, "material_step_calls");
+  const bool led = has(*table, "material_lead_calls");
+  if (stepped || led) {
     section.materials.emplace(MaterialAddresses{
-        .stepCalls = fields(*table, materialLead ? "material_lead_calls" : "material_step_calls"),
-        .lead = materialLead,
+        .stepCalls = stepped ? fields(*table, "material_step_calls") : std::vector<uint32_t>{},
+        .leadCalls = led ? fields(*table, "material_lead_calls") : std::vector<uint32_t>{},
         .stepArg = field(*table, "material_step_arg"),
+        .update = has(*table, "material_update")
+                      ? std::optional<uint32_t>(field(*table, "material_update"))
+                      : std::nullopt,
         .anim = field(*table, "material_anim"),
         .frame = field(*table, "material_frame"),
         .speed = field(*table, "material_speed"),
@@ -239,8 +243,8 @@ bool FrameInterpolation::setMode(Mode mode) {
                                 onSection(section);
                               }) ||
               (section.skeletons && !observeAll(replay, section.skeletons->drawCalls())) ||
-              (section.materials &&
-               !observeAll(replay, section.materials->stepCalls(), section.materials->lead())))) {
+              (section.materials && (!observeAll(replay, section.materials->stepCalls()) ||
+                                     !observeAll(replay, section.materials->leadCalls(), true))))) {
     replay.Uninstall();
     return false;
   }
