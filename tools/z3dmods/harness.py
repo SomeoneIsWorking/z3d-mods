@@ -232,6 +232,14 @@ class HarnessSession:
         """Turns the texture pack on or off in the running game."""
         return self._send(f"textures {state}")
 
+    def pace(self, what: str) -> str:
+        """Runs frames in real time (on) or as fast as they run (off, the default)."""
+        return self._send(f"pace {what}")
+
+    def pacing(self) -> str:
+        """Vblanks and game ticks per second of real time since the last call."""
+        return self._send("pacing")
+
     def interp(self, what: str) -> str:
         """Frame interpolation's mode (off, census, probe, on) or its report since the last one."""
         return self._send(f"interp {what}")

@@ -270,6 +270,19 @@ VideoCore::GPU &Emulator::gpu() {
   return system_.GPU();
 }
 
+Pacing Emulator::takePacing() {
+  const auto now = std::chrono::steady_clock::now();
+  const Core::PerfStats::Results stats = system_.GetAndResetPerfStats();
+  Pacing pacing{
+      .seconds = std::chrono::duration<double>(now - pacedSince_).count(),
+      .vblanksPerSecond = stats.system_fps,
+      .ticksPerSecond = stats.game_fps,
+      .speed = stats.emulation_speed,
+  };
+  pacedSince_ = now;
+  return pacing;
+}
+
 std::span<const uint8_t> Emulator::physical(uint32_t address, uint32_t size) {
   const uint8_t *first = system_.Memory().GetPhysicalPointer(address);
   const uint8_t *last = system_.Memory().GetPhysicalPointer(address + size - 1);

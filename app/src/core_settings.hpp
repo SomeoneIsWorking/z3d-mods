@@ -10,5 +10,7 @@ namespace z3d::app {
 void applyCoreSettings(const AppConfig &config);
 // Before each game loads, and before a window for a direct launch takes its shape.
 void applyGameSettings(const GameSetup &game);
+// The core's frame limit: real time, or as fast as it runs (the tools' default).
+void setRealTimePacing(bool realTime);
 
 } // namespace z3d::app

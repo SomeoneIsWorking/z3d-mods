@@ -44,6 +44,10 @@ Settings::LayoutOption layoutOption(ScreenLayout layout) {
 
 } // namespace
 
+void setRealTimePacing(bool realTime) {
+  Settings::values.frame_limit = realTime ? kRealTime : 0.0;
+}
+
 void applyCoreSettings(const AppConfig &config) {
   FileUtil::SetUserPath(userPath(config.userDir));
   auto &values = Settings::values;

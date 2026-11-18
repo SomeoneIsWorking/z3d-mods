@@ -196,4 +196,13 @@ cuts.
   check: a custom texture's asynchronous decode (play loads them asynchronously; in a replay
   only an already decoded one is uploaded, otherwise the guest's image shows in that in-between).
   Harness states load only in the core revision that saved them; their recipe is in docs/app.md.
-  Next: a real-time ticks-per-vblank measurement in the app and one paced run.
+- Pacing (Design 5): measured in real time with `pace on` and `pacing` (docs/app.md), which read
+  the core's own counts: emulated vblanks, and the game's frame submissions, one a logic tick. A
+  Kokiri Forest walk with the camera turning, 10.03 s each, on this host at load 2.6 to 2.9:
+  interpolation on 59.83 vblanks and 29.914 ticks a second (0.500 a vblank, real time 1.000 of
+  emulated), off 59.83 and 29.914 (scratch/runs/paced-on, paced-off; two runs each, the same to
+  three decimals). A first run at load 3.5 ran on at 0.987 of real time and off at 1.000, so a
+  busier host costs the replays their margin. The harness presents to no display, so this is
+  the emulator's pacing, not a display's flips; a windowed run with the option (below) is the
+  one that shows flips.
+  Next: MM3D's frame loop and draw section (step 5), then the option (step 6).

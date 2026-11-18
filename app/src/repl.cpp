@@ -1,5 +1,6 @@
 #include "repl.hpp"
 
+#include "core_settings.hpp"
 #include "emulator.hpp"
 #include "frame_interpolation.hpp"
 #include "game_options.hpp"
@@ -13,6 +14,7 @@
 #include <charconv>
 #include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -248,6 +250,25 @@ std::string Repl::execute(const std::string &line) {
       reply << ' ' << hit.address << ':' << hit.size << ':' << hit.value << ':' << hit.pc << ':'
             << hit.lr;
     }
+    return reply.str();
+  }
+  if (command == "pace") {
+    std::string what;
+    args >> what;
+    if (what != "on" && what != "off") {
+      return "err pace on|off";
+    }
+    setRealTimePacing(what == "on");
+    return "ok";
+  }
+  if (command == "pacing") {
+    const Pacing pacing = emulator_.takePacing();
+    std::ostringstream reply;
+    reply << std::fixed << std::setprecision(3) << "ok seconds=" << pacing.seconds
+          << " vblanks_per_second=" << pacing.vblanksPerSecond
+          << " ticks_per_second=" << pacing.ticksPerSecond << " ticks_per_vblank="
+          << (pacing.vblanksPerSecond > 0.0 ? pacing.ticksPerSecond / pacing.vblanksPerSecond : 0.0)
+          << " speed=" << pacing.speed;
     return reply.str();
   }
   if (command == "interp") {

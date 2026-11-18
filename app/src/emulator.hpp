@@ -6,6 +6,7 @@
 #include "app_config.hpp"
 #include "frame.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -34,6 +35,15 @@ struct WriteHit {
   uint64_t value;
   uint32_t pc;
   uint32_t lr;
+};
+
+// The emulated vblanks and the game's frame submissions (its logic ticks) per second of real
+// time since the last measurement, and real time over emulated time.
+struct Pacing {
+  double seconds = 0.0;
+  double vblanksPerSecond = 0.0;
+  double ticksPerSecond = 0.0;
+  double speed = 0.0;
 };
 
 class Emulator {
@@ -83,6 +93,7 @@ public:
   // The core's draw-section replay owner (frame_interpolation.hpp).
   [[nodiscard]] Core::SectionReplay &sectionReplay();
   [[nodiscard]] VideoCore::GPU &gpu();
+  [[nodiscard]] Pacing takePacing();
   // Physical memory (FCRAM, VRAM) as the GPU path reads and writes it; empty where unbacked.
   [[nodiscard]] std::span<const uint8_t> physical(uint32_t address, uint32_t size);
 
@@ -99,6 +110,7 @@ private:
   // runs inside a replay window.
   [[nodiscard]] bool drainAsync();
 
+  std::chrono::steady_clock::time_point pacedSince_ = std::chrono::steady_clock::now();
   std::unique_ptr<Core::System> owned_;
   Core::System &system_;
   GameWindow &window_;

@@ -20,7 +20,9 @@ slot:<n>[,<s>] (item slot n, 0 to 10, pressed), slotdown:<n>, slotup:<n>, chord:
 record:<name> (every frame from here into <name>.mp4), stoprecord,
 option:<id>,<value> (a game option, docs/app.md "Options"),
 touch:<x>,<y>[,<s>] (the stylus on the 320x240 touch screen),
-patch:<on|off> and textures:<on|off> (the running game's mods, docs/app.md "Hotswap").
+patch:<on|off> and textures:<on|off> (the running game's mods, docs/app.md "Hotswap"),
+pace:<on|off> (frames in real time, or as fast as they run) and pacing (vblanks and ticks a
+second of real time since the last pacing).
 """
 
 from __future__ import annotations
@@ -270,7 +272,7 @@ def run(session: Session, steps: list[str], out: Path, layout: Layout) -> None:
             scene = struct.unpack("<h", session.read(_play(session, layout) + layout.scene, 2))[0]
             log(f"save context {arg} (scene {scene}, cutscene {_cutscene(session, layout)})")
         elif kind in ("savestate", "loadstate", "watch", "hits", "keydown", "keyup", "type", "stick", "cstick", "gyro", "mouse", "device", "slot", "slotdown", "slotup", "chord",
-                      "record", "stoprecord", "option", "touch", "patch", "textures", "interp"):
+                      "record", "stoprecord", "option", "touch", "patch", "textures", "interp", "pace", "pacing"):
             extra = getattr(session, kind, None)
             if extra is None:
                 raise RuntimeError(f"{kind} is not available on this backend")
