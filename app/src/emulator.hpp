@@ -83,6 +83,8 @@ public:
   // The core's draw-section replay owner (frame_interpolation.hpp).
   [[nodiscard]] Core::SectionReplay &sectionReplay();
   [[nodiscard]] VideoCore::GPU &gpu();
+  // Physical memory (FCRAM, VRAM) as the GPU path reads and writes it; empty where unbacked.
+  [[nodiscard]] std::span<const uint8_t> physical(uint32_t address, uint32_t size);
 
   [[nodiscard]] bool watchWrites(uint32_t address, uint32_t size);
   void clearWatches();

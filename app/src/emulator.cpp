@@ -270,6 +270,15 @@ VideoCore::GPU &Emulator::gpu() {
   return system_.GPU();
 }
 
+std::span<const uint8_t> Emulator::physical(uint32_t address, uint32_t size) {
+  const uint8_t *first = system_.Memory().GetPhysicalPointer(address);
+  const uint8_t *last = system_.Memory().GetPhysicalPointer(address + size - 1);
+  if (first == nullptr || last != first + size - 1) {
+    return {};
+  }
+  return {first, size};
+}
+
 bool Emulator::watchWrites(uint32_t address, uint32_t size) {
   return watches_->add(address, size);
 }

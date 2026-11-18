@@ -45,6 +45,7 @@ add_executable(z3d
   src/material_track.cpp
   src/skeleton_track.cpp
   src/frame_interpolation.cpp
+  src/replay_leak_check.cpp
   src/gx_cmdlist.cpp
   src/frame.cpp
   src/repl.cpp

@@ -58,7 +58,7 @@ bool observeAll(Core::SectionReplay &replay, const std::vector<uint32_t> &sites)
 } // namespace
 
 FrameInterpolation::FrameInterpolation(Emulator &emulator, const std::filesystem::path &manifest)
-    : emulator_(emulator) {
+    : emulator_(emulator), leaks_(emulator) {
   std::ifstream file(manifest);
   const std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   std::string error;
@@ -186,7 +186,7 @@ void FrameInterpolation::onSection(Section &section) {
   census(replay, section);
   if (mode_ == Mode::Probe) {
     probe(replay, section);
-  } else if (mode_ == Mode::On) {
+  } else if (mode_ == Mode::On || mode_ == Mode::LeakCheck) {
     interpolate(replay, section);
   }
 }
@@ -244,9 +244,18 @@ void FrameInterpolation::interpolate(Core::SectionReplay &replay, Section &secti
   totals_.effectsPaired += effects.paired;
   totals_.effectsUnpaired += effects.unpaired;
   VideoCore::GPU &gpu = emulator_.gpu();
+  const bool checking = mode_ == Mode::LeakCheck;
+  if (checking) {
+    leaks_.before();
+  }
   const Core::SectionReplay::Result result = replay.Replay(*inputs, [&] {
-    totals_.inBetweens += gpu.RunDetached(section.cmdlist.read().commands);
+    const VideoCore::GPU::DetachedRun run = gpu.RunDetached(section.cmdlist.read().commands);
+    totals_.inBetweens += run.in_betweens;
+    totals_.gpuSkipped += run.skipped;
   });
+  if (checking) {
+    leaks_.after();
+  }
   ++totals_.replays;
   totals_.replayMicroseconds += result.host_microseconds;
   if (!result.done) {
@@ -337,7 +346,7 @@ std::string FrameInterpolation::takeReport() {
          << " identical=" << totals_.identical << " different_pages=" << totals_.differentPages
          << " different_bytes=" << totals_.differentBytes << " gx_identical=" << totals_.gxIdentical
          << " list_bytes=" << totals_.listBytes << " cuts=" << totals_.cuts
-         << " in_betweens=" << totals_.inBetweens;
+         << " in_betweens=" << totals_.inBetweens << " gpu_skipped=" << totals_.gpuSkipped;
   report << " actors_paired=" << totals_.actorsPaired
          << " actors_unpaired=" << totals_.actorsUnpaired
          << " skeletons_paired=" << totals_.skeletonsPaired
@@ -356,6 +365,7 @@ std::string FrameInterpolation::takeReport() {
       report << std::hex << page + bytes.second << std::dec << ':' << bytes.first << ',';
     }
   }
+  report << ' ' << leaks_.takeReport();
   totals_ = {};
   return report.str();
 }

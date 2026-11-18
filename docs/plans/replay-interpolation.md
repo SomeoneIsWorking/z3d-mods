@@ -44,10 +44,19 @@ cuts.
    leave alone, and the core has no fault handler to host it.
 4. **The GPU.** `GPU::RunDetached` runs the replay's requests: its lists through the same PICA
    command processor with interrupts muted and the PICA state saved and put back around them,
-   and each display transfer to a screen's display buffer into that screen's in-between image
-   (`RasterizerCache::DisplayTransferInto`), not guest memory. The display buffers the game
-   swaps are not touched. The lists draw into the game's own render target surfaces, which the
-   real lists draw over next; a render target of the replay's own is not built.
+   fills and transfers through the rasterizer cache only (one it cannot run is skipped and
+   counted, never run in software), and each display transfer to a screen's display buffer into
+   that screen's in-between image (`RasterizerCache::DisplayTransferInto`), not guest memory.
+   `SectionReplay::Replay` runs inside the cache's overlay (`RasterizerCache::OpenOverlay` to
+   `CloseOverlay`, around the exchanges, the replay and its rollback): the first image write to a
+   surface that existed at the open (a draw's colour or depth target, a validation, a copy or
+   blit, a texture cube's faces) copies it into a new slot and swaps the copy into its place, so
+   the replay writes the copy; a kept surface the replay unregisters keeps its slot. Closing
+   retires every surface made meanwhile, swaps the originals back (the copies are sentenced, so
+   the GPU is done with them before they go), registers again what was unregistered, and puts back
+   each kept surface's metadata, the dirty regions and the texture cubes. GPU writes to guest
+   memory meanwhile (a flush's download) are saved in the store journal first
+   (`MemorySystem::JournalPhysicalStore`) and rolled back with the replay's stores.
 5. **Pacing.** Each tick's frame shows on two vblanks. The in-between made from tick k's section
    goes to the display buffer tick k will show in; the renderer shows it on the second vblank of
    tick k - 1's frame and drops it when tick k's frame shows (`RasterizerVulkan::TakeInBetween`),
@@ -91,9 +100,7 @@ cuts.
   moves 0, 10.5 (scratch/runs/interp-kf-4 `on/`, `off1/`, crops `on-crops-6-10.png` and
   `off-crops-6-10.png`). The logic rate is unchanged: `PlayState.state.frames` advances 120 in
   4 s off and 120 in 4 s on. Cost in Kokiri Forest: a replay is about 0.9M instructions and
-  about 2 ms of host time with the list run. Actors and skeletons still move at 30 Hz, and the
-  replay draws into the game's own render target surfaces (Design 4).
-  (2026-11-18)
+  about 2 ms of host time with the list run. (2026-11-18)
 - Step 4 (OoT3D), actors: built (`app/src/actor_track`). Each live actor in the 12 actor lists
   pairs by address and id across two ticks and its `world.pos` and `shape.rot`, which
   `Actor_Draw` builds the model matrix from (frame.md "Actors in the draw"), are blended; an
@@ -137,7 +144,7 @@ cuts.
 - What still moves at 30 Hz in Link's house and Kokiri Forest standing still: the fairies'
   twinkle (`alpha`, stepped by the draw by conditions on `timer`, not blended) and Navi's
   sparkles (not traced). Not built: actors' own material animations and the time of day's list,
-  the remaining declared cuts, the replay's own render target, MM3D and the option. (2026-11-18)
+  the remaining declared cuts, MM3D and the option. (2026-11-18)
 - Step 4, declared cuts. Shipwright declares two camera cuts: `Camera_Special9` when the door
   timer runs out and `animState` goes 1 to 2 (the eye jumps to the door's far side), and
   `Camera_SetCSParams`. Door cut: built. A door within a scene (the Fire Temple lobby's left door,
@@ -168,30 +175,24 @@ cuts.
   and is skipped while an LCD colour fill is on; which of the two holds there (tick 12's frame on
   one vblank after the load's lag, or the screen still filled) is not measured yet. Next: count
   per vblank whether the in-between is due, the shown buffer and the fill state across this load.
-- The replay's own render target: not built. What `GPU::RunDetached` does to the game's state
-  today, read from the fork (be7fbf188): its lists draw through `GetFramebufferSurfaces` into the
-  game's colour and depth surfaces and `InvalidateRegion` makes them the regions' dirty owners;
-  a MemoryFill or TextureCopy request goes to `Execute`, so a fill registers a fill surface that
-  owns the game's region after the replay, and a copy the cache cannot accelerate writes guest
-  memory; a RequestDma (id 0, 45 of them in the Fire Temple door run) copies guest memory the
-  replay may have changed, outside the store journal; a `FlushRegion` during the replay (from
-  `ValidateSurface`) can download the replay's pixels into guest memory, also outside the
-  journal; display transfers to anything but a screen's display buffer are dropped, so a frame
-  that transfers into a texture it reads later would read the real one. The design: an overlay
-  in `RasterizerCache` opened and closed by `RunDetached`. Opening it snapshots `dirty_regions`,
-  `texture_cube_cache` and each registered surface's `SurfaceBase` metadata; the first image write to a surface that existed before (a draw's colour or
-  depth target, a copy, blit, clear or upload into it, a texture cube built from it) moves the
-  original out of its slot into a stash and puts a copy in its place, after dropping the
-  framebuffers and cube faces that name it, so every lookup of that id reads and writes the copy
-  and the original is never drawn into. Closing it unregisters every surface made during
-  the replay (to `sentenced`, so the GPU is done with it before it goes), registers again through
-  `RegisterSurface` the originals the replay unregistered (a fill's slot is kept while the overlay
-  is open), which keeps `page_table`, `cached_pages` and the memory's cached marks right without a
-  snapshot, swaps the originals back (the copies kept per original for the next replay, or
-  sentenced, never destroyed while in flight), restores the snapshots and drops the framebuffers
-  that name a swapped id. `Surface` (Vulkan) is movable, so the swap is a move of slot contents. Inside it a flush
-  of an interval the overlay owns is skipped and counted, a fill or copy goes through the cache
-  only (no software fallback; refused instead), a DMA is refused, and a display transfer into a
-  non-screen surface runs into the overlay. Proof wanted: `interp leakcheck`, the game's render
-  target surfaces read back before and after a replay, byte equal, in Kokiri Forest and the Fire
-  Temple door run.
+- The replay's effect on the game's GPU state: fixed (fork 230d77c83). `interp leakcheck`
+  (docs/app.md) compares the rasterizer cache's state, surface contents read back, and FCRAM and
+  VRAM before and after each replay. Before the overlay, every replay of a Kokiri Forest walk
+  leaked (119 of 119, scratch/runs/leak-kf-2): the top and bottom screens' colour targets changed
+  contents, textures sharing a page with the section's stores were invalidated or unregistered by
+  the journal's page-wide invalidations, and surfaces the replay made stayed registered. The
+  RequestDma copies (45 in the Fire Temple door run) were journalled already (`CopyBlock` writes
+  through `WriteBlock`); their cache invalidations were the leak. With the overlay: a Kokiri
+  Forest walk with the camera turning, 179 replays, 0 leaking (scratch/runs/leakcheck-kf); the
+  Fire Temple door run, 196 replays (2 refused, 2 cuts), 0 leaking (scratch/runs/leakcheck-door).
+  The presents of both runs with `interp on` are byte for byte those of the build before
+  (overlay-kf-new against overlay-kf-head, 180 of 180; overlay-door-new against
+  overlay-door-head, 246 of 246), the t = 1 probe still gives 180 of 180 identical lists, and its
+  memory differences are the build before's (identical=10, different_pages=286). The overlay
+  costs about 0.55 ms of host time a replay in Kokiri Forest (2.61 against 2.06 ms, one run each,
+  not a perf-units measurement). Depth surfaces are compared by the 4 bytes a pixel their download
+  writes (`DepthToBuffer` packs D24S8), not the 5 the staging buffer holds. Not covered by the
+  check: a custom texture's asynchronous decode (play loads them asynchronously; in a replay
+  only an already decoded one is uploaded, otherwise the guest's image shows in that in-between).
+  Harness states load only in the core revision that saved them; their recipe is in docs/app.md.
+  Next: the first step out of black (above).

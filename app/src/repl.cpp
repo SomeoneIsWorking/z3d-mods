@@ -260,10 +260,11 @@ std::string Repl::execute(const std::string &line) {
         {"off", FrameInterpolation::Mode::Off},
         {"census", FrameInterpolation::Mode::Census},
         {"probe", FrameInterpolation::Mode::Probe},
-        {"on", FrameInterpolation::Mode::On}};
+        {"on", FrameInterpolation::Mode::On},
+        {"leakcheck", FrameInterpolation::Mode::LeakCheck}};
     const auto mode = modes.find(what);
     if (mode == modes.end()) {
-      return "err interp off|census|probe|on|report";
+      return "err interp off|census|probe|on|leakcheck|report";
     }
     return interpolation_.setMode(mode->second) ? "ok" : "err the game has no draw section to hook";
   }

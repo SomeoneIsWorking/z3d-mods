@@ -32,7 +32,7 @@ only. It links the core's shared library, so it is GPL-2.0-or-later as linked. T
 | `savestate <file>` / `loadstate <file>` | the core's own states |
 | `shot <file>` | the last frame of the last `run` as PNG, in the set's layout at the render scale |
 | `watch <va> <size>` / `hits` / `unwatch` | guest CPU writes to a range, `address:size:value:pc:lr` |
-| `interp off\|census\|probe\|on\|report` | frame interpolation (docs/plans/replay-interpolation.md): census reports the draw section's pages, SVCs, GX requests and host time each tick; probe also replays it at t = 1 and compares its memory and its command list's requests and PICA lists with the real run's; on replays it at t = 0.5 with the camera blended and shows the in-between on the vblank before the tick's frame |
+| `interp off\|census\|probe\|on\|leakcheck\|report` | frame interpolation (docs/plans/replay-interpolation.md): census reports the draw section's pages, SVCs, GX requests and host time each tick; probe also replays it at t = 1 and compares its memory and its command list's requests and PICA lists with the real run's; on replays it at t = 0.5 with the tracks blended and shows the in-between on the vblank before the tick's frame; leakcheck is on with the rasterizer cache's state (surfaces with their contents read back, dirty regions, cached pages, texture cubes) and FCRAM and VRAM compared before and after each replay, reported as `leak_checked`, `leaking` and the leaks by kind (`src/replay_leak_check`) |
 | `touch <x> <y>` / `touch off` | the stylus held at a pixel of the 320x240 touch screen, wherever the layout draws it, or lifted |
 | `option <id> <value>` | sets a game option and writes the patch's block (Options below) |
 | `patch on` / `patch off` / `textures on` / `textures off` | swaps the running game's mods (Hotswap below) |
@@ -446,7 +446,11 @@ objects. Rebuild the app: `ninja -C build/app`.
   of the player's `nand`, `sdmc` and `sysdata` and a link to the installed `load/` (mods, textures).
   The harness makes a fresh one per run under `scratch/harness/<name>/`, so the player's data is
   only read and a file made in one run is gone in the next; states live in
-  `scratch/harness/states/<name>/`. `z3dmods play` seeds `~/.local/share/z3d-mods/` once and keeps
+  `scratch/harness/states/<name>/`. The core loads only states its own revision saved, so a move of
+  the core's pin needs them made again; OoT3D's interpolation states from file 1 of the player's
+  copy: `wait:15 start wait:3 a wait:3 a wait:8 warp:0xEE wait:5 savestate:kf warp:0x165 wait:5
+  savestate:fire warp:0xAD wait:5 savestate:alley loadstate:kf warp:0xDB wait:2 savestate:kak`.
+  `z3dmods play` seeds `~/.local/share/z3d-mods/` once and keeps
   it: the app's saves are its own, apart from standalone Azahar's. The core's log is
   `<user>/Azahar/log/z3d_core.log`.
 - Applets: the core's default ones (the software keyboard enters the console's user name).

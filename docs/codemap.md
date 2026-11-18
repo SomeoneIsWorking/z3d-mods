@@ -95,6 +95,7 @@
   - `material_track`: the material animations' track (texture scroll): each animation the draw steps started part of its step on, paired by address, animation and step.
   - `motion_blend`: the tracks' blends (floats, vectors, binary angles the short way, rigid 3x4 matrices); `section_memory`: typed reads of the section's start state and replay inputs.
   - `camera_track`: the camera's motion track for an in-between: `View_LookAt`'s eye, at, up and fovy blended unshaken between two ticks, with the newer tick's quake, and the cuts.
+  - `replay_leak_check`: `interp leakcheck`: the rasterizer cache's state and physical memory captured before and after a replay and compared.
   - `gx_cmdlist`: the bound nn::gx command list's requests and PICA lists, the draw section's output, read and compared.
   - `mouse_aim`: the mouse as the 3DS's gyroscope while the game's first-person look follows it (`patch/<game>/aim.toml`), and as the camera's turn through the link block in the rest of play.
   - `emulator`: game load, frame stepping, guest memory, savestates, screenshots and write watches.

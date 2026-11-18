@@ -12,6 +12,7 @@
 #include "material_track.hpp"
 #include "skeleton_track.hpp"
 #include "gx_cmdlist.hpp"
+#include "replay_leak_check.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -27,8 +28,9 @@ class FrameInterpolation {
 public:
   // Census: the real section's SVCs, GX commands and pages each tick. Probe: also a replay with
   // nothing blended, its stores and GX commands compared byte for byte with the real section's.
-  // On: an in-between each tick.
-  enum class Mode : uint8_t { Off, Census, Probe, On };
+  // On: an in-between each tick. LeakCheck: On, with the game's GPU state and physical memory
+  // compared before and after each replay (replay_leak_check.hpp).
+  enum class Mode : uint8_t { Off, Census, Probe, On, LeakCheck };
 
   // `manifest` is the game's z3d-options.json; without "interpolation" nothing is hooked.
   FrameInterpolation(Emulator &emulator, const std::filesystem::path &manifest);
@@ -69,6 +71,7 @@ private:
   // The real section's output this tick.
   GxOutput real_;
   Mode mode_ = Mode::Off;
+  ReplayLeakCheck leaks_;
 
   struct Totals {
     uint64_t sections = 0;
@@ -102,6 +105,8 @@ private:
     std::string firstGxDifference;
     uint64_t cuts = 0;
     uint64_t inBetweens = 0;
+    // Fills and transfers of in-betweens the rasterizer cache could not run.
+    uint64_t gpuSkipped = 0;
     uint64_t actorsPaired = 0;
     uint64_t actorsUnpaired = 0;
     uint64_t skeletonsPaired = 0;
