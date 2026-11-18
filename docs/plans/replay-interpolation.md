@@ -166,15 +166,16 @@ cuts.
   before the change from the village to the graveyard gate repeats the last tick (0 changed
   pixels) and the next shows the new shot whole (scratch/runs/shot-cut-2 `shot-386-393.png`);
   the cutscene's start and end are cut by the active camera changing (`shot-546-553.png`).
-- The first step out of black after a scene load: not a cut. Warping into Link's house, the old
-  scene's last section is frame 215 and the new scene's first closed section is frame 12 (frames
-  1 to 11 close no section while the scene loads), so (215, 12) is cut by the restart and (12, 13)
-  is blended: no refusal, the fade paired. Yet the present before tick 13's frame is black
-  (mean luminance 0.0, then 5.0, 7.7, 10.4, scratch/runs/fade-5): the in-between is made but never
-  shown. `RasterizerVulkan::TakeInBetween` shows it only on a later vblank of tick 12's frame,
-  and is skipped while an LCD colour fill is on; which of the two holds there (tick 12's frame on
-  one vblank after the load's lag, or the screen still filled) is not measured yet. Next: count
-  per vblank whether the in-between is due, the shown buffer and the fill state across this load.
+- The first step out of black after a scene load: a declared cut, not a presenter defect.
+  Warping from Kokiri Forest into Link's house (`warp:0xBB`), logged per vblank: no LCD colour
+  fill is on at any vblank; the new scene's first closed section (frame 12) is cut by the play
+  state's restart, and tick 12's frame shows on the vblank after the loading screen's last black
+  one. The in-between of (12, 13) is made in tick 13's section and shown on the second vblank of
+  tick 12's frame. Presents with interpolation on run 0.0, 5.0, 7.7, 10.4, 12.8; off, 0.0, 5.0,
+  5.0, 10.4, 10.4 (scratch/runs/black-1 `fade-113-117.png`, black-off): tick 12 shows at the same
+  present in both, so the earlier reading (fade-5) that the present before tick 13 was black was
+  one present off. The black present is the old scene's last frame, which no in-between may blend
+  across.
 - The replay's effect on the game's GPU state: fixed (fork 230d77c83). `interp leakcheck`
   (docs/app.md) compares the rasterizer cache's state, surface contents read back, and FCRAM and
   VRAM before and after each replay. Before the overlay, every replay of a Kokiri Forest walk
@@ -195,4 +196,4 @@ cuts.
   check: a custom texture's asynchronous decode (play loads them asynchronously; in a replay
   only an already decoded one is uploaded, otherwise the guest's image shows in that in-between).
   Harness states load only in the core revision that saved them; their recipe is in docs/app.md.
-  Next: the first step out of black (above).
+  Next: a real-time ticks-per-vblank measurement in the app and one paced run.
