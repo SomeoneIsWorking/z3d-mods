@@ -3,11 +3,12 @@ folder package.py describes, and the zip of it a release carries.
 
     Contents/MacOS/z3d          the launcher: Resources/python/bin/python3 -I -m z3dmods.packed play
     Contents/Resources/bin/z3d  the app, built on this Mac against Homebrew's libraries
-    Contents/Resources/lib/     the core, MoltenVK and every Homebrew library the app and the core
-                                link, each named @rpath/<file> so the bundle needs no Homebrew
+    Contents/Resources/lib/     the core, the Vulkan loader, MoltenVK and every Homebrew library they
+                                and the app link, each named @rpath/<file> so the bundle needs no Homebrew
+    Contents/Resources/vulkan/  MoltenVK's driver file, which the launcher hands the loader
 
-The core opens Vulkan by name: with no loader installed it opens lib/libMoltenVK.dylib, which
-config.app_env puts on the library fallback path. Everything is signed ad hoc.
+The core and SDL open Vulkan as libvulkan.dylib, which dyld finds in lib/ on the library fallback
+path config.app_env sets. Everything is signed ad hoc.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from z3dmods import app, package, shortcut
+from z3dmods import app, package, shortcut, sources
 from z3dmods.config import Config
 
 ZIP = "z3d-macos-arm64.zip"
@@ -26,19 +27,57 @@ HOMEBREW = "/opt/homebrew"
 LAUNCHER = """#!/bin/sh
 # z3d: opens the title picker, which asks for your folders on its first run.
 here=$(cd "$(dirname "$0")/../Resources" && pwd)
+# The bundled Vulkan loader finds the bundled MoltenVK through this driver file.
+export VK_DRIVER_FILES="$here/vulkan/icd.d/MoltenVK_icd.json"
 exec "$here/python/bin/python3" -I -m z3dmods.packed play "$@"
 """
+# MoltenVK's driver file for the loader, relative to Resources/vulkan/icd.d.
+DRIVER = """{
+    "file_format_version": "1.0.0",
+    "ICD": {
+        "library_path": "../../lib/libMoltenVK.dylib",
+        "api_version": "1.4.0",
+        "is_portability_driver": true
+    }
+}
+"""
+
+
+def _flags(cfg: Config) -> list[str]:
+    """Keeps this Mac's folders out of the package, as the Linux container build does: a source
+    file is named from its checkout, and the app has no run path of its own (the bundle adds
+    @executable_path/../lib)."""
+    home = Path.home()
+    named = {app.azahar_source(cfg): "azahar", cfg.repo: "z3d", cfg.dependencies / "azahar-core": "azahar-core",
+             **{home / checkout: name for name, checkout in sources.HOME_CHECKOUTS.items()}, home: "builder"}
+    maps = " ".join(f"-ffile-prefix-map={folder}={name}" for folder, name in named.items())
+    return [f"-DCMAKE_C_FLAGS={maps}", f"-DCMAKE_CXX_FLAGS={maps}", "-DCMAKE_SKIP_RPATH=ON"]
+
+
+# The package's own core and app, built with _flags apart from the development build (app.HOST).
+BUILDER = app.Builder(f"{app.TOOLCHAIN}-package", lambda cfg: cfg.repo / "build" / "package-app",
+                      lambda _cfg, command: subprocess.run(command, check=True), _flags)
 
 
 def _run(*command: str) -> str:
     return subprocess.run(command, check=True, capture_output=True, text=True).stdout
 
 
-def _linked(path: Path) -> list[str]:
-    """The Homebrew libraries the Mach-O file `path` names, as it names them."""
+def _linked(path: Path, origin: Path | None = None) -> list[tuple[str, Path]]:
+    """The Homebrew libraries the Mach-O file `path` names, as it names them and where each is.
+    A Homebrew library may name a sibling @rpath/<file> or @loader_path/<file> (libjxl names
+    libjxl_cms so); that is the file beside `origin`, the Homebrew file `path` was copied from."""
     lines = _run("otool", "-L", str(path)).splitlines()[1:]
-    names = (line.strip().split(" (")[0] for line in lines)
-    return [name for name in names if name.startswith(HOMEBREW)]
+    names = [line.strip().split(" (")[0] for line in lines]
+    found = []
+    for name in names:
+        if name.startswith(HOMEBREW):
+            found.append((name, Path(name)))
+        elif origin is not None and name.startswith(("@rpath/", "@loader_path/")):
+            beside = origin.parent / name.split("/", 1)[1]
+            if beside.exists() and beside.resolve() != origin.resolve():
+                found.append((name, beside))
+    return found
 
 
 def _keg(library: str) -> Path | None:
@@ -53,31 +92,45 @@ def _bundle_libraries(binary: Path, core: Path, out: Path, licenses: Path) -> No
     formula's licence files into `licenses`/homebrew/<formula>."""
     out.mkdir()
     moltenvk = Path(HOMEBREW) / "opt" / "molten-vk" / "lib" / "libMoltenVK.dylib"
-    seeds = [core, moltenvk]
+    # The loader, not MoltenVK alone: the picker and the core ask for VK_KHR_portability_enumeration,
+    # which only the loader has. The core and SDL open it as libvulkan.dylib.
+    loader = Path(HOMEBREW) / "opt" / "vulkan-loader" / "lib" / "libvulkan.1.dylib"
+    seeds = [core, moltenvk, loader]
     # Each library as the files that link it name it, and its copy in `out`.
     copied: dict[str, Path] = {}
+    # Each copy in `out` and the file it was copied from.
+    origins: dict[Path, Path | None] = {binary: None}
     for seed in seeds:
-        copied[str(seed)] = out / seed.name
+        copied[str(seed.resolve())] = out / seed.name
         shutil.copyfile(seed.resolve(), out / seed.name)
-    kegs = {_keg(str(moltenvk))}
+        origins[out / seed.name] = seed.resolve()
+    kegs = {_keg(str(moltenvk)), _keg(str(loader))}
     pending = [binary, *copied.values()]
     while pending:
-        for name in _linked(pending.pop()):
-            if name not in copied:
-                copied[name] = out / Path(name).name
-                shutil.copyfile(Path(name).resolve(), copied[name])
-                pending.append(copied[name])
-                kegs.add(_keg(name))
+        path = pending.pop()
+        for name, source in _linked(path, origins[path]):
+            key = str(source.resolve())
+            if key not in copied:
+                copied[key] = out / source.name
+                shutil.copyfile(source.resolve(), copied[key])
+                origins[copied[key]] = source.resolve()
+                pending.append(copied[key])
+                kegs.add(_keg(str(source)))
     for path in [binary, *copied.values()]:
         path.chmod(0o755)
         if path != binary:
             _run("install_name_tool", "-id", f"@rpath/{path.name}", str(path))
-        for name in _linked(path):
-            _run("install_name_tool", "-change", name, f"@rpath/{Path(name).name}", str(path))
+        for name, source in _linked(path, origins[path]):
+            if name != f"@rpath/{source.name}":
+                _run("install_name_tool", "-change", name, f"@rpath/{source.name}", str(path))
     for name in _run("otool", "-L", str(binary)).splitlines()[1:]:
         old = name.strip().split(" (")[0]
         if old.endswith(core.name) and not old.startswith("@rpath"):
             _run("install_name_tool", "-change", old, f"@rpath/{core.name}", str(binary))
+    (out / "libvulkan.dylib").symlink_to(loader.name)
+    drivers = out.parent / "vulkan" / "icd.d"
+    drivers.mkdir(parents=True)
+    (drivers / "MoltenVK_icd.json").write_text(DRIVER)
     _run("install_name_tool", "-add_rpath", "@executable_path/../lib", str(binary))
     for path in copied.values():
         _run("install_name_tool", "-add_rpath", "@loader_path", str(path))
@@ -111,10 +164,15 @@ def build(cfg: Config, bundle: Path) -> Path:
     resources = shortcut.mac_bundle(bundle, cfg.repo / "app" / "icon" / "z3d.svg", LAUNCHER)
     (resources / "bin").mkdir()
     binary = resources / "bin" / "z3d"
-    shutil.copy2(app.current_binary(cfg, app.HOST), binary)
-    core = next(app.core_prefix(cfg, app.HOST).glob("lib*/libazahar_core*.dylib"))
+    shutil.copy2(app.current_binary(cfg, BUILDER), binary)
+    core = next(app.core_prefix(cfg, BUILDER).glob("lib*/libazahar_core*.dylib"))
     _bundle_libraries(binary, core, resources / "lib", resources / "licenses")
     interpreter = package.contents(cfg, resources)
+    # uv names libpython by the folder it unpacked it into, here inside this bundle; the
+    # interpreter does not link it, and an extension that does finds it through @rpath.
+    for library in (resources / "python" / "lib").glob("libpython*.dylib"):
+        if not library.is_symlink():
+            _run("install_name_tool", "-id", f"@rpath/{library.name}", str(library))
     package.finish(cfg, resources, interpreter)
     _sign(bundle)
     archive = bundle.with_name(ZIP)
