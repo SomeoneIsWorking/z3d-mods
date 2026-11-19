@@ -22,9 +22,11 @@ is read-only, so it always uses the data folder.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from z3dmods import (
@@ -48,7 +50,9 @@ PYTHON = "3.12.16"
 # What a relocatable CPython carries that the tools never import.
 PYTHON_UNUSED = ("include", "share", "lib/tcl*", "lib/tk*", "lib/itcl*", "lib/thread*", "lib/libtcl*", "lib/libtk*",
                  "lib/python*/test", "lib/python*/tkinter", "lib/python*/idlelib", "lib/python*/ensurepip",
-                 "lib/python*/turtledemo", "lib/python*/lib2to3", "lib/python*/config-*", "lib/pkgconfig")
+                 "lib/python*/turtledemo", "lib/python*/lib2to3", "lib/python*/config-*", "lib/pkgconfig",
+                 # Windows' layout.
+                 "tcl", "Lib/test", "Lib/tkinter", "Lib/idlelib", "Lib/ensurepip", "Lib/turtledemo", "Lib/lib2to3")
 # The libraries the app takes from the desktop: the C and C++ runtimes, which a package cannot
 # stand in for. Every other one it links comes along (the font, text and image libraries with
 # what they need). Vulkan is not linked: the core opens the desktop's loader.
@@ -110,11 +114,12 @@ def _python(out: Path) -> Path:
     for pattern in PYTHON_UNUSED:
         for path in (out / "python").glob(pattern):
             shutil.rmtree(path) if path.is_dir() else path.unlink()
-    interpreter = out / "python" / "bin" / "python3"
+    windows = sys.platform == "win32"
+    interpreter = out / "python" / ("python.exe" if windows else "bin/python3")
     requirements = out / "requirements.txt"
     _run("uv", "export", "--frozen", "--no-dev", "--no-emit-project", "--directory", str(config.REPO),
          "--format", "requirements-txt", "-o", str(requirements))
-    site = next((out / "python" / "lib").glob("python*/site-packages"))
+    site = out / "python" / "Lib" / "site-packages" if windows else next((out / "python" / "lib").glob("python*/site-packages"))
     _run("uv", "pip", "install", "--python", str(interpreter), "--target", str(site), "--require-hashes",
          "-r", str(requirements))
     requirements.unlink()
@@ -122,7 +127,7 @@ def _python(out: Path) -> Path:
     for cache in list((out / "python").rglob("__pycache__")):
         shutil.rmtree(cache)
     # The tools stay beside the sets they read (config.REPO is two folders above them).
-    (site / "z3d.pth").write_text("../../../../tools\n")
+    (site / "z3d.pth").write_text(Path(os.path.relpath(out / "tools", site)).as_posix() + "\n")
     for built in (out / "python" / "lib").glob("python*/_sysconfigdata_*.py"):
         built.write_text(built.read_text().replace(str(installed), PYTHON_PREFIX))
     return interpreter
@@ -170,7 +175,8 @@ def _licenses(cfg: Config, out: Path, python: Path) -> None:
             kept.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(file, kept)
     (out / "python").mkdir()
-    shutil.copyfile(next((python / "lib").glob("python*/LICENSE.txt")), out / "python" / "LICENSE.txt")
+    shutil.copyfile(next(python.glob("LICENSE.txt"), None) or next((python / "lib").glob("python*/LICENSE.txt")),
+                    out / "python" / "LICENSE.txt")
     (out / "README.txt").write_text(LICENSES.format(runtime=sources.RUNTIME_RELEASE))
 
 
@@ -270,7 +276,7 @@ def contents(cfg: Config, out: Path) -> Path:
     built_from = "\n".join(f"  {source.url} at {sources.built_from(source.folder(cfg))}" for source in sources.SOURCES)
     (out / "SOURCE.txt").write_text(SOURCE.format(revision=sources.built_from(cfg.repo), sources=built_from))
     interpreter = _python(out)
-    _licenses(cfg, out / "licenses", interpreter.parent.parent)
+    _licenses(cfg, out / "licenses", out / "python")
     return interpreter
 
 

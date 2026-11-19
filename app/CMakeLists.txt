@@ -59,3 +59,10 @@ add_executable(z3d
 target_sources(z3d PRIVATE $<IF:$<BOOL:${WIN32}>,src/term_signal_windows.cpp,src/term_signal_posix.cpp>)
 target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf SDL3_image::SDL3_image setup_ui::setup_ui)
 target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)
+if(WIN32)
+  # The game's window with no console; SDL_main.h gives it WinMain.
+  set_target_properties(z3d PROPERTIES WIN32_EXECUTABLE ON)
+  add_executable(z3d_launcher WIN32 launcher/windows_launcher.cpp)
+  target_compile_options(z3d_launcher PRIVATE -Wall -Wextra -Werror -municode)
+  target_link_options(z3d_launcher PRIVATE -municode)
+endif()

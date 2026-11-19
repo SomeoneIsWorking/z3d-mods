@@ -24,6 +24,7 @@
 #include "test_pad.hpp"
 #include "title_picker.hpp"
 
+#include <SDL3/SDL_main.h>
 #include <lucent/log.h>
 
 #include <exception>

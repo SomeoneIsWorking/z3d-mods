@@ -1,5 +1,5 @@
 # The Windows build (docs/plans/all-platforms.md, slice 2): the core and the app with MSYS2's
-# clang64 toolchain, from public sources only. Started by hand; it keeps the app as a run artifact.
+# clang64 toolchain, from public sources only. Started by hand; it keeps the package's zip as a run artifact.
 name: windows
 
 on:
@@ -33,18 +33,18 @@ jobs:
           path-type: inherit
           install: git
           pacboy: >-
-            toolchain:p cmake:p ninja:p spirv-tools:p sdl3:p sdl3-image:p sdl3-ttf:p
+            toolchain:p cmake:p ninja:p spirv-tools:p sdl3:p sdl3-image:p sdl3-ttf:p imagemagick:p librsvg:p
       - name: Sources
         run: |
           # The tools and the app's CMake both find the shared checkouts under the Windows home.
           export HOME=$(cygpath -m "$USERPROFILE")
           uv run --frozen z3dmods sources
-      - name: App
+      - name: Package
         run: |
           export HOME=$(cygpath -m "$USERPROFILE")
-          uv run --frozen z3dmods build-app
+          uv run --frozen z3dmods package
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: z3d-windows-x86_64
-          path: build/app/z3d.exe
+          path: build/package/z3d-windows-x86_64.zip
           if-no-files-found: error
