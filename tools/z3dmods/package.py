@@ -65,7 +65,7 @@ exec "$here/python/bin/python3" -I -m z3dmods.packed play "$@"
 SOURCE = """z3d links Azahar's core (GPL-2.0-or-later), so this build as a whole is under the GPL
 (licenses/azahar/license.txt). Our own files are MIT (LICENSE). Its source, each at the commit
 this build was made from:
-  https://github.com/SomeoneIsWorking/z3d-mods at {revision}
+  https://github.com/SomeoneIsWorking/zelda3d-revamped at {revision}
 {sources}
 azahar is the core, with its submodules; lucent, setup-ui and RmlUi are built into bin/z3d;
 port-assets is assets/ and what prebuilt/glyphs/ is drawn from.

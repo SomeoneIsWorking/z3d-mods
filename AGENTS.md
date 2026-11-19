@@ -1,4 +1,4 @@
-# z3d-mods
+# zelda3d-revamped (Zelda 3D: Revamped)
 
 Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000125500) on Azahar
 2126.2, as openSU launches it. Azahar data: `~/.local/share/azahar-emu` (mods under
