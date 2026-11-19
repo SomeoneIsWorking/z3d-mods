@@ -5,8 +5,7 @@ Azahar's core. It runs both games from your own dumps at 60 fps over their origi
 on one screen, with a press-Start cutscene skip, stepped 3D stairs and PC controls. A title picker
 shows both games running side by side; pick one and it plays on without a reload.
 
-Linux is released today; macOS builds and plays from a checkout. Windows and Android are not
-released yet.
+Linux and macOS (Apple silicon) are released; Windows is in progress; Android is not built yet.
 
 ## Showcase
 
@@ -47,8 +46,9 @@ Captured from the app with each game's 4K texture pack.
 ## Download
 
 [The latest release](https://github.com/SomeoneIsWorking/zelda3d-revamped/releases/latest) has
-z3d for Linux as one file, `z3d-x86_64.AppImage`: the app, our patches and the setup that builds
-each game from your own dumps and your own downloads of the third-party mods. No game data and no
+z3d for Linux as one file, `z3d-x86_64.AppImage`, and for macOS on Apple silicon as
+`z3d-macos-arm64.zip` (`z3d.app`): the app, our patches and the setup that builds each game from
+your own dumps and your own downloads of the third-party mods. No game data and no
 third-party mod is in it; the release notes say what to bring and where to get it.
 
 Built with AI assistance (Claude and other LLMs).
