@@ -42,7 +42,7 @@ def azahar_source(cfg: Config) -> Path:
         raise RuntimeError('set "azahar_source" in env-assets/local.json to the SomeoneIsWorking/azahar checkout')
     head = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", "HEAD"],
                           capture_output=True, text=True, check=True).stdout.strip()
-    pinned = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", f"{AZAHAR_REVISION}^{{commit}}"],
+    pinned = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", f"{AZAHAR_REVISION}^0"],
                             capture_output=True, text=True, check=True).stdout.strip()
     if head != pinned:
         raise RuntimeError(f"{cfg.azahar_source} is at {head[:12]}, the app pins {AZAHAR_REVISION}")

@@ -15,13 +15,14 @@ controller (hotswap)". The rules are the `release` and `android` skills.
   cannot carry, so the install needs a native path there.
 
 ## Slices
-1. macOS `.app`: the package's folder layout for macOS (`z3dmods package` on a Mac): the app, the
-   core and MoltenVK inside `Contents/`, the tools and their Python runtime in `Contents/Resources`,
-   ad-hoc signed, zipped. Built on the Mac by the heavy queue's worker, which runs a checked-in
-   `tools/` script (psxport `tools/heavy.py`, the Mac cannot be reached from here).
-2. Windows `.exe`: the app and the tools building on Windows (POSIX calls behind their owners:
-   `tool_process`, paths, the user folder), then the package as a folder with `z3d.exe` in a zip,
-   built by the release workflow on a hosted Windows runner (started by hand or by the tag).
+1. macOS `.app`: written, not yet run (`tools/z3dmods/package_mac.py`, `z3dmods package` on a
+   Mac): the package folder in `Contents/Resources`, Homebrew's libraries, the core and MoltenVK
+   in its `lib/` named `@rpath/<file>`, ad-hoc signed, `z3d-macos-arm64.zip`. The heavy queue's
+   Mac worker takes only `repo/psx` jobs, so the Mac session builds it.
+2. Windows `.exe`: written, building on the hand-started `windows` workflow (MSYS2 clang64):
+   `tools/z3dmods/package_windows.py` makes `z3d/` with the launcher `z3d.exe`
+   (`app/launcher/windows_launcher.cpp`), `bin/z3d.exe` with clang64's DLLs, the bundled Python,
+   `z3d-windows-x86_64.zip`. The app ends on the console's events (`term_signal_windows.cpp`).
 3. Android `.apk`: an SDL3 Android activity around the same app, the core's Android build, Vulkan;
    the setup run natively (the install's rules in C++ only where Python cannot go, one owner each),
    and the touch layer: the 3DS buttons and sticks drawn over the game, multi-touch, hidden while a
