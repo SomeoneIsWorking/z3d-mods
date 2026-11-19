@@ -3,6 +3,8 @@
 #include "game_window.hpp"
 #include "prompt_art.hpp"
 
+#include <lucent/text.h>
+
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -119,7 +121,7 @@ MenuCanvas::MenuCanvas(GameWindow &window, const std::filesystem::path &font, st
     throw sdlError("TTF_Init");
   }
   engine_ = TTF_CreateRendererTextEngine(renderer_);
-  font_ = TTF_OpenFont(font.c_str(), 1.0F);
+  font_ = TTF_OpenFont(lucent::text::utf8(font).c_str(), 1.0F);
   if (engine_ == nullptr || font_ == nullptr) {
     throw sdlError("TTF_OpenFont");
   }

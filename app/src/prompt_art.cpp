@@ -1,5 +1,7 @@
 #include "prompt_art.hpp"
 
+#include <lucent/text.h>
+
 #include <SDL3/SDL_iostream.h>
 #include <SDL3_image/SDL_image.h>
 
@@ -13,7 +15,8 @@ std::filesystem::path setArtFile(const std::filesystem::path &assets, std::strin
 
 SDL_Surface *loadSetArt(const std::filesystem::path &assets, std::string_view set, std::string_view name, int width,
                         int height) {
-  SDL_IOStream *stream = SDL_IOFromFile(setArtFile(assets, set, name).c_str(), "rb");
+  SDL_IOStream *stream =
+      SDL_IOFromFile(lucent::text::utf8(setArtFile(assets, set, name)).c_str(), "rb");
   if (stream == nullptr) {
     return nullptr;
   }

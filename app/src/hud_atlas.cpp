@@ -6,6 +6,7 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <lucent/log.h>
+#include <lucent/text.h>
 
 #include <algorithm>
 #include <array>
@@ -80,7 +81,7 @@ HudAtlas::HudAtlas(std::filesystem::path assets) : assets_(std::move(assets)) {
   if (!TTF_Init()) {
     throw std::runtime_error(std::string("SDL_ttf: ") + SDL_GetError());
   }
-  font_ = TTF_OpenFont((assets_ / kFont).c_str(), 1.0F);
+  font_ = TTF_OpenFont(lucent::text::utf8(assets_ / kFont).c_str(), 1.0F);
   if (font_ == nullptr) {
     TTF_Quit();
     throw std::runtime_error((assets_ / kFont).string() + ": " + SDL_GetError());
@@ -278,7 +279,7 @@ HudSprite HudAtlas::image(const std::filesystem::path &file, int width, int heig
   if (const auto found = sprites_.find(key); found != sprites_.end()) {
     return found->second;
   }
-  SDL_Surface *loaded = IMG_Load(file.c_str());
+  SDL_Surface *loaded = IMG_Load(lucent::text::utf8(file).c_str());
   if (loaded != nullptr && width <= 0 && loaded->h > 0) {
     width = std::max(
         1, static_cast<int>(std::lround(static_cast<float>(loaded->w) * static_cast<float>(height) /
@@ -301,7 +302,7 @@ void HudAtlas::requireSvg(const std::string &set, const std::string &name) const
 }
 
 void HudAtlas::requireImage(const std::filesystem::path &file) {
-  SDL_Surface *surface = IMG_Load(file.c_str());
+  SDL_Surface *surface = IMG_Load(lucent::text::utf8(file).c_str());
   if (surface == nullptr) {
     throw std::runtime_error("HUD art is missing or unreadable: " + file.string() + " (" +
                              SDL_GetError() + "); install the game's set again");

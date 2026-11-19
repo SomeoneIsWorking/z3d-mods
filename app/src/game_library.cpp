@@ -5,6 +5,7 @@
 #include "core/loader/smdh.h"
 
 #include <lucent/json.h>
+#include <lucent/text.h>
 
 #include <cstring>
 #include <fstream>
@@ -35,7 +36,7 @@ uint32_t rgba(uint16_t rgb565) {
 }
 
 void readSmdh(Game &game) {
-  const std::string rom = game.setup.rom.string();
+  const std::string rom = lucent::text::utf8(game.setup.rom);
   const auto loader = Loader::GetLoader(rom);
   std::vector<u8> smdh;
   if (!loader || loader->ReadIcon(smdh) != Loader::ResultStatus::Success ||

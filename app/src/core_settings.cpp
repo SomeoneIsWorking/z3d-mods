@@ -9,6 +9,8 @@
 #include "core/3ds.h"
 #include "core/hle/service/service.h"
 
+#include <lucent/text.h>
+
 #include <stdexcept>
 #include <string>
 
@@ -16,7 +18,7 @@ namespace z3d::app {
 namespace {
 
 std::string userPath(const std::filesystem::path &userDir) {
-  std::string path = (userDir / "Azahar").string();
+  std::string path = lucent::text::utf8(userDir / "Azahar");
   if (!path.ends_with('/')) {
     path += '/';
   }

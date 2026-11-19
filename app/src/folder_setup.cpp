@@ -7,6 +7,7 @@
 
 #include <SDL3/SDL.h>
 #include <lucent/log.h>
+#include <lucent/text.h>
 #include <setup_ui/setup_ui.h>
 
 #include <algorithm>
@@ -61,7 +62,7 @@ std::filesystem::path home() {
 std::string kept(const Ask &what, const AppConfig &config) {
   std::vector<std::string> command = config.tools;
   command.insert(command.end(),
-                 {"folders", "--user", config.userDir.string(), "--kept", what.name});
+                 {"folders", "--user", lucent::text::utf8(config.userDir), "--kept", what.name});
   ToolProcess tool;
   tool.start(command);
   tool.wait();
@@ -86,8 +87,8 @@ bool ask(const Ask &what, FolderSetup::Asking asking, GameWindow &window, const 
   setup_ui::Session session(
       screen, setup_ui::SessionOptions{}, [&](const std::vector<setup_ui::StagedFile> &chosen) {
         std::vector<std::string> command = config.tools;
-        command.insert(command.end(), {"folders", "--user", config.userDir.string(), what.flag,
-                                       chosen.front().path.string()});
+        command.insert(command.end(), {"folders", "--user", lucent::text::utf8(config.userDir),
+                                       what.flag, lucent::text::utf8(chosen.front().path)});
         ToolProcess tool;
         tool.start(command);
         tool.wait();
@@ -98,7 +99,7 @@ bool ask(const Ask &what, FolderSetup::Asking asking, GameWindow &window, const 
                                       : tool.failure();
       });
   setup_ui::ViewOptions options;
-  options.font_path = config.font.string();
+  options.font_path = lucent::text::utf8(config.font);
   options.host_renderer = canvas.renderer();
   setup_ui::View view(session, options);
   if (!view.open()) {

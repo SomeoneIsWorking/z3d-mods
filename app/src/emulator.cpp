@@ -19,6 +19,7 @@
 #include "video_core/renderer_base.h"
 
 #include <lucent/log.h>
+#include <lucent/text.h>
 
 #include <algorithm>
 #include <chrono>
@@ -121,7 +122,7 @@ Emulator::Emulator(const AppConfig &config, const std::filesystem::path &rom, Ga
   makeCurrent();
   Frontend::RegisterDefaultApplets(system_);
   system_.RegisterImageInterface(std::make_shared<Frontend::ImageInterface>());
-  const Core::System::ResultStatus status = system_.Load(window_, rom.string());
+  const Core::System::ResultStatus status = system_.Load(window_, lucent::text::utf8(rom));
   if (status != Core::System::ResultStatus::Success) {
     const std::string details = system_.GetStatusDetails();
     throw std::runtime_error("cannot load " + rom.string() + " (status " +

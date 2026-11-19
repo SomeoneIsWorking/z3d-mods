@@ -2,6 +2,8 @@
 
 #include "core/frontend/image_interface.h"
 
+#include <lucent/text.h>
+
 #include <utility>
 
 namespace z3d::app {
@@ -25,7 +27,7 @@ bool Frame::writePng(const std::filesystem::path &path) const {
     rgba.push_back(0xFF);
   }
   Frontend::ImageInterface encoder;
-  return encoder.EncodePNG(path.string(), width_, height_, rgba);
+  return encoder.EncodePNG(lucent::text::utf8(path), width_, height_, rgba);
 }
 
 } // namespace z3d::app
