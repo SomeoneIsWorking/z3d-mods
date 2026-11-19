@@ -115,12 +115,14 @@ def _read_header(path: Path, decomp: Decomp) -> None:
                     decomp.sizes[name] = int(size.group(1), 16)
 
 
-# A package's copy of what the tools read from a decomp: everything but the function map.
+# A package's copy of what the tools read from a decomp, the function map with it: a set's
+# interpolation sites (games._interpolation) are functions.
 PACKAGED = "symbols.json"
 
 
 def save(decomp: Decomp, path: Path) -> None:
-    table = {"globals": decomp.globals, "offsets": decomp.offsets, "sizes": decomp.sizes, "defines": decomp.defines}
+    table = {"functions": decomp.functions, "globals": decomp.globals, "offsets": decomp.offsets,
+             "sizes": decomp.sizes, "defines": decomp.defines}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(table, indent=1) + "\n")
 
