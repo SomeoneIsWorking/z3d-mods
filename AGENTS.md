@@ -44,9 +44,13 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   ImageMagick has no librsvg); the core draws through MoltenVK on the window's
   CAMetalLayer. `z3dmods shortcut` there makes `~/Applications/z3d.app`. `run --harness` works there
   (hidden window, shots, watches, states); `inputtest` and `run` without `--harness` stay
-  Linux-only (Gamescope, XTest); `package` makes the Linux package only.
-- `uv run --frozen z3dmods package`: the Linux package, `build/package/z3d` (a folder) and
-  `build/package/z3d-x86_64.AppImage` ([docs/plans/packed-app.md](docs/plans/packed-app.md); "The release" there is how one is published).
+  Linux-only (Gamescope, XTest).
+- `uv run --frozen z3dmods package`: the package for the machine it runs on
+  ([docs/plans/packed-app.md](docs/plans/packed-app.md), [docs/plans/all-platforms.md](docs/plans/all-platforms.md);
+  "The release" in packed-app is how one is published). Linux: `build/package/z3d` (a folder) and
+  `build/package/z3d-x86_64.AppImage`. macOS: `build/package/z3d.app` and `z3d-macos-arm64.zip`,
+  runs with no Homebrew. Windows, in MSYS2 clang64 (the hand-started `windows` workflow):
+  `build/package/z3d` and `z3d-windows-x86_64.zip`.
 - `uv run --frozen z3dmods sources`: on a machine without them, clones the checkouts a package is
   built from (the core, Lucent, setup-ui, RmlUi, port-assets) at their pinned revisions and
   downloads the AppImage runtime.
