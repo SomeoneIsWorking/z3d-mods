@@ -54,13 +54,15 @@ def _mac_icon(svg: Path, icns: Path) -> None:
         subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns)], check=True)
 
 
-def _mac_install(cfg: Config) -> list[Path]:
-    contents = MAC_APP / "Contents"
-    if MAC_APP.exists():
-        shutil.rmtree(MAC_APP)
+def mac_bundle(bundle: Path, svg: Path, launcher: str) -> Path:
+    """A macOS app at `bundle` whose executable is the shell script `launcher`; returns its
+    Contents/Resources, which the caller fills."""
+    contents = bundle / "Contents"
+    if bundle.exists():
+        shutil.rmtree(bundle)
     (contents / "MacOS").mkdir(parents=True)
     (contents / "Resources").mkdir()
-    _mac_icon(cfg.repo / "app" / "icon" / "z3d.svg", contents / "Resources" / "z3d.icns")
+    _mac_icon(svg, contents / "Resources" / "z3d.icns")
     (contents / "Info.plist").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
@@ -73,17 +75,23 @@ def _mac_install(cfg: Config) -> list[Path]:
         "<key>LSApplicationCategoryType</key><string>public.app-category.games</string>\n"
         "<key>NSHighResolutionCapable</key><true/>\n"
         "</dict></plist>\n")
-    launcher = contents / "MacOS" / "z3d"
+    executable = contents / "MacOS" / "z3d"
+    executable.write_text(launcher)
+    executable.chmod(0o755)
+    return contents / "Resources"
+
+
+def _mac_install(cfg: Config) -> list[Path]:
     command = " ".join(shlex.quote(part) for part in (*cfg.tool_command, "play"))
     log = cfg.app_data / "launch.log"
     # Finder's PATH is /usr/bin:/bin:/usr/sbin:/sbin: the tools also look up uv and Homebrew's
     # programs (magick, the Vulkan loader's MoltenVK) by name.
     path = ":".join(dict.fromkeys([str(Path(cfg.tool_command[0]).parent), "/opt/homebrew/bin",
                                    "/usr/bin", "/bin", "/usr/sbin", "/sbin"]))
-    launcher.write_text(f"#!/bin/sh\nexport PATH={shlex.quote(path)}\n"
-                        f"mkdir -p {shlex.quote(str(log.parent))}\n"
-                        f"exec {command} >{shlex.quote(str(log))} 2>&1\n")
-    launcher.chmod(0o755)
+    mac_bundle(MAC_APP, cfg.repo / "app" / "icon" / "z3d.svg",
+               f"#!/bin/sh\nexport PATH={shlex.quote(path)}\n"
+               f"mkdir -p {shlex.quote(str(log.parent))}\n"
+               f"exec {command} >{shlex.quote(str(log))} 2>&1\n")
     return [MAC_APP]
 
 

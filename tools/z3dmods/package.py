@@ -149,7 +149,7 @@ def _libraries(cfg: Config, binary: Path, core: Path, out: Path, licenses: Path)
         build_container.run(cfg, ["cp", f"/usr/share/doc/{owner}/copyright", str(licenses / "ubuntu" / owner)])
 
 
-def _license_files(folder: Path) -> list[Path]:
+def license_files(folder: Path) -> list[Path]:
     return sorted(p for p in folder.iterdir() if p.is_file() and p.name.lower().startswith(LICENSE_NAMES)
                   and p.suffix.lower() in ("", ".txt", ".md", ".gplv2", ".gplv3"))
 
@@ -161,11 +161,11 @@ def _licenses(cfg: Config, out: Path, python: Path) -> None:
         if folder == cfg.port_assets:
             continue
         (out / source.name).mkdir()
-        for file in _license_files(folder):
+        for file in license_files(folder):
             shutil.copyfile(file, out / source.name / file.name)
     externals = app.azahar_source(cfg) / "externals"
     for folder in sorted(p for pattern in ("*", "*/*") for p in externals.glob(pattern) if p.is_dir()):
-        for file in _license_files(folder):
+        for file in license_files(folder):
             kept = out / "azahar" / "externals" / folder.relative_to(externals) / file.name
             kept.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(file, kept)
@@ -241,15 +241,10 @@ def folder(cfg: Config) -> Path:
     return cfg.repo / "build" / "package" / "z3d"
 
 
-def build(cfg: Config, out: Path) -> Path:
-    """Builds the package folder `out` from this checkout, replacing an earlier one."""
-    if out.exists():
-        shutil.rmtree(out)
-    (out / "bin").mkdir(parents=True)
-    binary = app.current_binary(cfg, build_container.BUILDER)
-    shutil.copy2(binary, out / "bin" / binary.name)
-    core = next(app.core_prefix(cfg, build_container.BUILDER).glob("lib*/libazahar_core.so"))
-    _libraries(cfg, binary, core, out / "lib", out / "licenses")
+def contents(cfg: Config, out: Path) -> Path:
+    """What a package holds on every platform, written into `out`: the tools and their Python,
+    the sets, the prebuilt patches and glyphs, the fonts, the sources and our licences. Returns
+    the interpreter."""
     shutil.copytree(cfg.repo / "tools" / "z3dmods", out / "tools" / "z3dmods",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(cfg.repo / "sets", out / "sets")
@@ -272,20 +267,38 @@ def build(cfg: Config, out: Path) -> Path:
     shutil.copyfile(cfg.ui_font().with_name("OpenSans-OFL.txt"), out / "fonts" / "OFL.txt")
     shutil.copyfile(cfg.repo / "app" / "icon" / "z3d.svg", out / "z3d.svg")
     shutil.copyfile(cfg.repo / "LICENSE", out / "LICENSE")
-    revision = _run("git", "-C", str(cfg.repo), "rev-parse", "HEAD").strip()
     built_from = "\n".join(f"  {source.url} at {sources.built_from(source.folder(cfg))}" for source in sources.SOURCES)
     (out / "SOURCE.txt").write_text(SOURCE.format(revision=sources.built_from(cfg.repo), sources=built_from))
-    launcher = out / "z3d"
-    launcher.write_text(LAUNCHER)
-    launcher.chmod(0o755)
-    # What makes the folder an AppDir: its entry point, desktop entry and icon (z3d.svg above).
-    (out / "AppRun").symlink_to(launcher.name)
-    (out / f"{play.DESKTOP_ID}.desktop").write_text(shortcut.desktop_entry(launcher.name))
     interpreter = _python(out)
     _licenses(cfg, out / "licenses", interpreter.parent.parent)
-    _check_floor(out)
+    return interpreter
+
+
+def finish(cfg: Config, out: Path, interpreter: Path) -> None:
+    """Marks `out` a whole package once its tools import, and refuses one naming this machine."""
+    revision = _run("git", "-C", str(cfg.repo), "rev-parse", "HEAD").strip()
     # The mark comes last: a folder with it is a whole package.
     (out / config.PACKAGE_MARK).write_text(json.dumps({"revision": revision, "azahar": app.AZAHAR_REVISION}) + "\n")
     _run(str(interpreter), "-I", "-B", "-c", "import z3dmods.packed")
     _check_private(cfg, out)
+
+
+def build(cfg: Config, out: Path) -> Path:
+    """Builds the Linux package folder `out` from this checkout, replacing an earlier one."""
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "bin").mkdir(parents=True)
+    binary = app.current_binary(cfg, build_container.BUILDER)
+    shutil.copy2(binary, out / "bin" / binary.name)
+    core = next(app.core_prefix(cfg, build_container.BUILDER).glob("lib*/libazahar_core.so"))
+    _libraries(cfg, binary, core, out / "lib", out / "licenses")
+    launcher = out / "z3d"
+    launcher.write_text(LAUNCHER)
+    launcher.chmod(0o755)
+    # What makes the folder an AppDir: its entry point, desktop entry and icon (z3d.svg).
+    (out / "AppRun").symlink_to(launcher.name)
+    (out / f"{play.DESKTOP_ID}.desktop").write_text(shortcut.desktop_entry(launcher.name))
+    interpreter = contents(cfg, out)
+    _check_floor(out)
+    finish(cfg, out, interpreter)
     return out

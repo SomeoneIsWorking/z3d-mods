@@ -53,7 +53,8 @@ class Config:
         """The environment the app runs in: the player's session and the package's libraries."""
         env = dict(os.environ, **self.session_env)
         if self.libraries is not None:
-            env["LD_LIBRARY_PATH"] = str(self.libraries)
+            # macOS: the core opens MoltenVK by its file name, which dyld looks up on the fallback path.
+            env["DYLD_FALLBACK_LIBRARY_PATH" if sys.platform == "darwin" else "LD_LIBRARY_PATH"] = str(self.libraries)
         return env
 
     def mods_dir(self, title_id: str) -> Path:

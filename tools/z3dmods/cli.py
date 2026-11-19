@@ -3,11 +3,28 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from pathlib import Path
 
-import json
-
-from z3dmods import azahar, config, ctr, games, harness, host_install, input_test, install, package, play, setup, shortcut, sources, steps, system_config
+from z3dmods import (
+    azahar,
+    config,
+    ctr,
+    games,
+    harness,
+    host_install,
+    input_test,
+    install,
+    package,
+    package_mac,
+    play,
+    setup,
+    shortcut,
+    sources,
+    steps,
+    system_config,
+)
 
 
 def rominfo(args: argparse.Namespace) -> None:
@@ -65,6 +82,9 @@ def input_check(args: argparse.Namespace) -> None:
 
 def build_package(args: argparse.Namespace) -> None:
     cfg = config.load()
+    if sys.platform == "darwin":
+        print(package_mac.build(cfg, args.out or package_mac.folder(cfg)))
+        return
     built = package.build(cfg, args.out or package.folder(cfg))
     print(built)
     print(package.appimage(cfg, built))
@@ -116,7 +136,7 @@ def main() -> None:
     app = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
     app.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
     app.set_defaults(run=play_game)
-    packed = commands.add_parser("package", help="build the z3d package for Linux: its folder, and the AppImage of it")
+    packed = commands.add_parser("package", help="build the z3d package: on Linux its folder and the AppImage of it, on macOS z3d.app and its zip")
     packed.add_argument("--out", type=Path, help="the folder to make; build/package/z3d without it")
     packed.set_defaults(run=build_package)
     fetched = commands.add_parser("sources", help="clone the checkouts a package is built from that this machine lacks, each at its pinned revision")
