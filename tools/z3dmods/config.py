@@ -115,6 +115,8 @@ def _session_env() -> dict[str, str]:
 
 # A package's folder of what a checkout builds from source: each game's patch and names, the glyphs.
 PREBUILT = "prebuilt"
+# The app's file name.
+APP_FILE = "z3d.exe" if sys.platform == "win32" else "z3d"
 # What marks REPO as a package (package.py) and not a checkout.
 PACKAGE_MARK = "package.json"
 # The player's folders, in a package's app data: {"roms": <folder>, "mods": <folder>}.
@@ -136,7 +138,7 @@ def _packaged(data_home: Path) -> Config:
         roms={},
         azahar_source=None,
         dependencies=REPO,
-        app_binary=REPO / "bin" / "z3d",
+        app_binary=REPO / "bin" / APP_FILE,
         app_data=app_data,
         session_env=_session_env(),
         port_assets=REPO / "assets",
@@ -168,7 +170,7 @@ def load() -> Config:
         roms={tid: Path(path) for tid, path in local["roms"].items()},
         azahar_source=Path(local["azahar_source"]) if "azahar_source" in local else None,
         dependencies=home / "dev",
-        app_binary=Path(os.environ.get(APP_BINARY_ENV) or REPO / "build" / "app" / "z3d"),
+        app_binary=Path(os.environ.get(APP_BINARY_ENV) or REPO / "build" / "app" / APP_FILE),
         app_data=Path(os.environ.get(APP_DATA_ENV) or data_home / "z3d-mods"),
         session_env=_session_env(),
         port_assets=Path(os.environ.get("PORT_ASSETS_DIR") or REPO.parent.parent / "shared" / "port-assets"),

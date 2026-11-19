@@ -27,7 +27,6 @@ add_executable(z3d
   src/title_picker.cpp
   src/menu_canvas.cpp
   src/prompt_art.cpp
-  src/term_signal.cpp
   src/folder_setup.cpp
   src/folder_browser.cpp
   src/tool_process.cpp
@@ -57,5 +56,6 @@ add_executable(z3d
   src/hud_atlas.cpp
   src/mod_swap.cpp
   src/player.cpp)
+target_sources(z3d PRIVATE $<IF:$<BOOL:${WIN32}>,src/term_signal_windows.cpp,src/term_signal_posix.cpp>)
 target_link_libraries(z3d PRIVATE AzaharCore::azahar_core lucent SDL3::SDL3 SDL3_ttf::SDL3_ttf SDL3_image::SDL3_image setup_ui::setup_ui)
 target_compile_options(z3d PRIVATE -Wall -Wextra -Werror)

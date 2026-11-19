@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from z3dmods import (
+    app,
     azahar,
     config,
     ctr,
@@ -90,6 +91,10 @@ def build_package(args: argparse.Namespace) -> None:
     print(package.appimage(cfg, built))
 
 
+def build_app(_args: argparse.Namespace) -> None:
+    print(app.current_binary(config.load(), app.HOST))
+
+
 def fetch_sources(_args: argparse.Namespace) -> None:
     for made in sources.fetch():
         print(made)
@@ -133,12 +138,14 @@ def main() -> None:
     run.add_argument("--resolution", type=int, default=harness.RESOLUTION,
                      help="harness only: render scale, 1 is the 3DS's 400x240")
     run.set_defaults(run=run_steps)
-    app = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
-    app.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
-    app.set_defaults(run=play_game)
+    played = commands.add_parser("play", help="the z3d app's title picker, or one game directly, with the installed mods")
+    played.add_argument("game", nargs="?", choices=["oot3d", "mm3d"])
+    played.set_defaults(run=play_game)
     packed = commands.add_parser("package", help="build the z3d package: on Linux its folder and the AppImage of it, on macOS z3d.app and its zip")
     packed.add_argument("--out", type=Path, help="the folder to make; build/package/z3d without it")
     packed.set_defaults(run=build_package)
+    built = commands.add_parser("build-app", help="build the app from this checkout and print where it is")
+    built.set_defaults(run=build_app)
     fetched = commands.add_parser("sources", help="clone the checkouts a package is built from that this machine lacks, each at its pinned revision")
     fetched.set_defaults(run=fetch_sources)
     probe = commands.add_parser("inputtest", help="the windowed app in a headless Gamescope, driven by real key and mouse events and the app's test pad")
