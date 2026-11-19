@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from z3dmods.install import GameSet
 
 # The fork's z3d-harness branch the app is built against.
-AZAHAR_REVISION = "21da39b89"
+AZAHAR_REVISION = "f18aaa8e8"
 TOOLCHAIN = "clang"
 COMPILERS = ["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]
 AZAHAR_OPTIONS = {
@@ -83,7 +83,8 @@ def core(cfg: Config, builder: Builder = HOST) -> Path:
         builder.run(cfg, ["cmake", "-S", str(azahar_source(cfg)), "-B", str(tree), "-G", "Ninja",
                           "-DCMAKE_BUILD_TYPE=Release", *COMPILERS, f"-DCMAKE_INSTALL_PREFIX={prefix}", *flags,
                           *builder.flags(cfg)])
-        builder.run(cfg, ["ninja", "-C", str(tree), "install"])
+        # -k 0: a failed build names every unit that fails, not only the first.
+        builder.run(cfg, ["ninja", "-k", "0", "-C", str(tree), "install"])
     return prefix
 
 
