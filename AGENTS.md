@@ -42,7 +42,8 @@ Ocarina of Time 3D (USA, 0004000000033500) and Majora's Mask 3D (USA, 0004000000
   sdl3 sdl3_ttf sdl3_image molten-vk vulkan-loader vulkan-headers llvm lld librsvg` (the patch is built
   with Homebrew's LLVM, not Apple's clang; glyphs are drawn by rsvg-convert, since Homebrew's
   ImageMagick has no librsvg); the core draws through MoltenVK on the window's
-  CAMetalLayer. `z3dmods shortcut` there makes `~/Applications/z3d.app`. `run --harness` works there
+  CAMetalLayer. `z3dmods shortcut` there builds the package and installs it as `/Applications/z3d.app`
+  (and removes the old checkout launcher in `~/Applications`). `run --harness` works there
   (hidden window, shots, watches, states); `inputtest` and `run` without `--harness` stay
   Linux-only (Gamescope, XTest).
 - `uv run --frozen z3dmods package`: the package for the machine it runs on

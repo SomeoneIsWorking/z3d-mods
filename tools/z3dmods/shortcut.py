@@ -3,7 +3,6 @@ through `z3dmods play` on the newest build (app.binary builds only when none exi
 
 from __future__ import annotations
 
-import shlex
 import shutil
 import subprocess
 import sys
@@ -33,8 +32,10 @@ def desktop_entry(exec_: str, folder: Path | None = None) -> str:
             "Icon=z3d\nTerminal=false\nCategories=Game;\n")
 
 
-# macOS: the picker as an app in the player's Applications folder.
-MAC_APP = Path.home() / "Applications" / "z3d.app"
+# macOS: the packaged app (package_mac), installed for every account. The launcher that ran the
+# checkout lived in the player's own Applications folder; an install removes it.
+MAC_APP = Path("/Applications") / "z3d.app"
+RETIRED_MAC_APP = Path.home() / "Applications" / "z3d.app"
 MAC_BUNDLE_ID = "io.github.someoneisworking.z3d"
 
 
@@ -82,16 +83,16 @@ def mac_bundle(bundle: Path, svg: Path, launcher: str) -> Path:
 
 
 def _mac_install(cfg: Config) -> list[Path]:
-    command = " ".join(shlex.quote(part) for part in (*cfg.tool_command, "play"))
-    log = cfg.app_data / "launch.log"
-    # Finder's PATH is /usr/bin:/bin:/usr/sbin:/sbin: the tools also look up uv and Homebrew's
-    # programs (magick, the Vulkan loader's MoltenVK) by name.
-    path = ":".join(dict.fromkeys([str(Path(cfg.tool_command[0]).parent), "/opt/homebrew/bin",
-                                   "/usr/bin", "/bin", "/usr/sbin", "/sbin"]))
-    mac_bundle(MAC_APP, cfg.repo / "app" / "icon" / "z3d.svg",
-               f"#!/bin/sh\nexport PATH={shlex.quote(path)}\n"
-               f"mkdir -p {shlex.quote(str(log.parent))}\n"
-               f"exec {command} >{shlex.quote(str(log))} 2>&1\n")
+    """Builds the self-contained z3d.app from this checkout and puts it in /Applications."""
+    from z3dmods import package_mac  # package_mac builds its bundle with mac_bundle above.
+
+    built = package_mac.folder(cfg)
+    package_mac.build(cfg, built)
+    if MAC_APP.exists():
+        shutil.rmtree(MAC_APP)
+    subprocess.run(["ditto", str(built), str(MAC_APP)], check=True)
+    if RETIRED_MAC_APP.exists():
+        shutil.rmtree(RETIRED_MAC_APP)
     return [MAC_APP]
 
 

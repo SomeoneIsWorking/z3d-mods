@@ -40,12 +40,36 @@ LINKED = ("load",)
 def azahar_source(cfg: Config) -> Path:
     if cfg.azahar_source is None:
         raise RuntimeError('set "azahar_source" in env-assets/local.json to the SomeoneIsWorking/azahar checkout')
-    head = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", "HEAD"],
-                          capture_output=True, text=True, check=True).stdout.strip()
-    pinned = subprocess.run(["git", "-C", str(cfg.azahar_source), "rev-parse", f"{AZAHAR_REVISION}^0"],
-                            capture_output=True, text=True, check=True).stdout.strip()
+    def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(["git", "-C", str(cfg.azahar_source), *args],
+                              capture_output=True, text=True, check=check)
+
+    def resolve() -> str | None:
+        found = git("rev-parse", "--verify", "--quiet", f"{AZAHAR_REVISION}^0", check=False)
+        return found.stdout.strip() if found.returncode == 0 else None
+
+    pinned = resolve()
+    if pinned is None:
+        # A new pin pulled from the repo: the checkout has not fetched it yet.
+        print(f"fetching {AZAHAR_REVISION} into {cfg.azahar_source}", flush=True)
+        git("fetch", "--quiet", "origin")
+        pinned = resolve()
+        if pinned is None:
+            raise RuntimeError(f"{cfg.azahar_source} has no commit {AZAHAR_REVISION}, even after a fetch from origin")
+    head = git("rev-parse", "HEAD").stdout.strip()
     if head != pinned:
-        raise RuntimeError(f"{cfg.azahar_source} is at {head[:12]}, the app pins {AZAHAR_REVISION}")
+        if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
+            raise RuntimeError(f"{cfg.azahar_source} is at {head[:12]} with uncommitted changes; "
+                               f"the app pins {AZAHAR_REVISION}")
+        # A clean checkout moves to the pin, keeping its branch when the branch holds it.
+        print(f"moving {cfg.azahar_source} from {head[:12]} to {AZAHAR_REVISION}", flush=True)
+        branch = git("symbolic-ref", "--quiet", "--short", "HEAD", check=False).stdout.strip()
+        upstream = git("rev-parse", "--abbrev-ref", "@{upstream}", check=False).stdout.strip()
+        if branch and upstream and git("merge-base", "--is-ancestor", head, pinned, check=False).returncode == 0:
+            git("merge", "--quiet", "--ff-only", pinned)
+        else:
+            git("checkout", "--quiet", "--detach", pinned)
+        git("submodule", "update", "--init", "--recursive", "--quiet")
     return cfg.azahar_source
 
 

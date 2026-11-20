@@ -166,7 +166,9 @@ def build(cfg: Config, bundle: Path) -> Path:
     binary = resources / "bin" / "z3d"
     shutil.copy2(app.current_binary(cfg, BUILDER), binary)
     core = next(app.core_prefix(cfg, BUILDER).glob("lib*/libazahar_core*.dylib"))
+    print("package: bundling libraries", flush=True)
     _bundle_libraries(binary, core, resources / "lib", resources / "licenses")
+    print("package: Python, the tools and the sets", flush=True)
     interpreter = package.contents(cfg, resources)
     # uv names libpython by the folder it unpacked it into, here inside this bundle; the
     # interpreter does not link it, and an extension that does finds it through @rpath.
@@ -174,8 +176,10 @@ def build(cfg: Config, bundle: Path) -> Path:
         if not library.is_symlink():
             _run("install_name_tool", "-id", f"@rpath/{library.name}", str(library))
     package.finish(cfg, resources, interpreter)
+    print("package: signing", flush=True)
     _sign(bundle)
     archive = bundle.with_name(ZIP)
     archive.unlink(missing_ok=True)
+    print(f"package: zipping {archive.name}", flush=True)
     _run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(bundle), str(archive))
     return archive
